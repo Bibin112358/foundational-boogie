@@ -576,9 +576,7 @@ lemma real_inverse_3:
 subsection \<open>Basic tactics\<close>
 
 method fun_output_axiom uses NonEmptyTypes =
-(  (simp add: Let_def),(rule allI)+, (simp split: option.split),(rule conjI), (rule impI),
-  (rule val_of_closed_type_correct[OF NonEmptyTypes]), assumption, rule allI, rule impI
-)
+( (auto simp add: Let_def split: option.split intro: val_of_closed_type_correct[OF NonEmptyTypes]) )
 
 lemma convert_type_of_val_vc: 
   assumes "type_of_val A v = t" and "closed t" and "ty_to_closed t = tc"
