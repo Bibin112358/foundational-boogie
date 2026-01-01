@@ -9,11 +9,47 @@ subsection \<open>Values, State, Variable Context\<close>
 text \<open>The values (and as a result the semantics) are parametrized by the carrier type 'a for the 
 abstract values (values that have a type constructed via type constructors)\<close>
 (* datatype ('a, 'm) val = LitV lit | AbsV (the_absv: 'a) *)
-datatype ('a, 'm) val = LitV lit | AbsV (the_absv: 'a) | MapV "ty list" ty 'm
+datatype 'a val0 = LitV lit | AbsV (the_absv: 'a)
+datatype 'a val1 = MapV1 "'a val0 \<Rightarrow> 'a val1" | Up1 "'a val0"
+datatype 'a val2 = MapV2 "'a val1 \<Rightarrow> 'a val2" | Up2 "'a val1"
+datatype 'a val3 = MapV3 "'a val2 \<Rightarrow> 'a val3" | Up3 "'a val2"
+datatype 'a val4 = MapV4 "'a val3 \<Rightarrow> 'a val4" | Up4 "'a val3"
+
+type_synonym 'a val = "'a val0 + 'a val1 + 'a val2 + 'a val3 + 'a val4"
 
 abbreviation IntV where "IntV i \<equiv> LitV (LInt i)"
 abbreviation BoolV where "BoolV b \<equiv> LitV (LBool b)"
 abbreviation RealV where "RealV r \<equiv> LitV (LReal r)"
+
+abbreviation L1IntV where "L1IntV i \<equiv> Up1 (IntV i)"
+abbreviation L2IntV where "L2IntV i \<equiv> Up2 (L1IntV i)"
+abbreviation L3IntV where "L3IntV i \<equiv> Up3 (L2IntV i)"
+abbreviation L4IntV where "L4IntV i \<equiv> Up4 (L3IntV i)"
+
+value "Inr (Inr (MapV x))"
+
+fun f1 :: "unit val0 \<Rightarrow> unit val1"  where "f1 x = (if x = IntV 1 then L1IntV 2 else L1IntV 3)"
+fun m1 :: "unit \<Rightarrow> unit val1" where "m1 () = MapV1 f1"
+fun f2 :: "unit val1 \<Rightarrow> unit val2" where "f2 x = (if x = m1 () then L2IntV 4 else L2IntV 5)"
+fun m2 :: "unit \<Rightarrow> unit val2" where "m2 () = MapV2 f2"
+fun f3 :: "unit val2 \<Rightarrow> unit val3" where "f3 x = (if x = m2 () then L3IntV 6 else L3IntV 7)"
+fun m3 :: "unit \<Rightarrow> unit val3" where "m3 () = MapV3 f3"
+
+fun g where "g x = (if x = m3 () then Up4 (Up3 (m2 ())) else Up4 (Up3 (m2 ())))"
+
+fun mg :: "unit \<Rightarrow> unit val4" where "mg () = MapV4 g"
+
+fun selectV :: "'a val \<Rightarrow> 'a val \<Rightarrow> 'a val"
+  where "selectV (Inr (Inl (MapV1 f))) (Inl k) = Inr (Inl (f k))"
+
+fun V2toV3 :: "'a val2 \<Rightarrow> 'a val3" where
+  "V2toV3 x = Up3 x"
+
+fun V3toV2 :: "'a val3 \<Rightarrow> 'a val2" where
+  "V3toV2 (Up3 x) = x"
+
+
+
 
 primrec is_lit_val :: "('a, 'm) val \<Rightarrow> bool"
   where 
