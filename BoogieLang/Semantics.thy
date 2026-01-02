@@ -9,7 +9,7 @@ subsection \<open>Values, State, Variable Context\<close>
 text \<open>The values (and as a result the semantics) are parametrized by the carrier type 'a for the 
 abstract values (values that have a type constructed via type constructors)\<close>
 datatype 'a val0 = LitV lit | AbsV (the_absv: 'a)
-datatype ('a, 'k) valL = MapV "'k \<Rightarrow> 'k + ('a, 'k) valL"
+datatype ('a, 'k) valL = MapV "('k, 'k + ('a, 'k) valL) map"
 
 type_synonym 'a val1 = "'a val0 + ('a, 'a val0) valL"
 type_synonym 'a val2 = "'a val1 + ('a, 'a val1) valL"
@@ -27,19 +27,14 @@ abbreviation L2IntV where "L2IntV i \<equiv> Inl (L1IntV i)"
 abbreviation L3IntV where "L3IntV i \<equiv> Inl (L2IntV i)"
 abbreviation L4IntV where "L4IntV i \<equiv> Inl (L3IntV i)"
 
-fun f1 :: "unit val0 \<Rightarrow> unit val1"  where "f1 x = (if x = IntV 1 then L1IntV 2 else L1IntV 3)"
-fun m1 :: "unit \<Rightarrow> unit val1" where "m1 () = Inr (MapV f1)"
-fun f2 :: "unit val1 \<Rightarrow> unit val2" where "f2 x = (if x = m1 () then L2IntV 4 else L2IntV 5)"
-fun m2 :: "unit \<Rightarrow> unit val2" where "m2 () = Inr (MapV f2)"
-fun f3 :: "unit val2 \<Rightarrow> unit val3" where "f3 x = (if x = m2 () then L3IntV 6 else L3IntV 7)"
-fun m3 :: "unit \<Rightarrow> unit val3" where "m3 () = Inr (MapV f3)"
+fun m1 :: "unit \<Rightarrow> unit val1" where "m1 () = Inr (MapV [IntV 1 \<mapsto> L1IntV 2])"
+fun m2 :: "unit \<Rightarrow> unit val2" where "m2 () = Inr (MapV [(m1 ()) \<mapsto> L2IntV 4])"
+fun m3 :: "unit \<Rightarrow> unit val3" where "m3 () = Inr (MapV [(m2 ()) \<mapsto> L3IntV 6])"
 
-fun g :: "unit val3 \<Rightarrow> unit val4" where "g x = (if x = m3 () then Inl (Inl (m2 ())) else Inl (Inl (m2 ())))"
+fun mg :: "unit \<Rightarrow> unit val4" where "mg () = Inr (MapV [(m3 ()) \<mapsto> Inl (Inl (m2 ()))])"
 
-fun mg :: "unit \<Rightarrow> unit val4" where "mg () = Inr (MapV g)"
-
-fun selectV :: "'a val \<Rightarrow> 'a val \<Rightarrow> 'a val"
-  where "selectV (Inr (Inl ( Inr (MapV f)))) (Inl k) = Inr (Inl (f k))"
+fun selectV :: "'a val \<Rightarrow> 'a val \<rightharpoonup> 'a val"
+  where "selectV (Inr (Inl ( Inr (MapV f)))) (Inl k) = map_option (Inr \<circ> Inl) (f k)"
 
 fun V2toV3 :: "'a val2 \<Rightarrow> 'a val3" where
   "V2toV3 x = Inl x"
