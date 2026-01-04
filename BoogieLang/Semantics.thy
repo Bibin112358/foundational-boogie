@@ -8,62 +8,34 @@ subsection \<open>Values, State, Variable Context\<close>
 
 text \<open>The values (and as a result the semantics) are parametrized by the carrier type 'a for the 
 abstract values (values that have a type constructed via type constructors)\<close>
-datatype ('a, 'k) val_aux = LitV0 lit | AbsV0 (the_absv: 'a)
+datatype ('a, 'k) val_aux = LitV lit | AbsV (the_absv: 'a)
   | MapV  "('k, ('a, 'k) val_aux) map" | Up 'k
-  | V (* convenience value for testing, to be removed*)
 
 type_synonym 'a val0 = "('a, unit)  val_aux"
 type_synonym 'a val1 = "('a, 'a val0) val_aux"
 type_synonym 'a val2 = "('a, 'a val1) val_aux"
 type_synonym 'a val3 = "('a, 'a val2) val_aux"
-
-value "Up (Up (MapV [V \<mapsto> V])) :: unit val3"
-value "Up (MapV [V \<mapsto> V]) :: unit val3" (* fails, as expected *)
-value "V :: unit val3" (* works, do we want that? *)
-(*
-pro: base values are not nested anymore
-cons: one can't go level down?
-fix: although, since it is a litearal, we can just reconstruct at any level? *)
-
-fun go :: "unit val1 \<Rightarrow> unit val2" where "go V = V" | "go v = Up v"
-fun down :: "unit val2 \<Rightarrow> unit val1" where "down V = V" | "down (Up v) = v"
-
-
 type_synonym 'a val4 = "('a, 'a val3) val_aux"
 type_synonym 'a val = "'a val4"
 
+abbreviation IntV where "IntV i \<equiv> LitV (LInt i)"
+abbreviation BoolV where "BoolV b \<equiv> LitV (LBool b)"
+abbreviation RealV where "RealV r \<equiv> LitV (LReal r)"
 
-abbreviation Inll where "Inll x \<equiv> Inl (Inl x)"
-abbreviation Inlll where "Inlll x \<equiv> Inl (Inll x)"
-
-abbreviation IntV0 where "IntV0 i \<equiv> LitV0 (LInt i)"
-abbreviation BoolV0 where "BoolV0 b \<equiv> LitV0 (LBool b)"
-abbreviation RealV0 where "RealV0 r \<equiv> LitV0 (LReal r)"
-
-abbreviation IntV where "IntV i \<equiv> Inll (IntV0 i)"
-abbreviation BoolV where "BoolV b \<equiv> Inll (BoolV0 b)"
-abbreviation RealV where "RealV r \<equiv> Inll (RealV0 r)"
-abbreviation LitV where "LitV l \<equiv> Inll (LitV0 l)"
-abbreviation AbsV where "AbsV l \<equiv> Inll (AbsV0 l)"
-
-
-fun m1 :: "unit \<Rightarrow> unit val1" where "m1 () = MapV [IntV0 1 \<mapsto> (IntV0 2)]"
-fun m2 :: "unit \<Rightarrow> unit val2" where "m2 () = MapV [m1 () \<mapsto> IntV0 4]"
-fun m3 :: "unit \<Rightarrow> unit val3" where "m3 () = MapV [m2 () \<mapsto> IntV0 2]"
-
+(* examples *)
+fun m1 :: "unit \<Rightarrow> unit val1" where "m1 () = MapV [IntV 1 \<mapsto> (IntV 2)]"
+fun m2 :: "unit \<Rightarrow> unit val2" where "m2 () = MapV [m1 () \<mapsto> IntV 4]"
+fun m3 :: "unit \<Rightarrow> unit val3" where "m3 () = MapV [m2 () \<mapsto> IntV 2]"
 fun mg :: "unit \<Rightarrow> unit val4" where "mg () = MapV [m3 () \<mapsto> Up (Up (m2 ()))]"
 
 fun select :: "'a val \<Rightarrow> 'a val \<rightharpoonup> 'a val" where
     "select (MapV f) (Up k) = f k"
   | "select (Up (MapV f)) (Up (Up k)) = map_option Up (f k)"
-  | "select (MapV f) (LitV0 l) = f (LitV0 l)"
+  | "select (MapV f) (LitV l) = f (LitV l)"
 
-fun V2toV3 :: "'a val2 \<Rightarrow> 'a val3" where
-  "V2toV3 x = Up x"
+fun V2toV3 :: "'a val2 \<Rightarrow> 'a val3" where  "V2toV3 x = Up x"
 
-fun V3toV2 :: "'a val3 \<Rightarrow> 'a val2" where
-  "V3toV2 (Up x) = x"
-| "V3toV2 (LitV0 x) = LitV0 x"
+fun V3toV2 :: "'a val3 \<Rightarrow> 'a val2" where "V3toV2 (Up x) = x" | "V3toV2 (LitV x) = LitV x"
 
 
 fun is_lit_val :: "'a val \<Rightarrow> bool"
@@ -73,8 +45,8 @@ fun is_lit_val :: "'a val \<Rightarrow> bool"
 
 lemma lit_val_elim:
  "\<lbrakk> \<And>b. v = BoolV b \<Longrightarrow> P; \<And>i. v = IntV i \<Longrightarrow> P; \<And>r. v = RealV r \<Longrightarrow> P; \<And> a. v = AbsV a \<Longrightarrow> P;
-    \<And>ks vv m. v = Inr (MapV m) \<Longrightarrow> P; \<And>ks vv m. v = Inl (Inr (MapV m)) \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
-  by (metis lit.exhaust val0.exhaust valL.exhaust)
+    \<And>ks vv m. v = MapV m \<Longrightarrow> P; \<And>k. v = Up k \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+  by (metis lit.exhaust val_aux.exhaust)
 
 text \<open>We differentiate between DeBruijn variables (used for bound variales) and named variables. When we open 
 a term in the semantics, we do not change the bound variable constructors (i.e., we treat bound 
