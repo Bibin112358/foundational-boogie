@@ -8,15 +8,29 @@ subsection \<open>Values, State, Variable Context\<close>
 
 text \<open>The values (and as a result the semantics) are parametrized by the carrier type 'a for the 
 abstract values (values that have a type constructed via type constructors)\<close>
-datatype 'a val0 = LitV0 lit | AbsV0 (the_absv: 'a)
-datatype ('a, 'k) valL = MapV "('k, 'k + ('a, 'k) valL) map"
+datatype ('a, 'k) val_aux = LitV0 lit | AbsV0 (the_absv: 'a)
+  | MapV  "('k, ('a, 'k) val_aux) map" | Up 'k
+  | V (* convenience value for testing, to be removed*)
 
-type_synonym 'a val1 = "'a val0 + ('a, 'a val0) valL"
-type_synonym 'a val2 = "'a val1 + ('a, 'a val1) valL"
-type_synonym 'a val3 = "'a val2 + ('a, 'a val2) valL"
-type_synonym 'a val4 = "'a val3 + ('a, 'a val3) valL"
+type_synonym 'a val0 = "('a, unit)  val_aux"
+type_synonym 'a val1 = "('a, 'a val0) val_aux"
+type_synonym 'a val2 = "('a, 'a val1) val_aux"
+type_synonym 'a val3 = "('a, 'a val2) val_aux"
 
-type_synonym 'a val = "'a val2"
+value "Up (Up (MapV [V \<mapsto> V])) :: unit val3"
+value "Up (MapV [V \<mapsto> V]) :: unit val3" (* fails, as expected *)
+value "V :: unit val3" (* works, do we want that? *)
+(*
+pro: base values are not nested anymore
+cons: one can't go level down?
+fix: although, since it is a litearal, we can just reconstruct at any level? *)
+
+fun go :: "unit val1 \<Rightarrow> unit val2" where "go V = V" | "go v = Up v"
+fun down :: "unit val2 \<Rightarrow> unit val1" where "down V = V" | "down (Up v) = v"
+
+
+type_synonym 'a val4 = "('a, 'a val3) val_aux"
+type_synonym 'a val = "'a val4"
 
 
 abbreviation Inll where "Inll x \<equiv> Inl (Inl x)"
@@ -33,20 +47,23 @@ abbreviation LitV where "LitV l \<equiv> Inll (LitV0 l)"
 abbreviation AbsV where "AbsV l \<equiv> Inll (AbsV0 l)"
 
 
-fun m1 :: "unit \<Rightarrow> unit val1" where "m1 () = Inr (MapV [IntV0 1 \<mapsto> Inl (IntV0 2)])"
-fun m2 :: "unit \<Rightarrow> unit val2" where "m2 () = Inr (MapV [(m1 ()) \<mapsto> Inll (IntV0 4)])"
-fun m3 :: "unit \<Rightarrow> unit val3" where "m3 () = Inr (MapV [(m2 ()) \<mapsto> Inl (Inl (Inl (IntV0 2)))])"
+fun m1 :: "unit \<Rightarrow> unit val1" where "m1 () = MapV [IntV0 1 \<mapsto> (IntV0 2)]"
+fun m2 :: "unit \<Rightarrow> unit val2" where "m2 () = MapV [m1 () \<mapsto> IntV0 4]"
+fun m3 :: "unit \<Rightarrow> unit val3" where "m3 () = MapV [m2 () \<mapsto> IntV0 2]"
 
-fun mg :: "unit \<Rightarrow> unit val4" where "mg () = Inr (MapV [(m3 ()) \<mapsto> Inl (Inl (m2 ()))])"
+fun mg :: "unit \<Rightarrow> unit val4" where "mg () = MapV [m3 () \<mapsto> Up (Up (m2 ()))]"
 
-fun selectV :: "'a val \<Rightarrow> 'a val \<rightharpoonup> 'a val"
-  where "selectV (Inl (Inr (MapV f))) (Inl (Inl k)) = map_option Inl (f k)"
+fun select :: "'a val \<Rightarrow> 'a val \<rightharpoonup> 'a val" where
+    "select (MapV f) (Up k) = f k"
+  | "select (Up (MapV f)) (Up (Up k)) = map_option Up (f k)"
+  | "select (MapV f) (LitV0 l) = f (LitV0 l)"
 
 fun V2toV3 :: "'a val2 \<Rightarrow> 'a val3" where
-  "V2toV3 x = Inl x"
+  "V2toV3 x = Up x"
 
 fun V3toV2 :: "'a val3 \<Rightarrow> 'a val2" where
-  "V3toV2 (Inl x) = x"
+  "V3toV2 (Up x) = x"
+| "V3toV2 (LitV0 x) = LitV0 x"
 
 
 fun is_lit_val :: "'a val \<Rightarrow> bool"
