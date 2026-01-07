@@ -9,8 +9,7 @@ subsection \<open>Values, State, Variable Context\<close>
 text \<open>The values (and as a result the semantics) are parametrized by the carrier type 'a for the 
 abstract values (values that have a type constructed via type constructors)\<close>
 datatype ('a, 'k) val_aux = LitV lit | AbsV (the_absv: 'a)
-  | MapV ty ty "('k, ('a, 'k) val_aux) map" | Up 'k
-
+  | MapV ty ty "('k, ('a, 'k) val_aux) map" 'k
 
 type_synonym 'a val0 = "('a, unit)  val_aux"
 type_synonym 'a val1 = "('a, 'a val0) val_aux"
@@ -23,36 +22,34 @@ abbreviation BoolV where "BoolV b \<equiv> LitV (LBool b)"
 abbreviation RealV where "RealV r \<equiv> LitV (LReal r)"
 
 (* examples *)
+value "IntV 1 :: unit val3"
+value "IntV 2 :: unit val4"
+fun m34 :: "unit \<Rightarrow> (unit val3, unit val4) map" where "m34 () = [IntV 1 \<mapsto> IntV 2]"
+
 abbreviation TV where "TV \<equiv> (TPrim TInt)"
-fun m1 :: "unit \<Rightarrow> unit val1" where "m1 () = MapV (TPrim TInt) (TPrim TInt) [ IntV 1 \<mapsto> (IntV 2)]"
-fun m2 :: "unit \<Rightarrow> unit val2" where "m2 () = MapV TV TV [m1 () \<mapsto> IntV 4]"
-fun m3 :: "unit \<Rightarrow> unit val3" where "m3 () = MapV TV TV [m2 () \<mapsto> IntV 2]"
-fun mg :: "unit \<Rightarrow> unit val4" where "mg () = MapV TV TV [m3 () \<mapsto> Up (Up (m2 ()))]"
 
-fun select4 :: "'a val4 \<Rightarrow> 'a val4 \<rightharpoonup> 'a val4" where
-    "select4 (MapV _ _ f) (Up k) = f k"
-  | "select4 (Up (MapV _ _ f)) (Up (Up k)) = map_option Up (f k)"
-  | "select4 (MapV _ _ f) (LitV l) = f (LitV l)"
+abbreviation M1 where "M1 \<equiv> MapV TV TV [IntV 1 \<mapsto> IntV 2]"
+fun m1 where "m1 () = M1 (M1 undefined)"
 
-fun V2toV3 :: "'a val2 \<Rightarrow> 'a val3" where  "V2toV3 x = Up x"
-fun V3toV2 :: "'a val3 \<Rightarrow> 'a val2" where "V3toV2 (Up x) = x" | "V3toV2 (LitV x) = LitV x"
+abbreviation M2 where "M2 \<equiv> MapV TV TV [(M1 undefined) \<mapsto> IntV 4]"
+fun m2 :: "unit \<Rightarrow> unit val4" where "m2 () = M2 (M2 undefined)"
 
+abbreviation M3 where "M3 \<equiv> MapV TV TV [(M2 undefined) \<mapsto> IntV 6]"
+fun m3 :: "unit \<Rightarrow> unit val4" where "m3 () = M3 (M3 undefined)"
 
-type_synonym 'a val = "'a val3"
+abbreviation MG where "MG \<equiv> MapV TV TV [(M2 undefined) \<mapsto> m1 ()]"
+fun mg :: "unit \<Rightarrow> unit val4" where "mg () = MG (MG undefined)"
 
-fun select_aux :: "(_, _) val_aux \<Rightarrow> (_, _) val_aux \<rightharpoonup> (_, _) val_aux" where
-    "select_aux (MapV _ _ f) k = f k"
+(* generic select function *)
+fun select :: "('a, _) val_aux \<Rightarrow> ('a, _) val_aux \<rightharpoonup> ('a, _) val_aux" where
+    "select (MapV _ _ m _) (MapV _ _ _ v) = m v" 
+  | "select (MapV _ _ m _) (LitV v) = m (LitV v)" 
+  | "select (MapV _ _ m _) (AbsV v) = m (AbsV v)"
+  | "select _ _ = undefined"  
 
-fun select :: "'a val \<Rightarrow> 'a val \<rightharpoonup> 'a val" where
-    "select (MapV _ _ f) (Up k) = f k"  (* level 3 *)
-  | "select (Up (MapV _ _ f)) (Up (Up k)) = map_option Up (f k)"   (* level 2 *)
-  | "select (Up (Up (MapV _ _ f))) (Up (Up (Up k))) = map_option (Up \<circ> Up) (f k)"   (* level 1 *)
-  | "select (Up (Up (Up (MapV _ _ f)))) (Up (Up (Up (Up k)))) = map_option (Up \<circ> Up \<circ> Up) (f k)"   (* level 0 *)
-  | "select (MapV _ _ f) (LitV l) = f (LitV l)"
-  | "select (MapV _ _ f) (AbsV a) = f (AbsV a)"
-(* Ups primitive key case? select (MapV _ _ f) (LitV l)*)
-  | "select _ _ = None"  (* non-maps *)
+lemma "select (mg ()) (m2 ()) = Some (m1 ())" by simp
 
+type_synonym 'a val = "'a val4"
 
 fun is_lit_val :: "'a val \<Rightarrow> bool"
   where 
@@ -61,7 +58,7 @@ fun is_lit_val :: "'a val \<Rightarrow> bool"
 
 lemma lit_val_elim:
  "\<lbrakk> \<And>b. v = BoolV b \<Longrightarrow> P; \<And>i. v = IntV i \<Longrightarrow> P; \<And>r. v = RealV r \<Longrightarrow> P; \<And> a. v = AbsV a \<Longrightarrow> P;
-    \<And>ks vv m. v = MapV ks vv m \<Longrightarrow> P; \<And>k. v = Up k \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+    \<And>kt vt mv kv. v = MapV kt vt mv kv \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
   by (metis lit.exhaust val_aux.exhaust)
 
 text \<open>We differentiate between DeBruijn variables (used for bound variales) and named variables. When we open 
@@ -442,8 +439,7 @@ fun type_of_val :: "'a absval_ty_fun \<Rightarrow> 'a val \<Rightarrow> ty"
   where
    "type_of_val A (LitV v) = TPrim (type_of_lit v)"
  | "type_of_val A (AbsV v) = TCon (fst (A v)) (snd (A v))"
- | "type_of_val _ (MapV ty_keys ty_val _) = TMap [ty_keys] ty_val"
-  (* all the Up cases ?! *)
+ | "type_of_val _ (MapV ty_keys ty_val _ _) = TMap [ty_keys] ty_val"
 
 type_synonym rtype_env = "ty list"
 
