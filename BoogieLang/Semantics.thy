@@ -41,13 +41,29 @@ abbreviation MG where "MG \<equiv> MapV TV TV [(M2 undefined) \<mapsto> m1 ()]"
 fun mg :: "unit \<Rightarrow> unit val4" where "mg () = MG (MG undefined)"
 
 (* generic select function *)
+fun down :: "('a, _) val_aux \<Rightarrow> _" where
+    "down (MapV _ _ _ k) = k"
+  | "down (LitV v) = LitV v"
+  | "down (AbsV v) = AbsV v"
+
 fun select :: "('a, _) val_aux \<Rightarrow> ('a, _) val_aux \<rightharpoonup> ('a, _) val_aux" where
-    "select (MapV _ _ m _) (MapV _ _ _ v) = m v" 
-  | "select (MapV _ _ m _) (LitV v) = m (LitV v)" 
-  | "select (MapV _ _ m _) (AbsV v) = m (AbsV v)"
+    "select (MapV _ _ m _) k = m (down k)"
   | "select _ _ = undefined"  
 
 lemma "select (mg ()) (m2 ()) = Some (m1 ())" by simp
+
+value [nbe] "[undefined \<mapsto> 1] undefined"
+
+(* there needs to be as many additional store functions, as there are nesting levels *)
+fun store1 :: "('a, _) val_aux \<Rightarrow> ('a, _) val_aux \<Rightarrow> ('a, _) val_aux \<Rightarrow> ('a, _) val_aux" where
+    "store1 (MapV tk tv mm mk) k v = (MapV tk tv (mm(down k \<mapsto> v)) undefined)"
+
+fun store :: "('a, _) val_aux \<Rightarrow> ('a, _) val_aux \<Rightarrow> ('a, _) val_aux \<Rightarrow> ('a, _) val_aux" where
+    "store  (MapV tk tv mm mk) k v = (MapV tk tv (mm(down k \<mapsto> v)) (store1 mk (down k) (down v)))"
+  | "store _ _ _ = undefined"
+
+lemma "select (store (mg ()) (m2 ()) (IntV 42)) (m2 ()) = Some (IntV 42)" by simp
+
 
 type_synonym 'a val = "'a val4"
 
