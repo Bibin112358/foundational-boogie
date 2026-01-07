@@ -1,7 +1,7 @@
 section \<open>Semantics of the Boogie Language\<close>
 
 theory Semantics
-imports Lang BoogieDeBruijn
+imports Lang BoogieDeBruijn "HOL-Library.Mapping"
 begin
 
 subsection \<open>Values, State, Variable Context\<close>
@@ -9,33 +9,49 @@ subsection \<open>Values, State, Variable Context\<close>
 text \<open>The values (and as a result the semantics) are parametrized by the carrier type 'a for the 
 abstract values (values that have a type constructed via type constructors)\<close>
 datatype ('a, 'k) val_aux = LitV lit | AbsV (the_absv: 'a)
-  | MapV  "('k, ('a, 'k) val_aux) map" | Up 'k
+  | MapV ty ty "('k, ('a, 'k) val_aux) map" | Up 'k
+
 
 type_synonym 'a val0 = "('a, unit)  val_aux"
 type_synonym 'a val1 = "('a, 'a val0) val_aux"
 type_synonym 'a val2 = "('a, 'a val1) val_aux"
 type_synonym 'a val3 = "('a, 'a val2) val_aux"
 type_synonym 'a val4 = "('a, 'a val3) val_aux"
-type_synonym 'a val = "'a val4"
 
 abbreviation IntV where "IntV i \<equiv> LitV (LInt i)"
 abbreviation BoolV where "BoolV b \<equiv> LitV (LBool b)"
 abbreviation RealV where "RealV r \<equiv> LitV (LReal r)"
 
 (* examples *)
-fun m1 :: "unit \<Rightarrow> unit val1" where "m1 () = MapV [IntV 1 \<mapsto> (IntV 2)]"
-fun m2 :: "unit \<Rightarrow> unit val2" where "m2 () = MapV [m1 () \<mapsto> IntV 4]"
-fun m3 :: "unit \<Rightarrow> unit val3" where "m3 () = MapV [m2 () \<mapsto> IntV 2]"
-fun mg :: "unit \<Rightarrow> unit val4" where "mg () = MapV [m3 () \<mapsto> Up (Up (m2 ()))]"
+abbreviation TV where "TV \<equiv> (TPrim TInt)"
+fun m1 :: "unit \<Rightarrow> unit val1" where "m1 () = MapV (TPrim TInt) (TPrim TInt) [ IntV 1 \<mapsto> (IntV 2)]"
+fun m2 :: "unit \<Rightarrow> unit val2" where "m2 () = MapV TV TV [m1 () \<mapsto> IntV 4]"
+fun m3 :: "unit \<Rightarrow> unit val3" where "m3 () = MapV TV TV [m2 () \<mapsto> IntV 2]"
+fun mg :: "unit \<Rightarrow> unit val4" where "mg () = MapV TV TV [m3 () \<mapsto> Up (Up (m2 ()))]"
 
-fun select :: "'a val \<Rightarrow> 'a val \<rightharpoonup> 'a val" where
-    "select (MapV f) (Up k) = f k"
-  | "select (Up (MapV f)) (Up (Up k)) = map_option Up (f k)"
-  | "select (MapV f) (LitV l) = f (LitV l)"
+fun select4 :: "'a val4 \<Rightarrow> 'a val4 \<rightharpoonup> 'a val4" where
+    "select4 (MapV _ _ f) (Up k) = f k"
+  | "select4 (Up (MapV _ _ f)) (Up (Up k)) = map_option Up (f k)"
+  | "select4 (MapV _ _ f) (LitV l) = f (LitV l)"
 
 fun V2toV3 :: "'a val2 \<Rightarrow> 'a val3" where  "V2toV3 x = Up x"
-
 fun V3toV2 :: "'a val3 \<Rightarrow> 'a val2" where "V3toV2 (Up x) = x" | "V3toV2 (LitV x) = LitV x"
+
+
+type_synonym 'a val = "'a val3"
+
+fun select_aux :: "(_, _) val_aux \<Rightarrow> (_, _) val_aux \<rightharpoonup> (_, _) val_aux" where
+    "select_aux (MapV _ _ f) k = f k"
+
+fun select :: "'a val \<Rightarrow> 'a val \<rightharpoonup> 'a val" where
+    "select (MapV _ _ f) (Up k) = f k"  (* level 3 *)
+  | "select (Up (MapV _ _ f)) (Up (Up k)) = map_option Up (f k)"   (* level 2 *)
+  | "select (Up (Up (MapV _ _ f))) (Up (Up (Up k))) = map_option (Up \<circ> Up) (f k)"   (* level 1 *)
+  | "select (Up (Up (Up (MapV _ _ f)))) (Up (Up (Up (Up k)))) = map_option (Up \<circ> Up \<circ> Up) (f k)"   (* level 0 *)
+  | "select (MapV _ _ f) (LitV l) = f (LitV l)"
+  | "select (MapV _ _ f) (AbsV a) = f (AbsV a)"
+(* Ups primitive key case? select (MapV _ _ f) (LitV l)*)
+  | "select _ _ = None"  (* non-maps *)
 
 
 fun is_lit_val :: "'a val \<Rightarrow> bool"
@@ -45,7 +61,7 @@ fun is_lit_val :: "'a val \<Rightarrow> bool"
 
 lemma lit_val_elim:
  "\<lbrakk> \<And>b. v = BoolV b \<Longrightarrow> P; \<And>i. v = IntV i \<Longrightarrow> P; \<And>r. v = RealV r \<Longrightarrow> P; \<And> a. v = AbsV a \<Longrightarrow> P;
-    \<And>ks vv m. v = MapV m \<Longrightarrow> P; \<And>k. v = Up k \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+    \<And>ks vv m. v = MapV ks vv m \<Longrightarrow> P; \<And>k. v = Up k \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
   by (metis lit.exhaust val_aux.exhaust)
 
 text \<open>We differentiate between DeBruijn variables (used for bound variales) and named variables. When we open 
@@ -423,10 +439,11 @@ type constructor).\<close>
 type_synonym 'a absval_ty_fun = "'a \<Rightarrow> (tcon_id \<times> ty list)"
 
 fun type_of_val :: "'a absval_ty_fun \<Rightarrow> 'a val \<Rightarrow> ty"
-  where 
+  where
    "type_of_val A (LitV v) = TPrim (type_of_lit v)"
  | "type_of_val A (AbsV v) = TCon (fst (A v)) (snd (A v))"
-(* | "type_of_val _ (MapV ty_keys ty_val _) = TMap ty_keys ty_val" *)
+ | "type_of_val _ (MapV ty_keys ty_val _) = TMap [ty_keys] ty_val"
+  (* all the Up cases ?! *)
 
 type_synonym rtype_env = "ty list"
 
@@ -463,6 +480,10 @@ inductive red_expr :: "'a absval_ty_fun \<Rightarrow> var_context \<Rightarrow> 
                 A,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>args, n_s\<rangle> [\<Down>] v_args;
                 f_interp (map (instantiate \<Omega>) ty_args) v_args = Some v \<rbrakk> \<Longrightarrow>
              A,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle> FunExp f ty_args args, n_s \<rangle> \<Down> v"
+  | RedMapSelect: "\<lbrakk> A,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e1, n_s\<rangle> \<Down> v1;
+                A,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e2, n_s\<rangle> \<Down> v2;
+                select v1 v2 = Some v\<rbrakk> \<Longrightarrow>
+             A,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle> MapSelect e1 e2, n_s \<rangle> \<Down> v"
   | RedCondExpTrue: 
                "\<lbrakk> A,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cond, n_s\<rangle> \<Down> (BoolV True); 
                   A,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>thn, n_s\<rangle> \<Down> v \<rbrakk> \<Longrightarrow>
@@ -854,6 +875,16 @@ next
     assume "\<Gamma> f = Some f_interp'" hence "f_interp = f_interp'" using RedFunOp.IH by simp
     assume "f_interp' (map (instantiate \<Omega>) ty_args) v_args' = Some v'"
     thus ?case using \<open>v_args = v_args'\<close> \<open>f_interp = f_interp'\<close> using RedFunOp.hyps by simp
+  qed
+next
+  case (RedMapSelect \<Omega> e1 n_s v1 e2 v2 v)
+  from RedMapSelect.prems show ?case
+  proof (cases)
+    fix v1' v2'
+    assume "A,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e1,n_s\<rangle> \<Down> v1'" hence "v1 = v1'" using RedMapSelect.IH by simp
+    assume "A,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e2,n_s\<rangle> \<Down> v2'" hence "v2 = v2'" using RedMapSelect.IH by simp
+    assume "select v1' v2' = Some v'"
+    with \<open>v1 = v1'\<close> \<open>v2 = v2'\<close> show ?thesis using RedMapSelect.hyps by simp
   qed
 next
   case (RedExpListNil n_s vs')
