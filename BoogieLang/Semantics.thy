@@ -7,92 +7,42 @@ begin
 subsection \<open>Values, State, Variable Context\<close>
 
 text \<open>The values (and as a result the semantics) are parametrized by the carrier type 'a for the 
-abstract values (values that have a type constructed via type constructors)\<close>
-datatype ('a, 'k) val_aux = LitV lit | AbsV (the_absv: 'a)
-  | MapV ty ty "('k, ('a, 'k) val_aux) map" "'k option"
-
-(* user needs to instantiate how many nesting levels to support *)
-type_synonym 'a val0 = "('a, unit)  val_aux"
-type_synonym 'a val1 = "('a, 'a val0) val_aux"
-type_synonym 'a val2 = "('a, 'a val1) val_aux"
-type_synonym 'a val3 = "('a, 'a val2) val_aux"
-type_synonym 'a val4 = "('a, 'a val3) val_aux"
+abstract values (values that have a type constructed via type constructors)
+TODO: explain Map Values
+\<close>
+datatype ('a, 'k) val = LitV lit | AbsV (the_absv: 'a)
+  | MapV ty ty "'k \<Rightarrow> ('a, 'k) val" "'k option"
 
 abbreviation IntV where "IntV i \<equiv> LitV (LInt i)"
 abbreviation BoolV where "BoolV b \<equiv> LitV (LBool b)"
 abbreviation RealV where "RealV r \<equiv> LitV (LReal r)"
 
-(* MapV examples *)
-value "IntV 1 :: unit val3"
-value "IntV 2 :: unit val4"
-definition simple_map_example :: "(unit val3, unit val4) map" where "simple_map_example = [IntV 1 \<mapsto> IntV 2]"
-
-abbreviation MapTV where "MapTV \<equiv> MapV (TPrim TInt) (TPrim TInt)"  (* convenience for testing purposes *)
-
-abbreviation m11 :: "unit val1" where "m11 \<equiv> MapTV [IntV 1 \<mapsto> IntV 2] None"
-abbreviation m12 :: "unit val2" where "m12 \<equiv> MapTV [IntV 1 \<mapsto> IntV 2] (Some m11)"
-abbreviation m13 :: "unit val3" where "m13 \<equiv> MapTV [IntV 1 \<mapsto> IntV 2] (Some m12)"
-abbreviation m14 :: "unit val4" where "m14 \<equiv> MapTV [IntV 1 \<mapsto> IntV 2] (Some m13)"
-
-abbreviation m22 :: "unit val2" where "m22 \<equiv> MapTV [m11 \<mapsto> IntV 4] None"
-abbreviation m23 :: "unit val3" where "m23 \<equiv> MapTV [m12 \<mapsto> IntV 4] (Some m22)"
-abbreviation m24 :: "unit val4" where "m24 \<equiv> MapTV [m13 \<mapsto> IntV 4] (Some m23)"
-
-abbreviation m33 :: "unit val3" where "m33 \<equiv> MapTV [m22 \<mapsto> IntV 6] None"
-abbreviation m34 :: "unit val4" where "m34 \<equiv> MapTV [m23 \<mapsto> IntV 6] (Some m33)"
-
-abbreviation mg3 :: "unit val3" where "mg3 \<equiv> MapTV [m22 \<mapsto> m13] None"
-abbreviation mg4 :: "unit val4" where "mg4 \<equiv> MapTV [m23 \<mapsto> m14] (Some mg3)"
-
-(* generic MapV select function *)
-primrec down :: "('a, _) val_aux \<rightharpoonup> ('a, _) val_aux" where
+(* generic MapV select function, TODO: should this be here with the generated store? *)
+primrec down :: "('a, _) val \<rightharpoonup> ('a, _) val" where
     "down (MapV _ _ _ k) = k"
   | "down (LitV v) = Some (LitV v)"
   | "down (AbsV v) = Some (AbsV v)"
 
-fun select :: "('a, _) val_aux \<Rightarrow> ('a, _) val_aux \<rightharpoonup> ('a, _) val_aux" where
-    "select (MapV _ _ m _) k = Option.bind (down k) m"
-  | "select _ _ = None"
+primrec select_impl :: "('a, _) val \<Rightarrow> ('a, _) val \<rightharpoonup> ('a, _) val" where
+    "select_impl (MapV _ _ m _) k = map_option m (down k)"
+  | "select_impl (LitV _) _ = None"
+  | "select_impl (AbsV _) _ = None"
 
-lemma "select mg4 m24 = Some m14" by simp
-
-(* there needs to be as many additional store functions, as there are nesting levels *)
-(* user needs to generate these functions (is there a way to make this cleaner, macro?) *)
-fun store3 :: "('a, _) val_aux option \<Rightarrow> ('a, _) val_aux option \<Rightarrow> ('a, _) val_aux option \<rightharpoonup> ('a, _) val_aux" where
-    "store3 _ _ _ = None"
-
-fun store2 :: "('a, _) val_aux option \<Rightarrow> ('a, _) val_aux option \<Rightarrow> ('a, _) val_aux option \<rightharpoonup> ('a, _) val_aux" where
-    "store2 (Some (MapV tk tv mm mk)) (Some k) (Some v) = Some (MapV tk tv (mm(k \<mapsto> v)) (store3 mk (down k) (down v)))"
-  | "store2 _ _ _ = None"
-
-fun store1 :: "('a, _) val_aux option \<Rightarrow> ('a, _) val_aux option \<Rightarrow> ('a, _) val_aux option \<rightharpoonup> ('a, _) val_aux" where
-    "store1 (Some (MapV tk tv mm mk)) (Some k) (Some v) = Some (MapV tk tv (mm(k \<mapsto> v)) (store2 mk (down k) (down v)))"
-  | "store1 _ _ _ = None"
-
-fun store0 :: "('a, _) val_aux option \<Rightarrow> ('a, _) val_aux option \<Rightarrow> ('a, _) val_aux option \<rightharpoonup> ('a, _) val_aux" where
-    "store0 (Some (MapV tk tv mm mk)) (Some k) (Some v) = Some (MapV tk tv (mm(k \<mapsto> v)) (store1 mk (down k) (down v)))"
-  | "store0 _ _ _ = None"
-
-fun store :: "'a val4 \<Rightarrow> ('a, _) val_aux \<Rightarrow> ('a, _) val_aux \<rightharpoonup> ('a, _) val_aux" where
-    "store (MapV tk tv mm mk) k v = store0 (Some (MapV tk tv mm mk)) (down k) (Some v)"
-  | "store _ _ _ = None"
+record ('a, 'k) map_interface =
+  map_select :: "('a, 'k) val \<Rightarrow> ('a, 'k) val \<rightharpoonup> ('a, 'k) val"
+  map_store :: "('a, 'k) val \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) val \<rightharpoonup> ('a, 'k) val"
 
 
-primrec select_option where "select_option (Some v) k = select v k"
-lemma "select_option (store mg4 m24 (IntV 42)) m24 = Some (IntV 42)" by simp
-
-
-type_synonym 'a val = "'a val4"
-
-fun is_lit_val :: "'a val \<Rightarrow> bool"
+primrec is_lit_val :: "('a, 'k) val \<Rightarrow> bool"
   where 
     "is_lit_val (LitV _) = True"
-  | "is_lit_val _ = False"
+  | "is_lit_val (AbsV _) = False"
+  | "is_lit_val (MapV _ _ _ _) = False"
 
 lemma lit_val_elim:
  "\<lbrakk> \<And>b. v = BoolV b \<Longrightarrow> P; \<And>i. v = IntV i \<Longrightarrow> P; \<And>r. v = RealV r \<Longrightarrow> P; \<And> a. v = AbsV a \<Longrightarrow> P;
     \<And>kt vt mv kv. v = MapV kt vt mv kv \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
-  by (metis lit.exhaust val_aux.exhaust)
+  by (metis lit.exhaust val.exhaust)
 
 text \<open>We differentiate between DeBruijn variables (used for bound variales) and named variables. When we open 
 a term in the semantics, we do not change the bound variable constructors (i.e., we treat bound 
