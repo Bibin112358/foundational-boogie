@@ -1,7 +1,7 @@
 section \<open>Semantics of the Boogie Language\<close>
 
 theory Semantics
-imports Lang BoogieDeBruijn "HOL-Library.Mapping"
+imports Lang BoogieDeBruijn
 begin
 
 subsection \<open>Values, State, Variable Context\<close>
@@ -462,6 +462,11 @@ inductive red_expr :: "'a absval_ty_fun \<Rightarrow> var_context \<Rightarrow> 
                 A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e2, n_s\<rangle> \<Down> v2;
                 (map_select MI) v1 v2 = Some v\<rbrakk> \<Longrightarrow>
              A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle> MapSelect e1 e2, n_s \<rangle> \<Down> v"
+  | RedMapStore: "\<lbrakk> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e1, n_s\<rangle> \<Down> v1;
+                A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e2, n_s\<rangle> \<Down> v2;
+                A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e3, n_s\<rangle> \<Down> v3;
+                (map_store MI) v1 v2 v3 = Some v\<rbrakk> \<Longrightarrow>
+             A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle> MapStore e1 e2 e3, n_s \<rangle> \<Down> v"
   | RedCondExpTrue: 
                "\<lbrakk> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>cond, n_s\<rangle> \<Down> (BoolV True); 
                   A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>thn, n_s\<rangle> \<Down> v \<rbrakk> \<Longrightarrow>
@@ -507,6 +512,8 @@ inductive red_expr :: "'a absval_ty_fun \<Rightarrow> var_context \<Rightarrow> 
 inductive_cases RedBinOp_case[elim!]: "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>(e1 \<guillemotleft>bop\<guillemotright> e2), n_s\<rangle> \<Down> v"
 inductive_cases RedUnOp_case[elim!]: "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>UnOp uop e1, n_s\<rangle> \<Down> v"
 inductive_cases RedFunOp_case[elim!]: "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle> FunExp f ty_args args, n_s \<rangle> \<Down> v"
+inductive_cases RedMapSelect_case[elim!]: "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle> MapSelect e1 e2, n_s \<rangle> \<Down> v"
+inductive_cases RedMapStore_case[elim!]: "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle> MapStore e1 e2 e3, n_s \<rangle> \<Down> v"
 inductive_cases RedCondExp_case[elim!]: "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle> CondExp cond thn els, n_s \<rangle> \<Down> v"
 inductive_cases RedOld_case[elim!]: "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Old  e, n_s\<rangle> \<Down> v"
 inductive_cases RedLit_case[elim!]: "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>(Lit l), n_s\<rangle> \<Down> LitV l"
@@ -863,6 +870,17 @@ next
     assume "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e2,n_s\<rangle> \<Down> v2'" hence "v2 = v2'" using RedMapSelect.IH by simp
     assume "(map_select MI) v1' v2' = Some v'"
     with \<open>v1 = v1'\<close> \<open>v2 = v2'\<close> show ?thesis using RedMapSelect.hyps by simp
+  qed
+next
+  case (RedMapStore \<Omega> MI e1 n_s v1 e2 v2 e3 v3 v)
+  from RedMapStore.prems show ?case
+  proof (cases)
+    fix v1' v2' v3'
+    assume "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e1,n_s\<rangle> \<Down> v1'" hence "v1 = v1'" using RedMapStore.IH by simp
+    assume "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e2,n_s\<rangle> \<Down> v2'" hence "v2 = v2'" using RedMapStore.IH by simp
+    assume "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e3,n_s\<rangle> \<Down> v3'" hence "v3 = v3'" using RedMapStore.IH by simp
+    assume "(map_store MI) v1' v2' v3'= Some v'"
+    with \<open>v1 = v1'\<close> \<open>v2 = v2'\<close> \<open>v3 = v3'\<close> show ?thesis using RedMapStore.hyps by simp
   qed
 next
   case (RedExpListNil n_s vs')

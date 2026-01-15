@@ -38,7 +38,8 @@ datatype expr
   | UnOp unop "expr"
   | BinOp "(expr)" binop "(expr)" ("_ \<guillemotleft>_\<guillemotright> _" [80,0,81] 80) 
   | FunExp fname "ty list" "(expr list)" (* second argument: type instantiation *)
-  | MapSelect "expr" "expr"
+  | MapSelect expr expr
+  | MapStore expr expr expr
   | CondExp expr expr expr
   | Old expr
 (* value quantification *)
