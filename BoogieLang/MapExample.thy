@@ -34,6 +34,23 @@ abbreviation m34 :: "unit val4" where "m34 \<equiv> MapTV (empty(m23 := IntV 6))
 abbreviation mg3 :: "unit val3" where "mg3 \<equiv> MapTV (empty(m22 := m13)) None"
 abbreviation mg4 :: "unit val4" where "mg4 \<equiv> MapTV (empty(m23 := m14)) (Some mg3)"
 
+
+fun Up1 where "Up1 (LitV v) = LitV v"
+fun UpF2 :: "('a val0 \<Rightarrow> 'a val1) \<Rightarrow> ('a val1 \<Rightarrow> 'a val2)"
+and Up2 :: "'a val1 \<Rightarrow> 'a val2" where 
+    "UpF2 f x = (case (down x) of (Some y) \<Rightarrow> Up2 (f y) | None \<Rightarrow> undefined)"
+  | "Up2 (MapV tk tv f k) = (MapV tk tv (UpF2 f) (Some (MapV tk tv f k)))"
+  | "Up2 (LitV v) = LitV v"
+  | "Up2 (AbsV v) = AbsV v" 
+
+
+fun Up :: "('a, _) val \<Rightarrow> ('a, _) val" where
+    "UpF f x = (if x = (Up y) then Up (f y) else undefined)"
+
+inductive wf_map :: "('a, _) val => nat \<Rightarrow>  bool" where
+  "wf_map (MapV _ _ _ _) 0" 
+| "wf_map (MapV _ _ (\<lambda>x. e)  k) 1 ==> wf_map (MapV _ _ (\<lambda>y. (down x) e)  k) 2"
+
 abbreviation example_map :: "('a, 'a val3) map_interface" where
   "example_map \<equiv> \<lparr> map_select = select_impl, map_store = undefined \<rparr>"
 
@@ -67,5 +84,10 @@ abbreviation example_map2 :: "('a, 'a val3) map_interface" where
 
 primrec select_option where "select_option (Some v) k = (map_select example_map2) v k"
 lemma "select_option ((map_store example_map2) mg4 m24 (IntV 42)) m24 = Some (IntV 42)" by simp
+
+lemma
+  assumes "(map_store example_map2) (MapV tk tv mm mk) x v = Some ms"
+  shows "(map_select example_map2) ms x = Some v"
+  apply auto
 
 end
