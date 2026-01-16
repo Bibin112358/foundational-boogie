@@ -6,36 +6,44 @@ begin
 
 (* user needs to instantiate how many nesting levels to support *)
 type_synonym 'a val0 = "('a, unit)  val"
-type_synonym 'a val1 = "('a val0) M"
-type_synonym 'a val2 = "('a val1) M"
-type_synonym 'a val3 = "('a val2) M"
-type_synonym 'a valn = "('a, 'a val3) val"
+type_synonym 'a val1 = "('a val0, 'a val0) L"
+type_synonym 'a val2 = "('a val1, 'a val1 + 'a val0) L"
+type_synonym 'a val3 = "('a val2, 'a val2 + 'a val1 + 'a val0) L"
+type_synonym 'a valn = "('a, 'a val3 + 'a val2 + 'a val1) val"
+
+primrec val0tovaln :: "'a val0 => 'a valn" where
+    "val0tovaln (LitV V) = LitV V"
+  | "val0tovaln (AbsV V) = AbsV V"
+
+primrec val1tovaln :: "'a val1 => 'a valn" where
+    "val1tovaln (L m) = MapV (TPrim TInt) (TPrim TInt) (Inr (Inr (L m)))"
 
 (* MapV examples *)
-value "Up ( Up (Up (IntV 1))) :: unit val3"
 value "IntV 2 :: unit valn"
+value "IntV 2 :: unit val0"
+(* value "IntV 1 :: unit val3")
 definition simple_map_example :: "(unit val3, unit valn) map" where
   "simple_map_example = [Up ( Up (Up (IntV 1))) \<mapsto> IntV 2]"
+*)
 
 abbreviation MapTV where "MapTV \<equiv> MapV (TPrim TInt) (TPrim TInt)"  (* convenience for testing purposes *)
-abbreviation Up2 where "Up2 x \<equiv> Up (Up x)"
-abbreviation Up3 where "Up3 x \<equiv> Up (Up2 x)"
-abbreviation Up4 where "Up4 x \<equiv> Up (Up3 x)"
 
-abbreviation m11 :: "unit val1" where "m11 \<equiv> MapAux [IntV 3 \<mapsto> Up (IntV 2)]"
-abbreviation m14 :: "unit valn" where "m14 \<equiv> MapTV (Up2 m11)"
+abbreviation m11 :: "unit val1" where "m11 \<equiv> L [IntV 3 \<mapsto> Inr (IntV 2)]"
+abbreviation m14 :: "unit valn" where "m14 \<equiv> MapTV (Inr (Inr m11))"
 
-abbreviation m22 :: "unit val2" where "m22 \<equiv> MapAux [m11 \<mapsto> Up2 (IntV 4)]"
-abbreviation m24 :: "unit valn" where "m24 \<equiv> MapTV (Up m22)"
+abbreviation m22 :: "unit val2" where "m22 \<equiv> L [m11 \<mapsto> Inr (Inr (IntV 4))]"
+abbreviation m24 :: "unit valn" where "m24 \<equiv> MapTV (Inr (Inl m22))"
 
-abbreviation m33 :: "unit val3" where "m33 \<equiv> MapAux [m22 \<mapsto> Up3 (IntV 6)]"
-abbreviation m34 :: "unit valn" where "m34 \<equiv> MapTV  m33"
+abbreviation m33 :: "unit val3" where "m33 \<equiv> L [m22 \<mapsto> Inr (Inr (Inr (IntV 6)))]"
+abbreviation m34 :: "unit valn" where "m34 \<equiv> MapTV (Inl m33)"
 
-abbreviation mg3 :: "unit val3" where "mg3 \<equiv> MapAux [m22 \<mapsto> Up2 m11]"
-abbreviation mg4 :: "unit valn" where "mg4 \<equiv> MapTV  mg3"
+abbreviation mg3 :: "unit val3" where "mg3 \<equiv> L [m22 \<mapsto> Inr (Inr (Inl m11))]"
+abbreviation mg4 :: "unit valn" where "mg4 \<equiv> MapTV (Inl mg3)"
 
 (* there needs to be as many additional store functions, as there are nesting levels *)
 (* user needs to generate these functions (is there a way to make this cleaner, macro?) *)
+
+(*
 fun select3 :: "('a, _) val \<Rightarrow> ('a, _) val option \<rightharpoonup> ('a, _) val" where
     "select3 (MapV tk tv (Inl f)) (Some k) = f k"
   | "select3 _ _ = None"
@@ -50,14 +58,14 @@ fun select1 :: "('a, _) val \<Rightarrow> ('a, _) val option \<rightharpoonup> (
   | "select1 (MapV tk tv (Inr m)) (Some k) = map_option up (select2 m (down k))"
   | "select1 _ _ = None"
 
-fun select0 :: "_ M \<Rightarrow> _ M option \<rightharpoonup> ('a, _) val" where
+fun select0 :: "_ L \<Rightarrow> _ M option \<rightharpoonup> ('a, _) val" where
     "select0 (MapAux m) (Some k) = m k"
   (*| "select0 (MapV tk tv (Inr m)) (Some k) = map_option up (select1 m (down k))"*)
   | "select0 _ _ = None"
-
-primrec select_impl :: "'a valn \<Rightarrow> 'a valn \<rightharpoonup> 'a valn" where
-    "select_impl (MapV _ _ m) (MapV _ _ k) = select0 m (down k)"
-  | "select_impl (MapV _ _ m) (LitV v) = select0 m (Up3 (LitV v))"
+*)
+fun select_impl :: "'a valn \<Rightarrow> 'a valn \<rightharpoonup> 'a valn" where
+    (*"select_impl (MapV _ _ m) (MapV _ _ k) = select0 m (down k)"
+  | *) "select_impl (MapV _ _ (Inr (Inr (L m)))) (LitV v) = m (LitV v)"
   | "select_impl (LitV _) _ = None"
   | "select_impl (AbsV _) _ = None"
 
@@ -103,6 +111,5 @@ lemma
   assumes "(map_store example_map2) (MapV tk tv m) x v = Some ms"
   shows "(map_select example_map2) ms x = Some v"
   apply auto
-  try
 
 end
