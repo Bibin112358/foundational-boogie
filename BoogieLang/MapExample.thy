@@ -6,33 +6,33 @@ begin
 
 (* user needs to instantiate how many nesting levels to support *)
 type_synonym 'a val0 = "('a, unit)  val"
-type_synonym 'a val1 = "('a, 'a val0) val"
-type_synonym 'a val2 = "('a, 'a val1) val"
-type_synonym 'a val3 = "('a, 'a val2) val"
-type_synonym 'a val4 = "('a, 'a val3) val"
-
+type_synonym 'a val1 = "('a val0) M"
+type_synonym 'a val2 = "('a val1) M"
+type_synonym 'a val3 = "('a val2) M"
+type_synonym 'a valn = "('a, 'a val3) val"
 
 (* MapV examples *)
-value "IntV 1 :: unit val3"
-value "IntV 2 :: unit val4"
-definition simple_map_example :: "(unit val3, unit val4) map" where "simple_map_example = [IntV 1 \<mapsto> IntV 2]"
+value "Up ( Up (Up (IntV 1))) :: unit val3"
+value "IntV 2 :: unit valn"
+definition simple_map_example :: "(unit val3, unit valn) map" where
+  "simple_map_example = [Up ( Up (Up (IntV 1))) \<mapsto> IntV 2]"
 
 abbreviation MapTV where "MapTV \<equiv> MapV (TPrim TInt) (TPrim TInt)"  (* convenience for testing purposes *)
+abbreviation Up2 where "Up2 x \<equiv> Up (Up x)"
+abbreviation Up3 where "Up3 x \<equiv> Up (Up2 x)"
+abbreviation Up4 where "Up4 x \<equiv> Up (Up3 x)"
 
-abbreviation m11 :: "unit val1" where "m11 \<equiv> MapTV (Inl [IntV 3 \<mapsto> IntV 2])"
-abbreviation m12 :: "unit val2" where "m12 \<equiv> MapTV (Inr m11)"
-abbreviation m13 :: "unit val3" where "m13 \<equiv> MapTV (Inr m12)"
-abbreviation m14 :: "unit val4" where "m14 \<equiv> MapTV (Inr m13)"
+abbreviation m11 :: "unit val1" where "m11 \<equiv> MapAux [IntV 3 \<mapsto> Up (IntV 2)]"
+abbreviation m14 :: "unit valn" where "m14 \<equiv> MapTV (Up2 m11)"
 
-abbreviation m22 :: "unit val2" where "m22 \<equiv> MapTV (Inl [m11 \<mapsto> IntV 4])"
-abbreviation m23 :: "unit val3" where "m23 \<equiv> MapTV (Inr m22)"
-abbreviation m24 :: "unit val4" where "m24 \<equiv> MapTV (Inr m23)"
+abbreviation m22 :: "unit val2" where "m22 \<equiv> MapAux [m11 \<mapsto> Up2 (IntV 4)]"
+abbreviation m24 :: "unit valn" where "m24 \<equiv> MapTV (Up m22)"
 
-abbreviation m33 :: "unit val3" where "m33 \<equiv> MapTV (Inl [m22 \<mapsto> IntV 6])"
-abbreviation m34 :: "unit val4" where "m34 \<equiv> MapTV (Inr m33)"
+abbreviation m33 :: "unit val3" where "m33 \<equiv> MapAux [m22 \<mapsto> Up3 (IntV 6)]"
+abbreviation m34 :: "unit valn" where "m34 \<equiv> MapTV  m33"
 
-abbreviation mg3 :: "unit val3" where "mg3 \<equiv> MapTV (Inl [m22 \<mapsto> m13])"
-abbreviation mg4 :: "unit val4" where "mg4 \<equiv> MapTV (Inr mg3)"
+abbreviation mg3 :: "unit val3" where "mg3 \<equiv> MapAux [m22 \<mapsto> Up2 m11]"
+abbreviation mg4 :: "unit valn" where "mg4 \<equiv> MapTV  mg3"
 
 (* there needs to be as many additional store functions, as there are nesting levels *)
 (* user needs to generate these functions (is there a way to make this cleaner, macro?) *)
@@ -50,14 +50,14 @@ fun select1 :: "('a, _) val \<Rightarrow> ('a, _) val option \<rightharpoonup> (
   | "select1 (MapV tk tv (Inr m)) (Some k) = map_option up (select2 m (down k))"
   | "select1 _ _ = None"
 
-fun select0 :: "('a, _) val \<Rightarrow> ('a, _) val option \<rightharpoonup> ('a, _) val" where
-    "select0 (MapV tk tv (Inl f)) (Some k) = f k"
-  | "select0 (MapV tk tv (Inr m)) (Some k) = map_option up (select1 m (down k))"
+fun select0 :: "_ M \<Rightarrow> _ M option \<rightharpoonup> ('a, _) val" where
+    "select0 (MapAux m) (Some k) = m k"
+  (*| "select0 (MapV tk tv (Inr m)) (Some k) = map_option up (select1 m (down k))"*)
   | "select0 _ _ = None"
 
-primrec select_impl :: "'a val4 \<Rightarrow> ('a, _) val \<rightharpoonup> ('a, _) val" where
-    (*"select_impl (MapV _ _ m _) k = map_option m (down k)"*)
-    "select_impl (MapV tk tv m) k = select0 (MapV tk tv m) (down k)"
+primrec select_impl :: "'a valn \<Rightarrow> 'a valn \<rightharpoonup> 'a valn" where
+    "select_impl (MapV _ _ m) (MapV _ _ k) = select0 m (down k)"
+  | "select_impl (MapV _ _ m) (LitV v) = select0 m (Up3 (LitV v))"
   | "select_impl (LitV _) _ = None"
   | "select_impl (AbsV _) _ = None"
 
