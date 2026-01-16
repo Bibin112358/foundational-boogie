@@ -11,22 +11,21 @@ abstract values (values that have a type constructed via type constructors)
 TODO: explain Map Values
 \<close>
 datatype ('a, 'k) val = LitV lit | AbsV (the_absv: 'a)
-  | MapV ty ty "'k \<Rightarrow> ('a, 'k) val" "'k option"
+  | MapV ty ty "('k, ('a, 'k) val) map  + 'k"
 
 abbreviation IntV where "IntV i \<equiv> LitV (LInt i)"
 abbreviation BoolV where "BoolV b \<equiv> LitV (LBool b)"
 abbreviation RealV where "RealV r \<equiv> LitV (LReal r)"
 
-(* generic MapV select function, TODO: should this be here with the generated store? *)
 primrec down :: "('a, _) val \<rightharpoonup> ('a, _) val" where
-    "down (MapV _ _ _ k) = k"
+    "down (MapV _ _ m) = (case m of Inr k \<Rightarrow> Some k | _ \<Rightarrow> None)"
   | "down (LitV v) = Some (LitV v)"
   | "down (AbsV v) = Some (AbsV v)"
 
-primrec select_impl :: "('a, _) val \<Rightarrow> ('a, _) val \<rightharpoonup> ('a, _) val" where
-    "select_impl (MapV _ _ m _) k = map_option m (down k)"
-  | "select_impl (LitV _) _ = None"
-  | "select_impl (AbsV _) _ = None"
+primrec up :: "('a, _) val \<Rightarrow> ('a, _) val" where
+    "up (MapV tk tv m) = (MapV tk tv (Inr (MapV tk tv m)))"
+  | "up (LitV v) = LitV v"
+  | "up (AbsV v) = AbsV v"
 
 record ('a, 'k) map_interface =
   map_select :: "('a, 'k) val \<Rightarrow> ('a, 'k) val \<rightharpoonup> ('a, 'k) val"
