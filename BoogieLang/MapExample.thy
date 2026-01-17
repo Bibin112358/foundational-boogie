@@ -1,9 +1,10 @@
-section \<open>Semantics of the Boogie Language\<close>
+section \<open>Instantiation Example for MapV\<close>
 
 theory MapExample
 imports Semantics
 begin
 
+subsection \<open>Type Definition\<close>
 (* user needs to instantiate how many nesting levels to support *)
 type_synonym 'a val0 = "('a, unit)  val"
 type_synonym 'a val1 = "('a val0) M"
@@ -11,6 +12,7 @@ type_synonym 'a val2 = "('a val1) M"
 type_synonym 'a val3 = "('a val2) M"
 type_synonym 'a valn = "('a, 'a val3) val"
 
+subsection \<open>Examples\<close>
 (* MapV examples *)
 value "Up ( Up (Up (IntV 1))) :: unit val3"
 value "IntV 2 :: unit valn"
@@ -34,27 +36,13 @@ abbreviation m34 :: "unit valn" where "m34 \<equiv> MapTV  m33"
 abbreviation mg3 :: "unit val3" where "mg3 \<equiv> MapAux [m22 \<mapsto> Up2 m11]"
 abbreviation mg4 :: "unit valn" where "mg4 \<equiv> MapV [] (TMap []  (TPrim TInt)) mg3"
 
-(* there needs to be as many additional store functions, as there are nesting levels *)
-(* user needs to generate these functions (is there a way to make this cleaner, macro?) *)
-fun select0 :: "_ M \<Rightarrow> _ M \<rightharpoonup> _ M" where
-    "select0 (MapAux m) (Up k) = m k"
-  | "select0 _ _ = None"
 
-fun select1 :: "_ M \<Rightarrow> _ M \<rightharpoonup> _ M" where
-    "select1 (MapAux m) (Up k) = m k"
-  | "select1 (Up m) (Up k) = map_option Up (select0 m k)"
-  | "select1 _ _ = None"
-
-fun select2 :: "_ M \<Rightarrow> _ M \<rightharpoonup> _ M" where
-    "select2 (MapAux m) (Up k) = m k"
-  | "select2 (Up m) (Up k) = map_option Up (select1 m k)"
-  | "select2 _ _ = None"
+subsection \<open>Helper Functions and Lemmas\<close>
 
 primrec valtoM :: "'a valn \<Rightarrow> _ M" where
     "valtoM (MapV _ _ m) = m"
   | "valtoM (LitV v) = Up3 (LitV v)"
   | "valtoM (AbsV v) = Up3 (AbsV v)"
-
 
 fun MtoVal :: " _ M option \<Rightarrow> ty \<rightharpoonup> 'a valn" where
     "MtoVal (Some (Up3 (LitV v))) _ = Some (LitV v)"
@@ -96,18 +84,34 @@ next
   then show ?thesis using MapV assms(1) by fastforce
 qed
 
+subsection \<open>Select\<close>
+(* there needs to be as many additional store functions, as there are nesting levels *)
+(* user needs to generate these functions (is there a way to make this cleaner, macro?) *)
+fun select0 :: "_ M \<Rightarrow> _ M \<rightharpoonup> _ M" where
+    "select0 (MapAux m) (Up k) = m k"
+  | "select0 _ _ = None"
+
+fun select1 :: "_ M \<Rightarrow> _ M \<rightharpoonup> _ M" where
+    "select1 (MapAux m) (Up k) = m k"
+  | "select1 (Up m) (Up k) = map_option Up (select0 m k)"
+  | "select1 _ _ = None"
+
+fun select2 :: "_ M \<Rightarrow> _ M \<rightharpoonup> _ M" where
+    "select2 (MapAux m) (Up k) = m k"
+  | "select2 (Up m) (Up k) = map_option Up (select1 m k)"
+  | "select2 _ _ = None"
 
 primrec select_impl :: "'a valn \<Rightarrow> 'a valn \<rightharpoonup> 'a valn" where
     "select_impl (MapV _ tv m) k = MtoVal (select2 m (valtoM k)) tv"
   | "select_impl (LitV _) _ = None"
   | "select_impl (AbsV _) _ = None"
 
-
 abbreviation example_map :: "('a, 'a val3) map_interface" where
   "example_map \<equiv> \<lparr> map_select = select_impl, map_store = undefined \<rparr>"
 
 lemma "(map_select example_map) mg4 m24 = Some m14" by simp
 
+subsection \<open>Store\<close>
 fun store0 :: "_ M \<Rightarrow> _ M \<Rightarrow> _ M \<rightharpoonup> _ M" where
     "store0 (MapAux m) (Up k) v = Some (MapAux (m(k \<mapsto> v)))"
   | "store0 _ _ _ = None"
@@ -132,6 +136,9 @@ abbreviation example_map2 :: "('a, 'a val3) map_interface" where
 
 primrec select_option where "select_option (Some v) k = (map_select example_map2) v k"
 lemma "select_option ((map_store example_map2) mg4 m24 (IntV 42)) m24 = Some (IntV 42)" by simp
+
+subsection \<open>Array Axiom Update\<close>
+text \<open>Property to prove: (m[k] := v)[k] == v or select (store m k v) k = v\<close>
 
 lemma update0:
   assumes "store0 m k v = Some ms"
@@ -200,5 +207,14 @@ proof -
     using assms(4,5) calculation by force
   ultimately show ?thesis using MtoVal_valtoM wf_v assms by fastforce
 qed
+
+subsection \<open>Array Axiom Stable\<close>
+text \<open>Property to prove:
+  y \<noteq> x ==> (m[x] := v)[y] == m[y]
+  y \<noteq> x ==> select (store m x v) y = select m y\<close>
+
+
+subsection \<open>Array Axiom Extensionality\<close>
+text \<open>Property to prove: (\<forall>k. m[k] == n[k]) <==> Eq m n\<close>
 
 end
