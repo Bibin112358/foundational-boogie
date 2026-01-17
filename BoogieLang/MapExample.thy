@@ -86,8 +86,11 @@ next
 next
   case (MapV tks tv y')
   have "valtoM y = y'" by (simp add: MapV)
-  have "\<forall> v. y' \<noteq> (Up3 (LitV v))" using MapV assms(2) by fastforce
-  have "\<forall> v. y' \<noteq> (Up3 (AbsV v))" using MapV assms(2) by fastforce
+  then obtain rhs where "MtoVal (Some y') ty = Some rhs"
+    using assms(1) by fastforce
+  have "\<And> v. y' \<noteq> (Up3 (LitV v))" using MapV assms(2) by fastforce
+  have "\<And> v. y' \<noteq> (Up3 (AbsV v))" using MapV assms(2) by fastforce
+  have "\<And> v. y' \<noteq> (Up3 v)" using MapV assms(2) by fastforce
   have "MtoVal (Some y') ty \<noteq> None" by (metis \<open>valtoM y = y'\<close> assms(1) option.discI)
   then have "\<exists> tks' tv'. MtoVal (Some y') ty = Some (MapV tks' tv' y')" sorry
   then show ?thesis using MapV assms(1) by fastforce
@@ -130,90 +133,72 @@ abbreviation example_map2 :: "('a, 'a val3) map_interface" where
 primrec select_option where "select_option (Some v) k = (map_select example_map2) v k"
 lemma "select_option ((map_store example_map2) mg4 m24 (IntV 42)) m24 = Some (IntV 42)" by simp
 
-lemma
-  assumes store: "store_impl (MapV tks tv m) x v = Some ms"
-  assumes wf: "wf v"
-  assumes select: "select_impl ms x = Some w"
-  shows sh: "Eq (Some w) (Some v)"
-  oops
-
 lemma update0:
   assumes "store0 m k v = Some ms"
-  assumes "select0 ms k = w"
-  shows "w = Some v"
-  using assms(1,2) store0.elims by force
+  shows "select0 ms k = Some v"
+  using assms store0.elims by force
 
 lemma update1Up:
   assumes "store1 (Up m') k v = Some ms"
-  assumes "select1 ms k = Some w"
-  shows "w = v"
+  shows "select1 ms k = Some v"
 proof -
   obtain k' v' where "k = Up k' \<and> v = Up v'"
-    by (metis M.exhaust assms(1,2) option.discI select1.simps(4) store1.simps(4))
-  thus "w = v"
-    using assms(1,2) update0 by fastforce
+    by (metis M.exhaust assms option.discI store1.simps(4,5))
+  then show ?thesis using assms update0 by fastforce
 qed
 
 lemma update1Map:
   assumes "store1 (MapAux m') k v = Some ms"
-  assumes "select1 ms k = Some w"
-  shows "w = v"
+  shows "select1 ms k = Some v"
 proof -
-  obtain k' where "k = Up k'" 
-    by (metis M.exhaust assms(2) option.discI select1.simps(4))
-  thus "w = v"
-    using assms(1,2) by fastforce
+  obtain k' where "k = Up k'"
+    by (metis M.exhaust assms(1) option.discI store1.simps(5))
+  thus ?thesis using assms by fastforce
 qed
 
 lemma update1:
   assumes "store1 m k v = Some ms"
-  assumes "Some w = select1 ms k"
-  shows "w = v"
-  using M.exhaust assms(1,2) update1Map update1Up by metis
+  shows "select1 ms k = Some v"
+  using M.exhaust assms update1Map update1Up by metis
 
 lemma update2Up:
   assumes "store2 (Up m') k v = Some ms"
-  assumes "select2 ms k = Some w"
-  shows "w = v"
+  shows "select2 ms k = Some v"
 proof -
   obtain k' v' where "k = Up k' \<and> v = Up v'"
-    by (metis M.exhaust assms(1,2) option.discI select2.simps(4) store2.simps(4))
-  thus "w = v"
-    using assms(1,2) update1 by fastforce
+    by (metis M.exhaust assms(1) option.discI store2.simps(4,5))
+  thus ?thesis using assms update1 by fastforce
 qed
 
 lemma update2Map:
   assumes "store2 (MapAux m') k v = Some ms"
-  assumes "select2 ms k = Some w"
-  shows "w = v"
+  shows "select2 ms k = Some v"
 proof -
   obtain k' where "k = Up k'"
-    by (metis M.exhaust assms(2) option.discI select2.simps(4))
-  thus "w = v"
-    using assms(1,2) by fastforce
+    by (metis M.exhaust assms(1) option.discI store2.simps(5))
+  thus ?thesis using assms by fastforce
 qed
 
 lemma update2:
   assumes "store2 m k v = Some ms"
-  assumes "Some w = select2 ms k"
-  shows "w = v"
-  using M.exhaust assms(1,2) update2Map update2Up by metis
+  shows "select2 ms k = Some v"
+  using M.exhaust assms update2Map update2Up by metis
 
-lemma
-  assumes store: "store_impl (MapV tks tv m) x v = Some (MapV tks tv ms)"
-  assumes wfv: "wf v"
-  assumes select: "select_impl (MapV tks tv ms) x = Some w"
-  shows sh: "Eq (Some w) (Some v)"
+lemma ArrayAxUpdate:
+  assumes wf_v: "wf v"
+  assumes "store_impl m k v = Some ms"
+  assumes "m = (MapV tks tv m')"  (* should be deducible *)
+  assumes "ms = (MapV tks tv ms')"  (* should be deducible *)
+  assumes "select_impl ms k \<noteq> None"  (* should be deducible *)
+  shows "Eq (select_impl ms k) (Some v)"
 proof -
-  have "Some ms = store2 m (valtoM x) (valtoM v)"
-    by (metis MtoVal.simps(7) MtoVal_inj option.exhaust option.simps(3) store
-        store_impl.simps(1))
-  then have "Some (valtoM v) = select2 ms (valtoM x)"
-    by (metis MtoVal.simps(7) local.select option.discI option.exhaust select_impl.simps(1)
-        update2)
-  then have "Some w = MtoVal (Some (valtoM v)) tv"
-    using local.select by fastforce
-  then show ?thesis using MtoVal_valtoM wfv by blast
+  have "Some ms' = store2 m' (valtoM k) (valtoM v)"
+    by (metis assms(2-4) MtoVal.simps(7) MtoVal_inj option.exhaust option.simps(3) store_impl.simps(1))
+  then have "Some (valtoM v) = select2 ms' (valtoM k)"
+    by (simp add: update2)
+  moreover obtain w where "Some w = MtoVal (Some (valtoM v)) tv"
+    using assms(4,5) calculation by force
+  ultimately show ?thesis using MtoVal_valtoM wf_v assms by fastforce
 qed
 
 end
