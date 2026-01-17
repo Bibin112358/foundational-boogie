@@ -124,33 +124,49 @@ lemma update0:
 lemma update1Up:
   fixes ms :: "'a M M"
   assumes "store1 (Up m') k v = Some ms"
-  assumes s: "Some w = select1 ms k"
+  assumes "select1 ms k = Some w"
   shows "w = v"
-  by (smt (verit) M.distinct(1) M.inject(2) assms(1) map_option_eq_Some
-      option.discI s select1.elims store1.elims update0)
+proof -
+  obtain k' where "k = Up k'"
+    by (metis M.exhaust assms(2) option.discI select1.simps(4))
+  obtain v' where "v = Up v'"
+    by (metis M.exhaust assms(1) option.discI store1.simps(4))
+  have "store1 (Up m') (Up k') (Up v') = map_option Up (store0 m' k' v')"
+    by auto
+  obtain ms' where "Some ms' = store0 m' k' v'"
+    using \<open>k = Up k'\<close> \<open>v = Up v'\<close> assms(1) by auto
+  then have "ms = Up ms'"
+    using \<open>k = Up k'\<close> \<open>v = Up v'\<close> assms(1) by auto
+  obtain w' where "select0 ms' k' = Some w'"
+    using \<open>k = Up k'\<close> \<open>ms = Up ms'\<close> assms(2) by auto
+  then have "v' = w'"
+    by (metis \<open>Some ms' = store0 m' k' v'\<close>  update0)
+  then show ?thesis
+    using \<open>k = Up k'\<close> \<open>ms = Up ms'\<close> \<open>select0 ms' k' = Some w'\<close> \<open>v = Up v'\<close> assms(2)
+    by auto
+qed
 
-(*
-  by (smt (verit) M.distinct(1) M.inject(2) assms(1) map_option_eq_Some
-      option.discI s select1.elims store1.elims update0)
-*)
 
-(*
 lemma update1Map:
   fixes ms :: "'a M M"
   assumes "store1 (MapAux m') k v = Some ms"
-  assumes s: "Some w = select1 ms k"
+  assumes "select1 ms k = Some w"
   shows "w = v"
-  by (smt (verit) M.distinct(1) assms(1) map_upd_Some_unfold option.discI s
-      select1.simps(1) store1.elims)
+proof -
+  obtain k' where "k = Up k'"
+    by (metis M.exhaust assms(2) option.discI select1.simps(4))
+  show "w = v"
+    using \<open>k = Up k'\<close> assms(1,2) by force
+qed
 
 lemma update1:
   fixes ms :: "'a M M"
   assumes "store1 m k v = Some ms"
-  assumes s: "Some w = select1 ms k"
+  assumes "Some w = select1 ms k"
   shows "w = v"
-  by (smt (verit) M.distinct(1) assms(1) map_upd_Some_unfold option.discI s
-      select1.simps(1) store1.elims)
+  by (metis M.exhaust assms(1,2) update1Map update1Up)
 
+(*
 lemma update2:
   fixes ms :: "'a M M M"
   assumes "store2 (Up m) k v = Some ms"
