@@ -13,7 +13,7 @@ abstract values (values that have a type constructed via type constructors)
 TODO: explain Map Values
 \<close>
 datatype ('a, 'm) val = LitV lit | AbsV (the_absv: 'a)
-  | MapV ty ty 'm
+  | MapV "ty list" ty 'm
 
 abbreviation IntV where "IntV i \<equiv> LitV (LInt i)"
 abbreviation BoolV where "BoolV b \<equiv> LitV (LBool b)"
