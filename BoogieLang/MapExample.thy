@@ -47,13 +47,14 @@ primrec valtoM :: "'a valn \<Rightarrow> _ M" where
 fun MtoVal :: " _ M option \<Rightarrow> ty \<rightharpoonup> 'a valn" where
     "MtoVal (Some (Up3 (LitV v))) _ = Some (LitV v)"
   | "MtoVal (Some (Up3 (AbsV v))) _ = Some (AbsV v)"
+  | "MtoVal (Some (Up3 (MapV _ _ _))) _ = None"
   | "MtoVal (Some x) (TMap tks tv) = Some (MapV tks tv x)"
   | "MtoVal _ _ = None"
 
 lemma MtoVal_inj:
   assumes "MtoVal (Some x) (TMap tks tv) = Some (MapV tks tv y)"
   shows "x = y"
-  sorry
+  using MtoVal.elims assms by auto
 
 fun Eq where "Eq (Some (MapV _ _ a)) (Some (MapV _ _ b)) = (a = b)" | "Eq a b = (a = b)"
 
@@ -76,11 +77,12 @@ next
   have "valtoM y = y'" by (simp add: MapV)
   then obtain rhs where "MtoVal (Some y') ty = Some rhs"
     using assms(1) by fastforce
-  have "\<And> v. y' \<noteq> (Up3 (LitV v))" using MapV assms(2) by fastforce
-  have "\<And> v. y' \<noteq> (Up3 (AbsV v))" using MapV assms(2) by fastforce
-  have "\<And> v. y' \<noteq> (Up3 v)" using MapV assms(2) by fastforce
+  have "\<forall> v. Some y' \<noteq> Some (Up3 (LitV v))" using MapV assms(2) by fastforce
+  have "\<forall> v. Some y' \<noteq> Some (Up3 (AbsV v))" using MapV assms(2) by fastforce
+  have "\<forall> tks' tv' v'. Some y' \<noteq> Some (Up3 (MapV tks' tv' v'))" using MapV assms(2) by fastforce
+  have "\<And> v. Some y' \<noteq> Some (Up3 v)" using MapV assms(2) by fastforce
   have "MtoVal (Some y') ty \<noteq> None" by (metis \<open>valtoM y = y'\<close> assms(1) option.discI)
-  then have "\<exists> tks' tv'. MtoVal (Some y') ty = Some (MapV tks' tv' y')" sorry
+  have "\<exists> tks' tv'. MtoVal (Some y') ty = Some (MapV tks' tv' y')" sorry
   then show ?thesis using MapV assms(1) by fastforce
 qed
 
