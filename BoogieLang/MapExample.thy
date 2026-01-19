@@ -323,4 +323,30 @@ qed
 subsection \<open>Array Axiom Extensionality\<close>
 text \<open>Property to prove: (\<forall>k. m[k] == n[k]) <==> Eq m n\<close>
 
+lemma extensional0: "(\<exists>k. select0 m k \<noteq> None) \<and> (\<forall>k. select0 m k = select0 n k) \<longrightarrow> (m = n)"
+  by (metis (no_types, lifting) ext M.exhaust select0.simps(1,2))
+
+(* counter example *)
+abbreviation mExt :: "unit val2" where "mExt \<equiv> Up (MapAux [IntV 1 \<mapsto> Up (IntV 2)])"
+abbreviation nExt :: "unit val2" where "nExt \<equiv> MapAux [Up (IntV 1) \<mapsto> Up (Up (IntV 2))]"
+
+(*
+lemma extensional1: "(\<exists>k. select1 m k \<noteq> None) \<and> (\<forall>k. select1 m k = select1 n k) \<longrightarrow> (m = n)"
+proof (cases m)
+  case (MapAux m')
+  then show ?thesis
+  proof (cases n)
+    case (Up n')
+    then show ?thesis sorry
+  next
+    case (MapAux n')
+    then show ?thesis sorry
+  qed
+
+next
+  case (Up x2)
+  then show ?thesis sorry
+qed
+*)
+
 end
