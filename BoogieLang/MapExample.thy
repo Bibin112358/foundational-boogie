@@ -7,11 +7,15 @@ begin
 
 subsection \<open>Type Definition\<close>
 (* user needs to instantiate how many nesting levels to support *)
-type_synonym 'a val0 = "('a, unit)  val"
-type_synonym 'a val1 = "('a val0, unit) L"
-type_synonym 'a val2 = "('a val1, 'a val0) L"
-type_synonym 'a val3 = "('a val2, 'a val1 + 'a val0) L"
-type_synonym 'a valn = "('a, 'a val3 + 'a val2 + 'a val1) val"
+type_synonym 'a val0 = "('a, unit) val"
+type_synonym 'a val1 = "('a val0, 'a val0) L"
+type_synonym 'a val10 = "'a val1 + 'a val0"
+type_synonym 'a val2 = "('a val1, 'a val10) L"
+type_synonym 'a val210 = "'a val2 + 'a val1 + 'a val0"
+type_synonym 'a val3 = "('a val2, 'a val210) L"
+type_synonym 'a val3210 = "'a val3 + 'a val210"
+type_synonym 'a valn = "('a, 'a val3 + 'a val2 + 'a val1) val"  (* do not inlcude val0! *)
+
 
 subsection \<open>Examples\<close>
 (* MapV examples *)
@@ -20,7 +24,7 @@ value "IntV 2 :: unit valn"
 
 abbreviation MapTV where "MapTV \<equiv> MapV [] (TPrim TInt)"  (* convenience for testing purposes *)
 
-abbreviation m11 :: "unit val1" where "m11 \<equiv> MapKey [IntV 3 \<mapsto> Inl (IntV 2)]"
+abbreviation m11 :: "unit val1" where "m11 \<equiv> MapKey [IntV 3 \<mapsto> IntV 2]"
 abbreviation m14 :: "unit valn" where "m14 \<equiv> MapTV (Inr (Inr m11))"
 
 abbreviation m22 :: "unit val2" where "m22 \<equiv> MapKey [m11 \<mapsto> Inr (IntV 4)]"
@@ -84,9 +88,9 @@ qed
 subsection \<open>Select\<close>
 (* there needs to be as many additional store functions, as there are nesting levels *)
 (* user needs to generate these functions (is there a way to make this cleaner, macro?) *)
-fun select0 :: "'a val1 \<Rightarrow> 'a val0 \<rightharpoonup> 'a val1 + 'a val0" where
-    "select0 (MapVal m) k = map_option Inl (m (Inl k))"
-  | "select0 (MapKey m) k = (case m k of (Some (Inl v)) \<Rightarrow> Some (Inr v) | _ \<Rightarrow> None)"
+fun select0 :: "'a val1 \<Rightarrow> 'a val0 \<rightharpoonup> 'a val10" where
+    "select0 (MapVal m) k = map_option Inl (m k)"
+  | "select0 (MapKey m) k = (case m k of (Some v) \<Rightarrow> Some (Inr v) | _ \<Rightarrow> None)"
 
 fun select1 :: "'a val2 \<Rightarrow> ('a val1 + 'a val0) \<rightharpoonup>  'a val2 + 'a val1 + 'a val0" where
     "select1 (MapVal m) k = map_option Inl (m k)"
@@ -98,15 +102,41 @@ fun select2 :: "'a val3 \<Rightarrow> ('a val2 + 'a val1 + 'a val0) \<rightharpo
   | "select2 (MapKey m) (Inl k) = (case m k of (Some v) \<Rightarrow> Some (Inr v) | _ \<Rightarrow> None)"
   | "select2 (MapKey m) (Inr k) = None"
 
-primrec select_impl :: "'a valn \<Rightarrow> 'a valn \<rightharpoonup> 'a valn" where
-    "select_impl (MapV _ tv m) k = MtoVal (select2 m (valtoM k)) tv"
-  | "select_impl (LitV _) _ = None"
-  | "select_impl (AbsV _) _ = None"
+fun selectAux :: "_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> _" where
+    "selectAux (MapVal m) _ (Some p)  = map_option Inl (m p)"
+  | "selectAux (MapKey m) (Some k) _ = (case m k of (Some v) \<Rightarrow> Some (Inr v) | _ \<Rightarrow> None)"
+  | "selectAux _ _ _ =  None"
 
-abbreviation example_map :: "('a, 'a val3) map_interface" where
+fun toVal3210 :: "'a valn \<Rightarrow> 'a val3210 option" where
+    "toVal3210 (LitV v) = Some (Inr (Inr (Inr (LitV v))))"
+  | "toVal3210 (AbsV v) = Some (Inr (Inr (Inr (AbsV v))))"
+  | "toVal3210 (MapV _ _ (Inr (Inr m))) = Some (Inr (Inr (Inl m)))"
+  | "toVal3210 (MapV _ _ (Inr (Inl m))) = Some (Inr (Inl m))"
+  | "toVal3210 (MapV _ _ (Inl m)) = Some (Inl m)"
+
+fun val3ToValn :: "ty \<Rightarrow> 'a val3210 \<Rightarrow> 'a valn option" where
+    "val3ToValn _ (Inr (Inr (Inr (LitV v)))) = Some (LitV v)"
+  | "val3ToValn _ (Inr (Inr (Inr (AbsV v)))) = Some (AbsV v)"
+  | "val3ToValn (TMap tks tv) (Inr (Inr (Inl m))) = Some (MapV tks tv (Inr (Inr m)))"
+  | "val3ToValn (TMap tks tv) (Inr (Inl m)) = Some (MapV tks tv (Inr (Inl m)))"
+  | "val3ToValn (TMap tks tv) (Inl m) = Some (MapV tks tv (Inl m))"
+  | "val3ToValn _ _ = None"
+
+
+fun vH :: "_ \<Rightarrow> _" where "vH (Some (Inl h)) = Some h" | "vH _ = None"
+fun vT :: "_ \<Rightarrow> _" where "vT (Some (Inr t)) = Some t" | "vT _ = None"
+
+fun select_impl :: "'a valn \<Rightarrow> 'a valn \<rightharpoonup> 'a valn" where
+    "select_impl (LitV _) _ = None"
+  | "select_impl (AbsV _) _ = None"
+  | "select_impl (MapV _ tv (Inr (Inr m))) k = Option.bind (selectAux m (vT (vT (vT (toVal3210 k)))) (vT (vT (vT (toVal3210 k))))) ((val3ToValn tv) \<circ> Inr \<circ> Inr)"
+  | "select_impl (MapV _ tv (Inr (Inl m))) k = Option.bind (selectAux m (vH (vT (vT (toVal3210 k)))) (vT (vT (toVal3210 k)))) ((val3ToValn tv) \<circ> Inr)"
+  | "select_impl (MapV _ tv (Inl m)) k = Option.bind (selectAux m (vH (vT (toVal3210 k))) (vT (toVal3210 k))) (val3ToValn tv)"
+
+abbreviation example_map :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
   "example_map \<equiv> \<lparr> map_select = select_impl, map_store = undefined \<rparr>"
 
-lemma "(map_select example_map) mg4 m24 = Some m14" by simp
+lemma "(map_select example_map) mg4 m24 = Some (MapTV (Inr (Inr (MapKey [IntV 3 \<mapsto> IntV 2]))))" by simp
 
 subsection \<open>Store\<close>
 fun store0 :: "_ M \<Rightarrow> _ M \<Rightarrow> _ M \<rightharpoonup> _ M" where
