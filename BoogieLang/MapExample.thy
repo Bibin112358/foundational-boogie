@@ -4,37 +4,36 @@ theory MapExample
 imports Semantics
 begin
 
+
 subsection \<open>Type Definition\<close>
 (* user needs to instantiate how many nesting levels to support *)
 type_synonym 'a val0 = "('a, unit)  val"
-type_synonym 'a val1 = "('a val0) M"
-type_synonym 'a val2 = "('a val1) M"
-type_synonym 'a val3 = "('a val2) M"
-type_synonym 'a valn = "('a, 'a val3) val"
+type_synonym 'a val1 = "('a val0, unit) L"
+type_synonym 'a val2 = "('a val1, 'a val0) L"
+type_synonym 'a val3 = "('a val2, 'a val1 + 'a val0) L"
+type_synonym 'a valn = "('a, 'a val3 + 'a val2 + 'a val1) val"
 
 subsection \<open>Examples\<close>
 (* MapV examples *)
-value "Up ( Up (Up (IntV 1))) :: unit val3"
+(* value "Up ( Up (Up (IntV 1))) :: unit val3" *)
 value "IntV 2 :: unit valn"
-definition simple_map_example :: "(unit val3, unit valn) map" where
-  "simple_map_example = [Up ( Up (Up (IntV 1))) \<mapsto> IntV 2]"
 
 abbreviation MapTV where "MapTV \<equiv> MapV [] (TPrim TInt)"  (* convenience for testing purposes *)
-abbreviation Up2 where "Up2 x \<equiv> Up (Up x)"
-abbreviation Up3 where "Up3 x \<equiv> Up (Up2 x)"
-abbreviation Up4 where "Up4 x \<equiv> Up (Up3 x)"
 
-abbreviation m11 :: "unit val1" where "m11 \<equiv> MapAux [IntV 3 \<mapsto> Up (IntV 2)]"
-abbreviation m14 :: "unit valn" where "m14 \<equiv> MapTV (Up2 m11)"
+abbreviation m11 :: "unit val1" where "m11 \<equiv> MapKey [IntV 3 \<mapsto> Inl (IntV 2)]"
+abbreviation m14 :: "unit valn" where "m14 \<equiv> MapTV (Inr (Inr m11))"
 
-abbreviation m22 :: "unit val2" where "m22 \<equiv> MapAux [m11 \<mapsto> Up2 (IntV 4)]"
-abbreviation m24 :: "unit valn" where "m24 \<equiv> MapTV (Up m22)"
+abbreviation m22 :: "unit val2" where "m22 \<equiv> MapKey [m11 \<mapsto> Inr (IntV 4)]"
+abbreviation m24 :: "unit valn" where "m24 \<equiv> MapTV (Inr (Inl m22))"
 
-abbreviation m33 :: "unit val3" where "m33 \<equiv> MapAux [m22 \<mapsto> Up3 (IntV 6)]"
-abbreviation m34 :: "unit valn" where "m34 \<equiv> MapTV  m33"
+abbreviation m33 :: "unit val3" where "m33 \<equiv> MapKey [m22 \<mapsto> Inr (Inr (IntV 6))]"
+abbreviation m34 :: "unit valn" where "m34 \<equiv> MapTV  (Inl m33)"
 
-abbreviation mg3 :: "unit val3" where "mg3 \<equiv> MapAux [m22 \<mapsto> Up2 m11]"
-abbreviation mg4 :: "unit valn" where "mg4 \<equiv> MapV [] (TMap []  (TPrim TInt)) mg3"
+abbreviation mg3 :: "unit val3" where "mg3 \<equiv> MapKey [m22 \<mapsto> Inr (Inl  m11)]"
+abbreviation mg4 :: "unit valn" where "mg4 \<equiv> MapV [] (TMap []  (TPrim TInt)) (Inl mg3)"
+
+abbreviation ms3 :: "unit val3" where "ms3 \<equiv> MapVal [Inr (Inr (IntV 3)) \<mapsto> m33]"
+abbreviation ms4 :: "unit valn" where "ms4 \<equiv> MapV [] (TMap []  (TPrim TInt)) (Inl ms3)"
 
 
 subsection \<open>Helper Functions and Lemmas\<close>
@@ -57,10 +56,6 @@ lemma MtoVal_inj:
   using MtoVal.elims assms by auto
 
 fun Eq where "Eq (Some (MapV _ _ a)) (Some (MapV _ _ b)) = (a = b)" | "Eq a b = (a = b)"
-
-fun wf :: "'a valn \<Rightarrow> bool" where
-    "wf (MapV _ _ (Up (Up (Up v)))) = False"
-  | "wf _ = True"
 
 lemma MtoVal_valtoM:
   assumes "Some x = MtoVal (Some (valtoM y)) ty"
@@ -89,19 +84,19 @@ qed
 subsection \<open>Select\<close>
 (* there needs to be as many additional store functions, as there are nesting levels *)
 (* user needs to generate these functions (is there a way to make this cleaner, macro?) *)
-fun select0 :: "_ M \<Rightarrow> _ M \<rightharpoonup> _ M" where
-    "select0 (MapAux m) (Up k) = m k"
-  | "select0 _ _ = None"
+fun select0 :: "'a val1 \<Rightarrow> 'a val0 \<rightharpoonup> 'a val1 + 'a val0" where
+    "select0 (MapVal m) k = map_option Inl (m (Inl k))"
+  | "select0 (MapKey m) k = (case m k of (Some (Inl v)) \<Rightarrow> Some (Inr v) | _ \<Rightarrow> None)"
 
-fun select1 :: "_ M \<Rightarrow> _ M \<rightharpoonup> _ M" where
-    "select1 (MapAux m) (Up k) = m k"
-  | "select1 (Up m) (Up k) = map_option Up (select0 m k)"
-  | "select1 _ _ = None"
+fun select1 :: "'a val2 \<Rightarrow> ('a val1 + 'a val0) \<rightharpoonup>  'a val2 + 'a val1 + 'a val0" where
+    "select1 (MapVal m) k = map_option Inl (m k)"
+  | "select1 (MapKey m) (Inl k) = (case m k of (Some v) \<Rightarrow> Some (Inr v) | _ \<Rightarrow> None)"
+  | "select1 (MapKey m) (Inr k) = None"
 
-fun select2 :: "_ M \<Rightarrow> _ M \<rightharpoonup> _ M" where
-    "select2 (MapAux m) (Up k) = m k"
-  | "select2 (Up m) (Up k) = map_option Up (select1 m k)"
-  | "select2 _ _ = None"
+fun select2 :: "'a val3 \<Rightarrow> ('a val2 + 'a val1 + 'a val0) \<rightharpoonup>  'a val3 + 'a val2 + 'a val1 + 'a val0" where
+    "select2 (MapVal m) k = map_option Inl (m k)"
+  | "select2 (MapKey m) (Inl k) = (case m k of (Some v) \<Rightarrow> Some (Inr v) | _ \<Rightarrow> None)"
+  | "select2 (MapKey m) (Inr k) = None"
 
 primrec select_impl :: "'a valn \<Rightarrow> 'a valn \<rightharpoonup> 'a valn" where
     "select_impl (MapV _ tv m) k = MtoVal (select2 m (valtoM k)) tv"
