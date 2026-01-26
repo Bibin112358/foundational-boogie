@@ -422,7 +422,7 @@ fun type_of_val :: "'a absval_ty_fun \<Rightarrow> ('a, 'k) val \<Rightarrow> ty
   where
    "type_of_val A (LitV v) = TPrim (type_of_lit v)"
  | "type_of_val A (AbsV v) = TCon (fst (A v)) (snd (A v))"
- | "type_of_val _ (MapV ty_keys ty_val _ _) = TMap [ty_keys] ty_val"
+ | "type_of_val _ (MapV ty_keys ty_val _) = TMap ty_keys ty_val"
 
 type_synonym rtype_env = "ty list"
 
