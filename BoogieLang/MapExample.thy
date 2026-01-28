@@ -7,7 +7,9 @@ begin
 
 subsection \<open>Type Definition\<close>
 (* user needs to instantiate how many nesting levels to support *)
-type_synonym 'a val0 = "('a, unit) val"
+
+datatype 'a val0 = LitV0 lit | AbsV0 (the_absv: 'a)
+
 type_synonym 'a val1 = "('a val0, 'a val0) L"
 type_synonym 'a val10 = "'a val1 + 'a val0"
 type_synonym 'a val2 = "('a val1, 'a val10) L"
@@ -22,123 +24,89 @@ subsection \<open>Examples\<close>
 (* value "Up ( Up (Up (IntV 1))) :: unit val3" *)
 value "IntV 2 :: unit valn"
 
-abbreviation MapTV where "MapTV \<equiv> MapV [] (TPrim TInt)"  (* convenience for testing purposes *)
+abbreviation IntV where "IntV i \<equiv> LitV0 (LInt i)"
+abbreviation TT where "TT \<equiv> TPrim TInt"  (* convenience for testing purposes *)
 
-abbreviation m11 :: "unit val1" where "m11 \<equiv> MapKey [IntV 3 \<mapsto> IntV 2]"
-abbreviation m14 :: "unit valn" where "m14 \<equiv> MapTV (Inr (Inr m11))"
+abbreviation m11 :: "unit val1" where "m11 \<equiv> MapKey [IntV 3 \<mapsto> IntV 2] TT"
+abbreviation m14 :: "unit valn" where "m14 \<equiv> MapV (Inr (Inr m11))"
 
-abbreviation m22 :: "unit val2" where "m22 \<equiv> MapKey [m11 \<mapsto> Inr (IntV 4)]"
-abbreviation m24 :: "unit valn" where "m24 \<equiv> MapTV (Inr (Inl m22))"
+abbreviation m22 :: "unit val2" where "m22 \<equiv> MapKey [m11 \<mapsto> Inr (IntV 4)] TT"
+abbreviation m24 :: "unit valn" where "m24 \<equiv> MapV (Inr (Inl m22))"
 
-abbreviation m33 :: "unit val3" where "m33 \<equiv> MapKey [m22 \<mapsto> Inr (Inr (IntV 6))]"
-abbreviation m34 :: "unit valn" where "m34 \<equiv> MapTV  (Inl m33)"
+abbreviation m33 :: "unit val3" where "m33 \<equiv> MapKey [m22 \<mapsto> Inr (Inr (IntV 6))] TT"
+abbreviation m34 :: "unit valn" where "m34 \<equiv> MapV (Inl m33)"
 
-abbreviation mg3 :: "unit val3" where "mg3 \<equiv> MapKey [m22 \<mapsto> Inr (Inl  m11)]"
-abbreviation mg4 :: "unit valn" where "mg4 \<equiv> MapV [] (TMap []  (TPrim TInt)) (Inl mg3)"
+abbreviation mg3 :: "unit val3" where "mg3 \<equiv> MapKey [m22 \<mapsto> Inr (Inl  m11)] (TMap [] (TMap []  (TPrim TInt)))"
+abbreviation mg4 :: "unit valn" where "mg4 \<equiv> MapV (Inl mg3)"
 
-abbreviation ms3 :: "unit val3" where "ms3 \<equiv> MapVal [Inr (Inr (IntV 3)) \<mapsto> m33]"
-abbreviation ms4 :: "unit valn" where "ms4 \<equiv> MapV [] (TMap []  (TPrim TInt)) (Inl ms3)"
+abbreviation ms3 :: "unit val3" where "ms3 \<equiv> MapVal [Inr (Inr (IntV 3)) \<mapsto> m33] (TMap [] (TMap []  (TPrim TInt)))"
+abbreviation ms4 :: "unit valn" where "ms4 \<equiv> MapV (Inl ms3)"
 
 
 subsection \<open>Helper Functions and Lemmas\<close>
-
-primrec valtoM :: "'a valn \<Rightarrow> _ M" where
-    "valtoM (MapV _ _ m) = m"
-  | "valtoM (LitV v) = Up3 (LitV v)"
-  | "valtoM (AbsV v) = Up3 (AbsV v)"
-
-fun MtoVal :: " _ M option \<Rightarrow> ty \<rightharpoonup> 'a valn" where
-    "MtoVal (Some (Up3 (LitV v))) _ = Some (LitV v)"
-  | "MtoVal (Some (Up3 (AbsV v))) _ = Some (AbsV v)"
-  | "MtoVal (Some (Up3 (MapV _ _ _))) _ = None"
-  | "MtoVal (Some x) (TMap tks tv) = Some (MapV tks tv x)"
-  | "MtoVal _ _ = None"
-
-lemma MtoVal_inj:
-  assumes "MtoVal (Some x) (TMap tks tv) = Some (MapV tks tv y)"
-  shows "x = y"
-  using MtoVal.elims assms by oops
-
-fun Eq where "Eq (Some (MapV _ _ a)) (Some (MapV _ _ b)) = (a = b)" | "Eq a b = (a = b)"
-
-lemma MtoVal_valtoM:
-  assumes "Some x = MtoVal (Some (valtoM y)) ty"
-  assumes "wf y"
-  shows "Eq (Some x) (Some y)"
-proof (cases y)
-  case (LitV y')
-  then show ?thesis by (simp add: assms(1))
-next
-  case (AbsV y')
-  then show ?thesis by (simp add: assms(1))
-next
-  case (MapV tks tv y')
-  have "valtoM y = y'" by (simp add: MapV)
-  then obtain rhs where "MtoVal (Some y') ty = Some rhs"
-    using assms(1) by fastforce
-  have "\<forall> v. Some y' \<noteq> Some (Up3 (LitV v))" using MapV assms(2) by fastforce
-  have "\<forall> v. Some y' \<noteq> Some (Up3 (AbsV v))" using MapV assms(2) by fastforce
-  have "\<forall> tks' tv' v'. Some y' \<noteq> Some (Up3 (MapV tks' tv' v'))" using MapV assms(2) by fastforce
-  have "\<And> v. Some y' \<noteq> Some (Up3 v)" using MapV assms(2) by fastforce
-  have "MtoVal (Some y') ty \<noteq> None" by (metis \<open>valtoM y = y'\<close> assms(1) option.discI)
-  have "\<exists> tks' tv'. MtoVal (Some y') ty = Some (MapV tks' tv' y')" sorry
-  then show ?thesis using MapV assms(1) by fastforce
-qed
 
 subsection \<open>Select\<close>
 (* there needs to be as many additional store functions, as there are nesting levels *)
 (* user needs to generate these functions (is there a way to make this cleaner, macro?) *)
 fun select0 :: "'a val10 \<Rightarrow> 'a val10 \<rightharpoonup> 'a val10" where
-    "select0 (Inl (MapVal m)) (Inr k) = map_option Inl (m k)"
-  | "select0 (Inl (MapKey m)) (Inr k) = map_option Inr (m k)"
+    "select0 (Inl (MapVal m _)) (Inr k) = map_option Inl (m k)"
+  | "select0 (Inl (MapKey m _)) (Inr k) = map_option Inr (m k)"
   | "select0 _ _ = None"
 
 fun select1 :: "'a val210  \<Rightarrow> 'a val210  \<rightharpoonup> 'a val210" where
-    "select1 (Inl (MapVal m)) (Inr k) = map_option Inl (m k)"
-  | "select1 (Inl (MapKey m)) (Inr (Inl k)) = map_option Inr (m k)"
+    "select1 (Inl (MapVal m _)) (Inr k) = map_option Inl (m k)"
+  | "select1 (Inl (MapKey m _)) (Inr (Inl k)) = map_option Inr (m k)"
   | "select1 (Inr m) (Inr k) = map_option Inr (select0 m k)"
   | "select1 _ _ = None"
 
 fun select2 :: "'a val3 \<Rightarrow> ('a val2 + 'a val1 + 'a val0) \<rightharpoonup>  'a val3 + 'a val2 + 'a val1 + 'a val0" where
-    "select2 (MapVal m) k = map_option Inl (m k)"
-  | "select2 (MapKey m) (Inl k) = (case m k of (Some v) \<Rightarrow> Some (Inr v) | _ \<Rightarrow> None)"
-  | "select2 (MapKey m) (Inr k) = None"
+    "select2 (MapVal m _) k = map_option Inl (m k)"
+  | "select2 (MapKey m _) (Inl k) = (case m k of (Some v) \<Rightarrow> Some (Inr v) | _ \<Rightarrow> None)"
+  | "select2 (MapKey m _) (Inr k) = None"
 
 
-fun toVal3210 :: "'a valn \<Rightarrow> 'a val3210 option" where
-    "toVal3210 (LitV v) = Some (Inr (Inr (Inr (LitV v))))"
-  | "toVal3210 (AbsV v) = Some (Inr (Inr (Inr (AbsV v))))"
-  | "toVal3210 (MapV _ _ (Inr (Inr m))) = Some (Inr (Inr (Inl m)))"
-  | "toVal3210 (MapV _ _ (Inr (Inl m))) = Some (Inr (Inl m))"
-  | "toVal3210 (MapV _ _ (Inl m)) = Some (Inl m)"
+fun toVal3210 :: "'a valn \<Rightarrow> 'a val3210" where
+    "toVal3210 (LitV v) = (Inr (Inr (Inr (LitV0 v))))"
+  | "toVal3210 (AbsV v) = (Inr (Inr (Inr (AbsV0 v))))"
+  | "toVal3210 (MapV (Inr (Inr m))) = (Inr (Inr (Inl m)))"
+  | "toVal3210 (MapV (Inr (Inl m))) = (Inr (Inl m))"
+  | "toVal3210 (MapV (Inl m)) = (Inl m)"
 
-fun val3ToValn :: "ty \<Rightarrow> 'a val3210 \<Rightarrow> 'a valn option" where
-    "val3ToValn _ (Inr (Inr (Inr (LitV v)))) = Some (LitV v)"
-  | "val3ToValn _ (Inr (Inr (Inr (AbsV v)))) = Some (AbsV v)"
-  | "val3ToValn (TMap tks tv) (Inr (Inr (Inl m))) = Some (MapV tks tv (Inr (Inr m)))"
-  | "val3ToValn (TMap tks tv) (Inr (Inl m)) = Some (MapV tks tv (Inr (Inl m)))"
-  | "val3ToValn (TMap tks tv) (Inl m) = Some (MapV tks tv (Inl m))"
-  | "val3ToValn _ _ = None"
+fun toVal3210Opt :: "'a valn \<Rightarrow> 'a val3210 option" where
+  "toVal3210Opt x = Some (toVal3210 x)"
+
+fun val3ToValn :: "'a val3210 \<Rightarrow> 'a valn" where
+    "val3ToValn (Inr (Inr (Inr (LitV0 v)))) = (LitV v)"
+  | "val3ToValn (Inr (Inr (Inr (AbsV0 v)))) = (AbsV v)"
+  | "val3ToValn (Inr (Inr (Inl m))) = (MapV (Inr (Inr m)))"
+  | "val3ToValn (Inr (Inl m)) = (MapV (Inr (Inl m)))"
+  | "val3ToValn (Inl m) = (MapV (Inl m))"
 
 fun vH :: "_ \<Rightarrow> _" where "vH (Some (Inl h)) = Some h" | "vH _ = None"
 fun vT :: "_ \<Rightarrow> _" where "vT (Some (Inr t)) = Some t" | "vT _ = None"
 
-fun selectAux :: "_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> _" where
-    "selectAux (MapVal m) _ (Some p)  = map_option Inl (m p)"
-  | "selectAux (MapKey m) (Some k) _ = map_option Inr (m k)"
-  | "selectAux _ _ _ =  None"
+fun selectAux0 :: "_ \<Rightarrow> _ \<Rightarrow> _" where
+    "selectAux0 (MapVal m _) (Some (Inr k)) = map_option Inl (m k)"
+  | "selectAux0 (MapKey m _) (Some (Inr k)) = map_option Inr (m k)"
+  | "selectAux0 _ _ = None"
+
+fun selectAux :: "('a, 'a + 'b) L \<Rightarrow> (('a, 'a + 'b) L + 'a + 'b) option \<Rightarrow> (('a, 'a + 'b) L + 'a + 'b) option"  where
+    "selectAux (MapVal m _) (Some (Inr k)) = map_option Inl (m k)"
+  | "selectAux (MapKey m _) (Some (Inr (Inl k))) = map_option Inr (m k)"
+  | "selectAux _ _ = None"
+
 
 fun selectImpl :: "'a valn \<Rightarrow> 'a valn \<rightharpoonup> 'a valn" where
     "selectImpl (LitV _) _ = None"
   | "selectImpl (AbsV _) _ = None"
-  | "selectImpl (MapV _ tv (Inr (Inr m))) k = Option.bind (selectAux m (vT (vT (vT (toVal3210 k)))) (vT (vT (vT (toVal3210 k))))) ((val3ToValn tv) \<circ> Inr \<circ> Inr)"
-  | "selectImpl (MapV _ tv (Inr (Inl m))) k = Option.bind (selectAux m (vH (vT (vT (toVal3210 k)))) (vT (vT (toVal3210 k)))) ((val3ToValn tv) \<circ> Inr)"
-  | "selectImpl (MapV _ tv (Inl m)) k = Option.bind (selectAux m (vH (vT (toVal3210 k))) (vT (toVal3210 k))) (val3ToValn tv)"
+  | "selectImpl (MapV (Inr (Inr m))) k = map_option ((val3ToValn) \<circ> Inr \<circ> Inr) (selectAux0 m ((vT (vT (toVal3210Opt k)))))"
+  | "selectImpl (MapV (Inr (Inl m))) k = map_option ((val3ToValn) \<circ> Inr) (selectAux m ((vT (toVal3210Opt k))))"
+  | "selectImpl (MapV (Inl m)) k = map_option (val3ToValn) (selectAux m ( (toVal3210Opt k)))"
 
 abbreviation example_map :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
   "example_map \<equiv> \<lparr> map_select = selectImpl, map_store = undefined \<rparr>"
 
-lemma "(map_select example_map) mg4 m24 = Some (MapTV (Inr (Inr (MapKey [IntV 3 \<mapsto> IntV 2]))))" by simp
+lemma "(map_select example_map) mg4 m24 = Some (MapV (Inr (Inr (MapKey [IntV 3 \<mapsto> IntV 2] TT))))" by simp
 
 subsection \<open>Store\<close>
 fun store0 :: "_ M \<Rightarrow> _ M \<Rightarrow> _ M \<rightharpoonup> _ M" where
@@ -367,16 +335,17 @@ subsection \<open>Array Axiom Extensionality\<close>
 text \<open>Property to prove: (\<forall>k. m[k] == n[k]) <==> Eq m n\<close>
 
 lemma extensionalAuxVal:
-  assumes "selectAux (MapVal m) = selectAux (MapVal n)"
+  assumes "selectAux (MapVal m t) = selectAux (MapVal n t')"
   shows "m = n"
 proof -
   have "\<forall>p. map_option Inl (m p) = map_option Inl (n p)"
   proof rule
-    fix p k
-    have "selectAux (MapVal m) k (Some p) = selectAux (MapVal n) k (Some p)" using assms by auto
-    also have "selectAux (MapVal m) k (Some p) = map_option Inl (m p)" by simp
-    also have "selectAux (MapVal n) k (Some p) = map_option Inl (n p)" by simp
-    finally show "map_option Inl (m p) = map_option Inl (n p)" by (metis Inl_inject option.inj_map_strong)
+    fix k
+    have "selectAux (MapVal m t) (Some (Inr k)) = selectAux (MapVal n t') (Some (Inr k))"
+      by (metis assms selectAux.simps(1))
+    also have "selectAux (MapVal m t) (Some (Inr k)) = map_option Inl (m k)" by simp
+    also have "selectAux (MapVal n t') (Some (Inr k)) = map_option Inl (n k)" by simp
+    finally show "map_option Inl (m k) = map_option Inl (n k)" by (metis Inl_inject option.inj_map_strong)
   qed
   then have "\<forall>p. (m p) = (n p)"
     by (metis old.sum.inject(1) option.inj_map_strong)
@@ -385,15 +354,16 @@ proof -
 qed
 
 lemma extensionalAuxKey:
-  assumes "selectAux (MapKey m) = selectAux (MapKey n)"
+  assumes "selectAux (MapKey m t) = selectAux (MapKey n t')"
   shows "m = n"
 proof -
   have "\<forall>k. map_option Inr (m k) = map_option Inr (n k)"
   proof rule
-    fix p k
-    have "selectAux (MapKey m) (Some k) p = selectAux (MapKey n) (Some k) p" using assms by auto
-    also have "selectAux (MapKey m) (Some k) p = map_option Inr (m k)" by simp
-    also have "selectAux (MapKey n) (Some k) p = map_option Inr (n k)" by simp
+    fix k
+    have "selectAux (MapKey m t) (Some (Inr (Inl k))) = selectAux (MapKey n t') (Some (Inr (Inl k)))"
+      by (metis assms selectAux.simps(2))
+    also have "selectAux (MapKey m t) (Some (Inr (Inl k))) = map_option Inr (m k)" by simp
+    also have "selectAux (MapKey n t') (Some (Inr (Inl k))) = map_option Inr (n k)" by simp
     finally show "map_option Inr (m k) = map_option Inr (n k)"
       by (metis option.inj_map_strong sum.inject(2))
   qed
@@ -403,24 +373,123 @@ proof -
     by auto
 qed
 
+primrec type_of_L where
+  "type_of_L (MapKey _ t) = t" | "type_of_L (MapVal _ t) = t"
 
 
-lemma extensionalAux':
+lemma extensionalAux:
   assumes "selectAux m = selectAux n"
-  assumes "\<exists>k p. selectAux m k p \<noteq> None"
+  assumes "type_of_L m = type_of_L n"
+  assumes "\<exists>k. selectAux m k \<noteq> None"
   shows "m = n"
 proof (cases m)
-  case (MapVal m')
+  case (MapVal m' t)
   then show ?thesis
-    by (metis L.exhaust assms extensionalAuxVal option.exhaust_sel
-        selectAux.simps(1,3,4))
+  proof (cases n)
+    case (MapVal n' t')
+    then show "m = n" using MapVal \<open>m = MapVal m' t\<close> assms extensionalAuxVal by auto
+  next
+    case (MapKey x21 x22)
+    obtain k v where "selectAux m k = Some v" by sorry
+    then show ?thesis
+      using \<open>m = MapVal m' t\<close> assms elem_set option.set_sel selectAux.simps
+      by sorry
+  qed
 next
-  case (MapKey m')
+  case (MapKey m' t)
   then show ?thesis
-    by (metis L.exhaust assms extensionalAuxKey option.exhaust_sel
-        selectAux.simps(2-4))
+  proof (cases n)
+    case (MapVal x11 x12)
+    then show ?thesis
+      using \<open>m = MapKey m' t\<close> assms(1,3) elem_set option.set_sel selectAux.simps(1,3,4)
+      by sorry
+  next
+    case (MapKey x21 x22)
+    then show "m = n" using MapKey \<open>m = MapKey m' t\<close> assms extensionalAuxKey by auto
+  qed
 qed
 
+
+lemma valSurj: "surj (\<lambda>k. (vH (vT (toVal3210Opt k))))"
+proof -
+  have "\<forall>y. \<exists>z. (\<lambda>k. (vH (vT (toVal3210Opt k)))) z = y"
+    by (metis option.exhaust_sel toVal3210.simps(4,5) toVal3210Opt.simps vH.simps(1,2)
+        vT.simps(1,3))
+  then show ?thesis by (metis (mono_tags, lifting) surj_def)
+qed
+
+lemma valBij: "toVal3210 (val3ToValn x) = x"
+proof (cases x)
+  case (Inl x')
+  then show ?thesis by simp
+next
+  case (Inr x')
+  then show ?thesis
+  proof (cases x')
+    case (Inl x'')
+    then show ?thesis using Inl Inr by fastforce
+  next
+    case (Inr x'')
+    then show ?thesis
+    proof (cases x'')
+      case (Inl x''')
+      then show ?thesis 
+        using \<open>x = Inr x'\<close> \<open>x' = Inr x''\<close> \<open>x'' = Inl x'''\<close> by simp
+    next
+      case (Inr x''')
+      then show ?thesis
+      proof (cases x''')
+        case (LitV0 v)
+        then show ?thesis
+          using \<open>x''' = LitV0 v\<close> \<open>x = Inr x'\<close> \<open>x' = Inr x''\<close> \<open>x'' = Inr x'''\<close> by simp
+      next
+        case (AbsV0 v)
+        then show ?thesis
+          using \<open>x''' = AbsV0 v\<close> \<open>x = Inr x'\<close> \<open>x' = Inr x''\<close> \<open>x'' = Inr x'''\<close> by simp
+      qed
+    qed
+  qed
+qed
+
+lemma val3ToValn_inj:
+  assumes "val3ToValn x = val3ToValn y"
+  shows "x = y"
+  using valBij by (metis assms)
+
+
+lemma extensionalMapVInl:
+  assumes "selectImpl (MapV (Inl m)) = selectImpl (MapV (Inl n))"
+  assumes "type_of_L m = type_of_L n"
+  assumes "\<exists>k. selectImpl (MapV (Inl m)) k \<noteq> None"
+  shows "m = n"
+proof -
+  have "\<And>kOpt. selectAux m kOpt = selectAux n kOpt"
+  proof -
+    fix kOpt::"'a val3210 option"
+    have "\<forall>k. map_option val3ToValn (selectAux m (toVal3210Opt k))
+      = map_option val3ToValn (selectAux n ((toVal3210Opt k)))"
+      by (metis assms(1) selectImpl.simps(5))
+    obtain k where "kOpt = None \<or> kOpt = Some k" by fastforce
+    have "\<exists>k'::'a valn. Some k = toVal3210Opt k'"
+        by (metis toVal3210Opt.simps valBij)
+    have "map_option val3ToValn (selectAux m (Some k))
+    = map_option val3ToValn (selectAux n (Some k))"
+      using \<open>\<exists>k'. Some k = toVal3210Opt k'\<close>
+        \<open>\<forall>k. map_option val3ToValn (selectAux m (toVal3210Opt k)) = map_option val3ToValn (selectAux n (toVal3210Opt k))\<close>
+      by force
+    moreover have "map_option val3ToValn (selectAux m None)
+    = map_option val3ToValn (selectAux n None)"
+      by simp
+    ultimately have "map_option val3ToValn (selectAux m kOpt)
+    = map_option val3ToValn (selectAux n kOpt)" using \<open>kOpt = None \<or> kOpt = Some k\<close> by blast
+    then show "(selectAux m kOpt) = (selectAux n kOpt)"
+      using
+        option.inj_map_strong[of "selectAux n kOpt" "selectAux m kOpt" val3ToValn val3ToValn]
+        val3ToValn_inj by fastforce
+  qed
+  then have "selectAux m = selectAux n" by auto
+  then show "m = n" using valSurj extensionalAux
+    using assms(2,3) by fastforce
 
 lemma extensionalMapV:
   assumes "selectImpl (MapV tks ty m) = selectImpl (MapV tks ty n)"
@@ -431,7 +500,7 @@ proof (cases m)
   then show ?thesis
   proof (cases n)
     case (Inl n')
-    then show ?thesis try
+    then show ?thesis oops
   next
     case (Inr b)
     then show ?thesis sorry

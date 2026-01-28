@@ -6,14 +6,14 @@ begin
 
 subsection \<open>Values, State, Variable Context\<close>
 
-datatype ('k, 'p) L = MapVal "('p, ('k, 'p) L) map" |  MapKey "('k, 'p) map"
+datatype ('k, 'p) L = MapVal "('p, ('k, 'p) L) map" ty |  MapKey "('k, 'p) map" ty
 
 text \<open>The values (and as a result the semantics) are parametrized by the carrier type 'a for the 
 abstract values (values that have a type constructed via type constructors)
 TODO: explain Map Values
 \<close>
 datatype ('a, 'm) val = LitV lit | AbsV (the_absv: 'a)
-  | MapV "ty list" ty 'm
+  | MapV 'm
 
 abbreviation IntV where "IntV i \<equiv> LitV (LInt i)"
 abbreviation BoolV where "BoolV b \<equiv> LitV (LBool b)"
