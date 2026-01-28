@@ -429,7 +429,8 @@ proof (cases m)
     then show "m = n" using MapVal \<open>m = MapVal m' t\<close> assms extensionalAuxVal by auto
   next
     case (MapKey x21 x22)
-    obtain k v where "selectAux m k = Some v" using assms(3) by blast
+    obtain k v where "selectAux m k = Some (Inl v)"
+      using assms(3) \<open>m = MapVal m' t\<close> sorry
     then show ?thesis
       using \<open>m = MapVal m' t\<close> assms elem_set option.set_sel selectAux.simps
       sorry
@@ -634,8 +635,14 @@ proof -
     using extensionalAux0 by fastforce
 qed
 
+fun type_of_map where
+    "type_of_map (Inl m) = type_of_L m"
+  | "type_of_map (Inr (Inl m)) = type_of_L m"
+  | "type_of_map (Inr (Inr m)) = type_of_L m"
+
 lemma extensionalMapV:
   assumes "selectImpl (MapV m) = selectImpl (MapV n)"
+  assumes "type_of_map m = type_of_map n"
   assumes "\<exists>k. selectImpl (MapV m) k \<noteq> None"
   shows "m = n"
 proof (cases m)
@@ -643,15 +650,27 @@ proof (cases m)
   then show ?thesis
   proof (cases n)
     case (Inl n')
-    then show ?thesis oops
+    have "selectImpl (MapV (Inl m')) = selectImpl (MapV (Inl n'))"
+      using \<open>m = Inl m'\<close> \<open>n = Inl n'\<close> assms(1) by force
+    moreover have "type_of_L m' = type_of_L n'"
+      using \<open>m = Inl m'\<close> \<open>n = Inl n'\<close> assms(2) by force
+    moreover have "\<exists>k. selectImpl (MapV (Inl m')) k \<noteq> None"
+      using \<open>m = Inl m'\<close> \<open>n = Inl n'\<close> assms(3) by force
+    ultimately show ?thesis using \<open>m = Inl m'\<close> \<open>n = Inl n'\<close> assms extensionalMapVInl
+      by blast
   next
-    case (Inr b)
-    then show ?thesis sorry
+    case (Inr n')
+    obtain k where "selectImpl (MapV (Inl m')) k \<noteq> None"
+      using \<open>m = Inl m'\<close> assms by blast
+    have "selectImpl (MapV (Inr n')) k = None"
+      using \<open>n = Inr n'\<close> assms oops
+    then show ?thesis
+      using Inl Inr \<open>selectImpl (MapV (Inl m')) k \<noteq> None\<close> assms(1) by force
   qed
   
 next
   case (Inr b)
-  then show ?thesis sorry
+  then show ?thesis oops
 qed
 
 lemma extensional:
