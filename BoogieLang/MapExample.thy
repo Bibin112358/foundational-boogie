@@ -466,22 +466,21 @@ proof -
   have "\<And>kOpt. selectAux m kOpt = selectAux n kOpt"
   proof -
     fix kOpt::"'a val3210 option"
-    have "\<forall>k. map_option val3ToValn (selectAux m (toVal3210Opt k))
+    obtain k where "kOpt = None \<or> kOpt = Some k" by fastforce
+    have "\<exists>k'. Some k = toVal3210Opt k'"
+      by (metis toVal3210Opt.simps valBij)
+    moreover have "\<forall>k. map_option val3ToValn (selectAux m (toVal3210Opt k))
       = map_option val3ToValn (selectAux n ((toVal3210Opt k)))"
       by (metis assms(1) selectImpl.simps(5))
-    obtain k where "kOpt = None \<or> kOpt = Some k" by fastforce
-    have "\<exists>k'::'a valn. Some k = toVal3210Opt k'"
-        by (metis toVal3210Opt.simps valBij)
-    have "map_option val3ToValn (selectAux m (Some k))
-    = map_option val3ToValn (selectAux n (Some k))"
-      using \<open>\<exists>k'. Some k = toVal3210Opt k'\<close>
-        \<open>\<forall>k. map_option val3ToValn (selectAux m (toVal3210Opt k)) = map_option val3ToValn (selectAux n (toVal3210Opt k))\<close>
+    ultimately have "map_option val3ToValn (selectAux m (Some k))
+      = map_option val3ToValn (selectAux n (Some k))"
       by force
     moreover have "map_option val3ToValn (selectAux m None)
-    = map_option val3ToValn (selectAux n None)"
+      = map_option val3ToValn (selectAux n None)"
       by simp
     ultimately have "map_option val3ToValn (selectAux m kOpt)
-    = map_option val3ToValn (selectAux n kOpt)" using \<open>kOpt = None \<or> kOpt = Some k\<close> by blast
+      = map_option val3ToValn (selectAux n kOpt)"
+      using \<open>kOpt = None \<or> kOpt = Some k\<close> by blast
     then show "(selectAux m kOpt) = (selectAux n kOpt)"
       using
         option.inj_map_strong[of "selectAux n kOpt" "selectAux m kOpt" val3ToValn val3ToValn]
@@ -490,6 +489,44 @@ proof -
   then have "selectAux m = selectAux n" by auto
   then show "m = n" using valSurj extensionalAux
     using assms(2,3) by fastforce
+qed
+
+lemma extensionalMapVInrl:
+  assumes "selectImpl (MapV (Inr (Inl m))) = selectImpl (MapV (Inr (Inl n)))"
+  assumes "type_of_L m = type_of_L n"
+  assumes "\<exists>k. selectImpl (MapV (Inr (Inl m))) k \<noteq> None"
+  shows "m = n"
+proof -
+  have "\<And>kOpt. selectAux m kOpt = selectAux n kOpt"
+  proof -
+    fix kOpt::"'a val210 option"
+    obtain k where "kOpt = (vT (toVal3210Opt k))"
+      by (metis not_Some_eq toVal3210Opt.elims vT.simps(1,3) valBij)
+    have "map_option ((val3ToValn) \<circ> Inr) (selectAux m kOpt)
+      = map_option ((val3ToValn) \<circ> Inr) (selectAux n kOpt)"
+      by (metis \<open>\<And>thesis. (\<And>k. kOpt = vT (toVal3210Opt k) \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close> assms(1)
+          selectImpl.simps(4))
+    (* injectivity of map_option ((val3ToValn) \<circ> Inr) *)
+    have "map_option val3ToValn (map_option Inr (selectAux m kOpt))
+      = map_option val3ToValn (map_option Inr (selectAux n kOpt))"
+      by (simp add:
+          \<open>map_option (val3ToValn \<circ> Inr) (selectAux m kOpt) = map_option (val3ToValn \<circ> Inr) (selectAux n kOpt)\<close>
+          map_option.compositionality)
+    have "(map_option Inr (selectAux m kOpt))
+      = (map_option Inr (selectAux n kOpt))"
+      using
+        \<open>map_option val3ToValn (map_option Inr (selectAux m kOpt)) = map_option val3ToValn (map_option Inr (selectAux n kOpt))\<close>
+        option.inj_map_strong[of "selectAux n kOpt" "selectAux m kOpt" Inr Inr]
+        option.inj_map_strong[of "map_option Inr (selectAux n kOpt)"
+          "map_option Inr (selectAux m kOpt)" val3ToValn val3ToValn]
+        val3ToValn_inj by force
+    then show "(selectAux m kOpt) = (selectAux n kOpt)"
+      by (metis not_arg_cong_Inr option.inj_map_strong)
+  qed
+  then have "selectAux m = selectAux n" by auto
+  then show "m = n" using valSurj extensionalAux
+    using assms(2,3) by fastforce
+qed
 
 lemma extensionalMapV:
   assumes "selectImpl (MapV tks ty m) = selectImpl (MapV tks ty n)"
