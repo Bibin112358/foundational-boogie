@@ -48,21 +48,22 @@ subsection \<open>Helper Functions and Lemmas\<close>
 subsection \<open>Select\<close>
 (* there needs to be as many additional store functions, as there are nesting levels *)
 (* user needs to generate these functions (is there a way to make this cleaner, macro?) *)
-fun select0 :: "'a val10 \<Rightarrow> 'a val10 \<rightharpoonup> 'a val10" where
-    "select0 (Inl (MapVal m _)) (Inr k) = map_option Inl (m k)"
-  | "select0 (Inl (MapKey m _)) (Inr k) = map_option Inr (m k)"
+fun select0 :: "'a val10 \<Rightarrow> 'a val0 \<rightharpoonup> 'a val10" where
+    "select0 (Inl (MapVal m _)) k = map_option Inl (m k)"
+  | "select0 (Inl (MapKey m _)) k = map_option Inr (m k)"
   | "select0 _ _ = None"
 
-fun select1 :: "'a val210  \<Rightarrow> 'a val210  \<rightharpoonup> 'a val210" where
-    "select1 (Inl (MapVal m _)) (Inr k) = map_option Inl (m k)"
-  | "select1 (Inl (MapKey m _)) (Inr (Inl k)) = map_option Inr (m k)"
+fun select1 :: "'a val210  \<Rightarrow> 'a val10  \<rightharpoonup> 'a val210" where
+    "select1 (Inl (MapVal m _)) k = map_option Inl (m k)"
+  | "select1 (Inl (MapKey m _)) (Inl k) = map_option Inr (m k)"
   | "select1 (Inr m) (Inr k) = map_option Inr (select0 m k)"
   | "select1 _ _ = None"
 
-fun select2 :: "'a val3 \<Rightarrow> ('a val2 + 'a val1 + 'a val0) \<rightharpoonup>  'a val3 + 'a val2 + 'a val1 + 'a val0" where
-    "select2 (MapVal m _) k = map_option Inl (m k)"
-  | "select2 (MapKey m _) (Inl k) = (case m k of (Some v) \<Rightarrow> Some (Inr v) | _ \<Rightarrow> None)"
-  | "select2 (MapKey m _) (Inr k) = None"
+fun select2 :: "'a val3210 \<Rightarrow> 'a val210 \<rightharpoonup> 'a val3210" where
+    "select2 (Inl (MapVal m _)) k = map_option Inl (m k)"
+  | "select2 (Inl (MapKey m _)) (Inl k) = map_option Inr (m k)"
+  | "select2 (Inr m) (Inr k) = map_option Inr (select1 m k)"
+  | "select2 _ _ = None"
 
 
 fun toVal3210 :: "'a valn \<Rightarrow> 'a val3210" where
@@ -95,13 +96,12 @@ fun selectAux :: "('a, 'a + 'b) L \<Rightarrow> (('a, 'a + 'b) L + 'a + 'b) opti
   | "selectAux (MapKey m _) (Some (Inr (Inl k))) = map_option Inr (m k)"
   | "selectAux _ _ = None"
 
+fun selectImpl' :: "'a val3210 \<Rightarrow> 'a val3210 \<rightharpoonup> 'a val3210" where
+    "selectImpl' m (Inl k) = None"
+  | "selectImpl' m (Inr k) = select2 m k"
 
 fun selectImpl :: "'a valn \<Rightarrow> 'a valn \<rightharpoonup> 'a valn" where
-    "selectImpl (LitV _) _ = None"
-  | "selectImpl (AbsV _) _ = None"
-  | "selectImpl (MapV (Inr (Inr m))) k = map_option ((val3ToValn) \<circ> Inr \<circ> Inr) (selectAux0 m ((vT (vT (toVal3210Opt k)))))"
-  | "selectImpl (MapV (Inr (Inl m))) k = map_option ((val3ToValn) \<circ> Inr) (selectAux m ((vT (toVal3210Opt k))))"
-  | "selectImpl (MapV (Inl m)) k = map_option (val3ToValn) (selectAux m ( (toVal3210Opt k)))"
+    "selectImpl m k = map_option val3ToValn (selectImpl' (toVal3210 m) (toVal3210 k))"
 
 abbreviation example_map :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
   "example_map \<equiv> \<lparr> map_select = selectImpl, map_store = undefined \<rparr>"
@@ -551,7 +551,7 @@ lemma toValnInrrOpt_inj:
   shows "x = y"
 proof -
   have "map_option val3ToValn (map_option Inr (map_option Inr x))
-      = map_option val3ToValn (map_option Inr (map_option Inr y))" try
+      = map_option val3ToValn (map_option Inr (map_option Inr y))"
     by (metis assms option.map_comp)
   then show "x = y"
     by (metis (no_types, lifting) option.inj_map_strong sum.inject(2) toValnOpt_inj)
@@ -633,6 +633,433 @@ proof -
   then have "selectAux0 m = selectAux0 n" by auto
   then show "m = n" using assms
     using extensionalAux0 by fastforce
+qed
+
+
+subsubsection \<open>Array Axiom Extensionality: Recursive Approach\<close>
+
+fun type_of_val10  where
+    "type_of_val10 (Inl m) = type_of_L m"
+  | "type_of_val10 (Inr v) = undefined"
+
+lemma extensional0Val:
+  assumes "select0 (Inl (MapVal m t)) = select0 (Inl (MapVal n t'))"
+  assumes "\<exists>k. select0 (Inl (MapVal m t)) k \<noteq> None"
+  shows "m = n"
+proof -
+  have "\<forall>k. map_option Inl (m k) = map_option Inl (n k)"
+    by (metis (mono_tags, lifting) assms(1) option.inj_map_strong select0.simps(1)
+        sum.inject(1))
+  then have "\<forall>k. m k = n k"
+    by (metis (no_types, lifting) Inl_inject[of "the (m _)" "the (n _)"]
+        option.collapse[of "m _"] option.collapse[of "n _"] option.map_disc_iff[of Inl "n _"]
+        option.map_disc_iff[of Inl "m _"] option.map_sel[of "m _" Inl]
+        option.map_sel[of "n _" Inl])
+  then show "m = n" by auto
+qed
+
+lemma extensional0Key:
+  assumes "select0 (Inl (MapKey m t)) = select0 (Inl (MapKey n t'))"
+  assumes "\<exists>k. select0 (Inl (MapKey m t)) k \<noteq> None"
+  shows "m = n"
+proof -
+  have "\<forall>k. map_option Inr (m k) = map_option Inr (n k)"
+    by (metis assms(1) option.inj_map_strong select0.simps(2) sum.inject(2))
+  then have "\<forall>k. m k = n k"
+    by (metis (no_types, lifting) Inr_inject[of "the (m _)" "the (n _)"]
+        option.collapse[of "m _"] option.collapse[of "n _"] option.map_disc_iff[of Inr "n _"]
+        option.map_disc_iff[of Inr "m _"] option.map_sel[of "m _" Inr]
+        option.map_sel[of "n _" Inr])
+  then show "m = n" by auto
+qed
+
+lemma extensional0:
+  assumes "select0 m = select0 n"
+  assumes "type_of_val10 m = type_of_val10 n"
+  assumes "\<exists>k. select0 m k \<noteq> None"
+  shows "m = n"
+proof (cases m)
+  case (Inr m')
+  then show ?thesis using assms(3) by auto
+next
+  case (Inl m')
+  then show ?thesis
+  proof (cases m')
+    case (MapVal m'' t)
+    then show ?thesis
+    proof (cases n)
+      case (Inr n')
+      then show ?thesis using assms(1,3) by auto
+    next
+      case (Inl n')
+      then show ?thesis
+      proof (cases n')
+        case (MapKey n'' t')
+        obtain k v where "select0 (Inl (MapVal m'' t)) k = Some (Inl v)"
+          using \<open>m = Inl m'\<close> \<open>m' = MapVal m'' t\<close> assms by auto
+        then show ?thesis
+          using \<open>m = Inl m'\<close> \<open>m' = MapVal m'' t\<close> \<open>n = Inl n'\<close> \<open>n' = MapKey n'' t'\<close> assms
+          by fastforce
+      next
+        case (MapVal n'' t')
+        then show ?thesis
+          using extensional0Val \<open>m = Inl m'\<close> \<open>m' = MapVal m'' t\<close> \<open>n = Inl n'\<close> \<open>n' = MapVal n'' t'\<close> assms
+          by fastforce
+      qed
+    qed
+  next
+    case (MapKey m'' t)
+    then show ?thesis
+    proof (cases n)
+      case (Inr n')
+      then show ?thesis using assms(1,3) by auto
+    next
+      case (Inl n')
+      then show ?thesis
+      proof (cases n')
+        case (MapVal n'' t')
+        obtain k v where "select0 (Inl (MapKey m'' t)) k = Some (Inr v)"
+          using \<open>m = Inl m'\<close> \<open>m' = MapKey m'' t\<close> assms by auto
+        then show ?thesis
+          using \<open>m = Inl m'\<close> \<open>m' = MapKey m'' t\<close> \<open>n = Inl n'\<close> \<open>n' = MapVal n'' t'\<close> assms
+          by fastforce
+      next
+        case (MapKey n'' t')
+        then show ?thesis
+        using extensional0Key \<open>m = Inl m'\<close> \<open>m' = MapKey m'' t\<close> \<open>n = Inl n'\<close> \<open>n' = MapKey n'' t'\<close> assms
+          by fastforce
+      qed
+    qed
+  qed
+qed
+
+lemma extensional1Val:
+  assumes "select1 (Inl (MapVal m t)) = select1 (Inl (MapVal n t'))"
+  assumes "\<exists>k. select1 (Inl (MapVal m t)) k \<noteq> None"
+  shows "m = n"
+proof -
+  have "\<forall>k. map_option Inl (m k) = map_option Inl (n k)"
+    by (metis (mono_tags, lifting) assms(1) option.inj_map_strong select1.simps(1)
+        sum.inject(1))
+  then have "\<forall>k. m k = n k"
+    by (metis (no_types, lifting) Inl_inject[of "the (m _)" "the (n _)"]
+        option.collapse[of "m _"] option.collapse[of "n _"] option.map_disc_iff[of Inl "n _"]
+        option.map_disc_iff[of Inl "m _"] option.map_sel[of "m _" Inl]
+        option.map_sel[of "n _" Inl])
+  then show "m = n" by auto
+qed
+
+lemma extensional1Key:
+  assumes "select1 (Inl (MapKey m t)) = select1 (Inl (MapKey n t'))"
+  assumes "\<exists>k. select1 (Inl (MapKey m t)) k \<noteq> None"
+  shows "m = n"
+proof -
+  have "\<forall>k. map_option Inr (m k) = map_option Inr (n k)"
+    by (metis (mono_tags, lifting) assms(1) option.inj_map_strong select1.simps(2)
+          sum.inject(2))
+  then have "\<forall>k. m k = n k"
+    by (metis (no_types, lifting) Inr_inject[of "the (m _)" "the (n _)"]
+        option.collapse[of "m _"] option.collapse[of "n _"] option.map_disc_iff[of Inr "n _"]
+        option.map_disc_iff[of Inr "m _"] option.map_sel[of "m _" Inr]
+        option.map_sel[of "n _" Inr])
+  then show "m = n" by auto
+qed
+
+fun type_of_val210  where
+    "type_of_val210 (Inl m) = type_of_L m"
+  | "type_of_val210 (Inr v) = type_of_val10 v"
+
+lemma extensional1Rec:
+  assumes "select1 (Inr m') = select1 (Inr n')"
+  assumes "type_of_val10 m' = type_of_val10 n'"
+  assumes "\<exists>k. select1 (Inr m') k \<noteq> None"
+  shows "m' = n'"
+proof -
+  have "\<forall>k. select0 m' k = select0 n' k"
+  proof rule
+    fix k
+    have "select1 (Inr m') (Inr k) = map_option Inr (select0 m' k)"
+      by simp
+    moreover have "select1 (Inr n') (Inr k) = map_option Inr (select0 n' k)"
+      by simp
+    ultimately have "map_option Inr (select0 m' k) = map_option Inr (select0 n' k)"
+      by (metis (mono_tags, lifting) assms(1) option.inj_map_strong sum.inject(2))
+    then show "select0 m' k = select0 n' k"
+      by (metis option.inj_map_strong sum.inject(2))
+  qed
+  then have "select0 m' = select0 n'" by auto
+  have "\<exists>k. select0 m' k \<noteq> None"
+  proof -
+    obtain k where "select1 (Inr m') k \<noteq> None" using assms by auto
+    obtain k' where "select1 (Inr m') k = map_option Inr (select0 m' k')"
+      by (smt (verit) Inr_not_Inl \<open>select1 (Inr m') k \<noteq> None\<close> select1.elims
+          sum.inject(2))
+    then show ?thesis using \<open>select1 (Inr m') k \<noteq> None\<close> by auto
+  qed
+  have "type_of_val10 m' = type_of_val10 n'" using assms by auto
+  then show ?thesis using assms extensional0
+    using \<open>\<exists>k. select0 m' k \<noteq> None\<close> \<open>select0 m' = select0 n'\<close> by blast
+qed
+
+(*
+lemma extensional1':
+  assumes "select1 m = select1 n"
+  assumes "type_of_val10 m = type_of_val10 n"
+  assumes "\<exists>k. select1 m k \<noteq> None"
+  shows "m = n"
+proof (induction rule: select1.induct)
+  case (1 m uu k)
+  then show ?case
+  proof (cases n)
+next
+  case (2 m uv k)
+  then show ?case sorry
+next
+  case (3 m k)
+  then show ?case sorry
+next
+  case ("4_1" va vb v)
+  then show ?case sorry
+next
+  case ("4_2" v va)
+  then show ?case sorry
+qed
+*)
+
+lemma extensional1:
+  assumes "select1 m = select1 n"
+  assumes "type_of_val210 m = type_of_val210 n"
+  assumes "\<exists>k. select1 m k \<noteq> None"
+  shows "m = n"
+proof (cases m)
+  case (Inr m')
+  then show ?thesis
+  proof (cases n)
+    case (Inl n')
+    then show ?thesis
+      by (smt (verit) Inr assms(1,3) map_option_is_None option.map_sel select1.elims
+          sum.distinct(1))
+    (*proof -
+      obtain k v where "select1 (Inr m') k = Some (v)" using Inr assms by auto
+      have "select1 (Inl n') k \<noteq> Some (v)"
+        by (smt (verit) Inr_not_Inl \<open>select1 (Inr m') k = Some v\<close> option.discI
+            option.map_disc_iff option.map_sel select1.elims)
+      then show ?thesis
+        using Inl Inr \<open>select1 (Inr m') k = Some v\<close> assms(1) by auto
+    qed*)
+  next
+    case (Inr n') then show ?thesis
+      using \<open>m = Inr m'\<close> \<open>n = Inr n'\<close> assms extensional1Rec by fastforce
+  qed
+next
+  case (Inl m')
+  then show ?thesis
+  proof (cases m')
+    case (MapVal m'' t)
+    then show ?thesis
+    proof (cases n)
+      case (Inr n')
+      then show ?thesis using assms(1,3)
+        by (smt (verit) Inl option.map_disc_iff option.map_sel select1.elims
+            sum.distinct(1))
+    next
+      case (Inl n')
+      then show ?thesis
+      proof (cases n')
+        case (MapKey n'' t')
+        obtain k v where "select1 (Inl (MapVal m'' t)) k = Some (Inl v)"
+          using \<open>m = Inl m'\<close> \<open>m' = MapVal m'' t\<close> assms by auto
+        then show ?thesis
+          using \<open>m = Inl m'\<close> \<open>m' = MapVal m'' t\<close> \<open>n = Inl n'\<close> \<open>n' = MapKey n'' t'\<close> assms
+          by (smt (verit) Inl_inject Inr_not_Inl L.distinct(1) option.map_disc_iff option.map_sel
+              select1.elims)
+      next
+        case (MapVal n'' t')
+        then show ?thesis
+          using extensional1Val \<open>m = Inl m'\<close> \<open>m' = MapVal m'' t\<close> \<open>n = Inl n'\<close> \<open>n' = MapVal n'' t'\<close> assms
+          by fastforce
+      qed
+    qed
+  next
+    case (MapKey m'' t)
+    then show ?thesis
+    proof (cases n)
+      case (Inr n')
+      then show ?thesis using assms(1,3)
+        by (smt (verit) Inl Inl_inject L.distinct(1) MapKey select1.elims
+            sum.distinct(1))
+    next
+      case (Inl n')
+      then show ?thesis
+      proof (cases n')
+        case (MapVal n'' t')
+        obtain k v where "select1 (Inl (MapKey m'' t)) k = Some (Inr v)"
+          using \<open>m = Inl m'\<close> \<open>m' = MapKey m'' t\<close> assms
+          by (smt (verit) L.distinct(1) option.collapse option.map_disc_iff option.map_sel
+              select1.elims sum.inject(1))
+        then show ?thesis
+          using \<open>m = Inl m'\<close> \<open>m' = MapKey m'' t\<close> \<open>n = Inl n'\<close> \<open>n' = MapVal n'' t'\<close> assms
+          by fastforce
+      next
+        case (MapKey n'' t')
+        then show ?thesis
+        using extensional1Key \<open>m = Inl m'\<close> \<open>m' = MapKey m'' t\<close> \<open>n = Inl n'\<close> \<open>n' = MapKey n'' t'\<close> assms
+          by fastforce
+      qed
+    qed
+  qed
+qed
+
+lemma extensional2Val:
+  assumes "select2 (Inl (MapVal m t)) = select2 (Inl (MapVal n t'))"
+  assumes "\<exists>k. select2 (Inl (MapVal m t)) k \<noteq> None"
+  shows "m = n"
+proof -
+  have "\<forall>k. map_option Inl (m k) = map_option Inl (n k)"
+    by (metis (mono_tags, lifting) assms(1) option.inj_map_strong select2.simps(1)
+        sum.inject(1))
+  then have "\<forall>k. m k = n k"
+    by (metis (no_types, lifting) Inl_inject[of "the (m _)" "the (n _)"]
+        option.collapse[of "m _"] option.collapse[of "n _"] option.map_disc_iff[of Inl "n _"]
+        option.map_disc_iff[of Inl "m _"] option.map_sel[of "m _" Inl]
+        option.map_sel[of "n _" Inl])
+  then show "m = n" by auto
+qed
+
+lemma extensional2Key:
+  assumes "select2 (Inl (MapKey m t)) = select2 (Inl (MapKey n t'))"
+  assumes "\<exists>k. select2 (Inl (MapKey m t)) k \<noteq> None"
+  shows "m = n"
+proof -
+  have "\<forall>k. map_option Inr (m k) = map_option Inr (n k)"
+    by (metis (mono_tags, lifting) assms(1) option.inj_map_strong select2.simps(2)
+          sum.inject(2))
+  then have "\<forall>k. m k = n k"
+    by (metis (no_types, lifting) Inr_inject[of "the (m _)" "the (n _)"]
+        option.collapse[of "m _"] option.collapse[of "n _"] option.map_disc_iff[of Inr "n _"]
+        option.map_disc_iff[of Inr "m _"] option.map_sel[of "m _" Inr]
+        option.map_sel[of "n _" Inr])
+  then show "m = n" by auto
+qed
+
+fun type_of_val3210  where
+    "type_of_val3210 (Inl m) = type_of_L m"
+  | "type_of_val3210 (Inr v) = type_of_val210 v"
+
+lemma extensional2Rec:
+  assumes "select2 (Inr m') = select2 (Inr n')"
+  assumes "type_of_val210 m' = type_of_val210 n'"
+  assumes "\<exists>k. select2 (Inr m') k \<noteq> None"
+  shows "m' = n'"
+proof -
+  have "\<forall>k. select1 m' k = select1 n' k"
+  proof rule
+    fix k
+    have "select2 (Inr m') (Inr k) = map_option Inr (select1 m' k)"
+      by simp
+    moreover have "select2 (Inr n') (Inr k) = map_option Inr (select1 n' k)"
+      by simp
+    ultimately have "map_option Inr (select1 m' k) = map_option Inr (select1 n' k)"
+      by (metis (mono_tags, lifting) assms(1) option.inj_map_strong sum.inject(2))
+    then show "select1 m' k = select1 n' k"
+      by (metis option.inj_map_strong sum.inject(2))
+  qed
+  then have "select1 m' = select1 n'" by auto
+  have "\<exists>k. select1 m' k \<noteq> None"
+  proof -
+    obtain k where "select2 (Inr m') k \<noteq> None" using assms by auto
+    obtain k' where "select2 (Inr m') k = map_option Inr (select1 m' k')"
+      by (smt (verit) Inr_not_Inl \<open>select2 (Inr m') k \<noteq> None\<close> select2.elims
+          sum.inject(2))
+    then show ?thesis using \<open>select2 (Inr m') k \<noteq> None\<close> by auto
+  qed
+  have "type_of_val210 m' = type_of_val210 n'" using assms by auto
+  then show ?thesis using assms extensional1
+    using \<open>\<exists>k. select1 m' k \<noteq> None\<close> \<open>select1 m' = select1 n'\<close> by blast
+qed
+
+lemma extensional2:
+  assumes "select2 m = select2 n"
+  assumes "type_of_val3210 m = type_of_val3210 n"
+  assumes "\<exists>k. select2 m k \<noteq> None"
+  shows "m = n"
+proof (cases m)
+  case (Inr m')
+  then show ?thesis
+  proof (cases n)
+    case (Inl n')
+    then show ?thesis
+      by (smt (verit) Inr assms(1,3) map_option_is_None option.map_sel select2.elims
+          sum.distinct(1))
+    (*proof -
+      obtain k v where "select1 (Inr m') k = Some (v)" using Inr assms by auto
+      have "select1 (Inl n') k \<noteq> Some (v)"
+        by (smt (verit) Inr_not_Inl \<open>select1 (Inr m') k = Some v\<close> option.discI
+            option.map_disc_iff option.map_sel select1.elims)
+      then show ?thesis
+        using Inl Inr \<open>select1 (Inr m') k = Some v\<close> assms(1) by auto
+    qed*)
+  next
+    case (Inr n') then show ?thesis
+      using \<open>m = Inr m'\<close> \<open>n = Inr n'\<close> assms extensional2Rec by fastforce
+  qed
+next
+  case (Inl m')
+  then show ?thesis
+  proof (cases m')
+    case (MapVal m'' t)
+    then show ?thesis
+    proof (cases n)
+      case (Inr n')
+      then show ?thesis using assms(1,3)
+        by (smt (verit) Inl option.map_disc_iff option.map_sel select2.elims
+            sum.distinct(1))
+    next
+      case (Inl n')
+      then show ?thesis
+      proof (cases n')
+        case (MapKey n'' t')
+        obtain k v where "select2 (Inl (MapVal m'' t)) k = Some (Inl v)"
+          using \<open>m = Inl m'\<close> \<open>m' = MapVal m'' t\<close> assms by auto
+        then show ?thesis
+          using \<open>m = Inl m'\<close> \<open>m' = MapVal m'' t\<close> \<open>n = Inl n'\<close> \<open>n' = MapKey n'' t'\<close> assms
+          by (smt (verit) Inl_inject Inr_not_Inl L.distinct(1) option.map_disc_iff option.map_sel
+              select2.elims)
+      next
+        case (MapVal n'' t')
+        then show ?thesis
+          using extensional2Val \<open>m = Inl m'\<close> \<open>m' = MapVal m'' t\<close> \<open>n = Inl n'\<close> \<open>n' = MapVal n'' t'\<close> assms
+          by fastforce
+      qed
+    qed
+  next
+    case (MapKey m'' t)
+    then show ?thesis
+    proof (cases n)
+      case (Inr n')
+      then show ?thesis using assms(1,3)
+        by (smt (verit) Inl Inl_inject L.distinct(1) MapKey select2.elims
+            sum.distinct(1))
+    next
+      case (Inl n')
+      then show ?thesis
+      proof (cases n')
+        case (MapVal n'' t')
+        obtain k v where "select2 (Inl (MapKey m'' t)) k = Some (Inr v)"
+          using \<open>m = Inl m'\<close> \<open>m' = MapKey m'' t\<close> assms
+          by (smt (verit) L.distinct(1) option.collapse option.map_disc_iff option.map_sel
+              select2.elims sum.inject(1))
+        then show ?thesis
+          using \<open>m = Inl m'\<close> \<open>m' = MapKey m'' t\<close> \<open>n = Inl n'\<close> \<open>n' = MapVal n'' t'\<close> assms
+          by fastforce
+      next
+        case (MapKey n'' t')
+        then show ?thesis
+        using extensional2Key \<open>m = Inl m'\<close> \<open>m' = MapKey m'' t\<close> \<open>n = Inl n'\<close> \<open>n' = MapKey n'' t'\<close> assms
+          by fastforce
+      qed
+    qed
+  qed
 qed
 
 fun type_of_map where
