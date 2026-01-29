@@ -84,10 +84,12 @@ fun selectImpl' :: "'a val3210 \<Rightarrow> 'a val3210 \<rightharpoonup> 'a val
   | "selectImpl' m (Inr k) = select2 m k"
 
 fun selectImpl :: "'a valn \<Rightarrow> 'a valn \<rightharpoonup> 'a valn" where
-    "selectImpl m k = map_option val3ToValn (selectImpl' (toVal3210 m) (toVal3210 k))"
+    "selectImpl (LitV _) _ = None"
+  | "selectImpl (AbsV _) _ = None"
+  | "selectImpl (MapV m) k = map_option val3ToValn (selectImpl' (toVal3210 (MapV m)) (toVal3210 k))"
 
 abbreviation example_map :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
-  "example_map \<equiv> \<lparr> map_select = selectImpl, map_store = undefined \<rparr>"
+  "example_map \<equiv> \<lparr> map_select = selectImpl, map_store = undefined, map_type = undefined \<rparr>"
 
 lemma "(map_select example_map) mg4 m24 = Some (MapV (Inr (Inr (MapKey [IntV 3 \<mapsto> IntV 2] TT))))" by simp
 
@@ -113,7 +115,7 @@ primrec store_impl :: "'a valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn \<rig
   | "store_impl (AbsV _) _ _ = None"
 
 abbreviation example_map2 :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
-  "example_map2 \<equiv> \<lparr> map_select = selectImpl, map_store = storeImpl \<rparr>"
+  "example_map2 \<equiv> \<lparr> map_select = selectImpl, map_store = storeImpl, map_type = undefined \<rparr>"
 
 primrec select_option where "select_option (Some v) k = (map_select example_map2) v k"
 lemma "select_option ((map_store example_map2) mg4 m24 (IntV 42)) m24 = Some (IntV 42)" by simp
@@ -338,6 +340,12 @@ next
     qed
   qed
 qed
+
+lemma toVal3210_inj:
+  assumes "toVal3210 x = toVal3210 y"
+  shows "x = y"
+  apply (cases x rule: toVal3210.cases; cases y rule: toVal3210.cases)
+  using assms by auto
 
 lemma val3ToValn_inj:
   assumes "val3ToValn x = val3ToValn y"
@@ -807,12 +815,6 @@ qed
 
 subsubsection \<open>Extensionality Impl\<close>
 
-fun type_of_map where
-    "type_of_map (Inl m) = type_of_L m"
-  | "type_of_map (Inr (Inl m)) = type_of_L m"
-  | "type_of_map (Inr (Inr m)) = type_of_L m"
-
-
 lemma extensionalImpl':
   assumes "selectImpl' m = selectImpl' n"
   assumes "type_of_val3210 m = type_of_val3210 n"
@@ -822,80 +824,47 @@ lemma extensionalImpl':
       selectImpl'.elims[of m _ "selectImpl' m _"] selectImpl'.simps(2)[of n]
       selectImpl'.simps(2)[of m])
 
-lemma extensionalImpl:
-  assumes "selectImpl (MapV m) = selectImpl (MapV n)"
-  assumes "type_of_map m = type_of_map n"
-  assumes "\<exists>k. selectImpl (MapV m) k \<noteq> None"
-  shows "m = n"
-(* "selectImpl m k = map_option val3ToValn (selectImpl' (toVal3210 m) (toVal3210 k))" *)
-proof -
-  have "\<forall>k'. map_option val3ToValn (selectImpl' (toVal3210 (MapV m)) (toVal3210 k'))
-    = map_option val3ToValn (selectImpl' (toVal3210 (MapV m)) (toVal3210 k'))" by simp
-  fix k
-  obtain k' where "k = toVal3210 k'" by (metis valBij)
-  (* injectivity of map_option val3ToValn *)
-  (* lemma extensionalImpl' *)
-  (* injectivity of toVal3210 *)
-  oops
+fun type_of_Impl where
+    "type_of_Impl m = type_of_val3210 (toVal3210 (MapV m))"
 
-lemma extensionalMapV:
+lemma extensionalImplMapV:
   assumes "selectImpl (MapV m) = selectImpl (MapV n)"
-  assumes "type_of_map m = type_of_map n"
+  assumes "type_of_Impl m = type_of_Impl n"
   assumes "\<exists>k. selectImpl (MapV m) k \<noteq> None"
   shows "m = n"
-proof (cases m)
-  case (Inl m')
-  then show ?thesis
-  proof (cases n)
-    case (Inl n')
-    have "selectImpl (MapV (Inl m')) = selectImpl (MapV (Inl n'))"
-      using \<open>m = Inl m'\<close> \<open>n = Inl n'\<close> assms(1) by force
-    moreover have "type_of_L m' = type_of_L n'"
-      using \<open>m = Inl m'\<close> \<open>n = Inl n'\<close> assms(2) by force
-    moreover have "\<exists>k. selectImpl (MapV (Inl m')) k \<noteq> None"
-      using \<open>m = Inl m'\<close> \<open>n = Inl n'\<close> assms(3) by force
-    ultimately show ?thesis using \<open>m = Inl m'\<close> \<open>n = Inl n'\<close> assms extensionalMapVInl
-      by blast
-  next
-    case (Inr n')
-    obtain k where "selectImpl (MapV (Inl m')) k \<noteq> None"
-      using \<open>m = Inl m'\<close> assms by blast
-    have "selectImpl (MapV (Inr n')) k = None"
-      using \<open>n = Inr n'\<close> assms oops
-    then show ?thesis
-      using Inl Inr \<open>selectImpl (MapV (Inl m')) k \<noteq> None\<close> assms(1) by force
-  qed
-  
-next
-  case (Inr b)
-  then show ?thesis oops
+proof -  
+  (* injectivity of map_option val3ToValn *)
+  have "\<forall>k'. map_option val3ToValn (selectImpl' (toVal3210 (MapV m)) (toVal3210 k'))
+    = map_option val3ToValn (selectImpl' (toVal3210 (MapV n)) (toVal3210 k'))"
+    by (metis assms(1) selectImpl.simps(3))
+  then have "\<forall>k'. (selectImpl' (toVal3210 (MapV m)) (toVal3210 k'))
+    = (selectImpl' (toVal3210 (MapV n)) (toVal3210 k'))"
+    using toValnOpt_inj by blast
+  then have "\<forall>k. (selectImpl' (toVal3210 (MapV m)) k)
+    = (selectImpl' (toVal3210 (MapV n)) k)" by (metis valBij)
+
+  (* lemma extensionalImpl' *)
+  moreover have "type_of_val3210 (toVal3210 (MapV m)) = type_of_val3210 (toVal3210 (MapV n))"
+    using assms(2) by auto
+  moreover have "\<exists>k. selectImpl' (toVal3210 (MapV m)) k \<noteq> None"
+    using assms(3) by auto
+  ultimately have "(toVal3210 (MapV m)) = (toVal3210 (MapV n))"
+    using assms extensionalImpl' by blast
+
+  (* injectivity of toVal3210 *)
+  then show ?thesis using toVal3210_inj by auto
 qed
+
+abbreviation example_map3 :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
+  "example_map3 \<equiv> \<lparr> map_select = selectImpl, map_store = undefined, map_type = type_of_Impl \<rparr>"
+
 
 lemma extensional:
-  assumes "selectImpl m = selectImpl n"
-  assumes "\<exists>k. selectImpl m k \<noteq> None"
-  assumes "type_of_val A m = type_of_val A n"
+  assumes "(map_select example_map3) m = (map_select example_map3) n"
+  assumes "\<exists>k. (map_select example_map3) m k \<noteq> None"
+  assumes "type_of_val A example_map3 m = type_of_val A example_map3 n"
   shows "m = n"
-proof (cases m)
-  case (LitV x1)
-  then show ?thesis using assms(2) by fastforce
-next
-  case (AbsV x2)
-  then show ?thesis using assms(2) by fastforce
-next
-  case cm: (MapV mtks mty m')
-  then show ?thesis
-  proof (cases n)
-    case (LitV x1)
-    then show ?thesis using assms(1,2) by auto
-  next
-    case (AbsV x2)
-    then show ?thesis using assms(1,2) by auto
-  next
-    case cn: (MapV ntks nty n')
-    have "mtks = ntks" using cm cn assms by auto
-    have "mty = nty" using cm cn assms by auto
-  qed
-qed
+  by (smt (verit) assms(1,2,3) extensionalImplMapV map_interface.select_convs(1,3)
+      selectImpl.elims type_of_val.simps(3))
 
 end

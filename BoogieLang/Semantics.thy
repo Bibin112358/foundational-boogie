@@ -32,6 +32,7 @@ primrec up :: "('a, _) val \<Rightarrow> ('a, _) val" where
 record ('a, 'k) map_interface =
   map_select :: "('a, 'k) val \<Rightarrow> ('a, 'k) val \<rightharpoonup> ('a, 'k) val"
   map_store :: "('a, 'k) val \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) val \<rightharpoonup> ('a, 'k) val"
+  map_type :: "'k \<Rightarrow> ty"
 
 
 primrec is_lit_val :: "('a, 'k) val \<Rightarrow> bool"
@@ -418,11 +419,11 @@ Each value of the abstract carrier type must be mapped to a corresponding type (
 type constructor).\<close>
 type_synonym 'a absval_ty_fun = "'a \<Rightarrow> (tcon_id \<times> ty list)"
 
-fun type_of_val :: "'a absval_ty_fun \<Rightarrow> ('a, 'k) val \<Rightarrow> ty"
+fun type_of_val :: "'a absval_ty_fun \<Rightarrow> ('a, 'k) map_interface \<Rightarrow> ('a, 'k) val \<Rightarrow> ty"
   where
-   "type_of_val A (LitV v) = TPrim (type_of_lit v)"
- | "type_of_val A (AbsV v) = TCon (fst (A v)) (snd (A v))"
- | "type_of_val _ (MapV ty_keys ty_val _) = TMap ty_keys ty_val"
+   "type_of_val A _ (LitV v) = TPrim (type_of_lit v)"
+ | "type_of_val A _ (AbsV v) = TCon (fst (A v)) (snd (A v))"
+ | "type_of_val _ MI (MapV v) = (map_type MI) v"
 
 type_synonym rtype_env = "ty list"
 
