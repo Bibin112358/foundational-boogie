@@ -6,7 +6,7 @@ begin
 
 subsection \<open>Values, State, Variable Context\<close>
 
-datatype ('k, 'p) L = MapVal "('p, ('k, 'p) L) map" ty |  MapKey "('k, 'p) map" ty
+datatype ('k, 'p) L = MapVal "'p \<Rightarrow> ('k, 'p) L" ty |  MapKey "'k \<Rightarrow> 'p" ty
 
 text \<open>The values (and as a result the semantics) are parametrized by the carrier type 'a for the 
 abstract values (values that have a type constructed via type constructors)
@@ -30,8 +30,8 @@ primrec up :: "('a, _) val \<Rightarrow> ('a, _) val" where
   | "up (AbsV v) = AbsV v"
 
 record ('a, 'k) map_interface =
-  map_select :: "('a, 'k) val \<Rightarrow> ('a, 'k) val \<rightharpoonup> ('a, 'k) val"
-  map_store :: "('a, 'k) val \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) val \<rightharpoonup> ('a, 'k) val"
+  map_select :: "('a, 'k) val \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) val"
+  map_store :: "('a, 'k) val \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) val"
   map_type :: "'k \<Rightarrow> ty"
 
 

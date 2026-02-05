@@ -21,25 +21,24 @@ type_synonym 'a valn = "('a, 'a val3 + 'a val2 + 'a val1) val"  (* do not inlcud
 
 subsection \<open>Examples\<close>
 (* MapV examples *)
-(* value "Up ( Up (Up (IntV 1))) :: unit val3" *)
 value "IntV 2 :: unit valn"
 
 abbreviation IntV where "IntV i \<equiv> LitV0 (LInt i)"
 abbreviation TT where "TT \<equiv> TPrim TInt"  (* convenience for testing purposes *)
 
-abbreviation m11 :: "unit val1" where "m11 \<equiv> MapKey [IntV 3 \<mapsto> IntV 2] TT"
+abbreviation m11 :: "unit val1" where "m11 \<equiv> MapKey (undefined(IntV 3 := IntV 2)) TT"
 abbreviation m14 :: "unit valn" where "m14 \<equiv> MapV (Inr (Inr m11))"
 
-abbreviation m22 :: "unit val2" where "m22 \<equiv> MapKey [m11 \<mapsto> Inr (IntV 4)] TT"
+abbreviation m22 :: "unit val2" where "m22 \<equiv> MapKey (undefined(m11 := Inr (IntV 4))) TT"
 abbreviation m24 :: "unit valn" where "m24 \<equiv> MapV (Inr (Inl m22))"
 
-abbreviation m33 :: "unit val3" where "m33 \<equiv> MapKey [m22 \<mapsto> Inr (Inr (IntV 6))] TT"
+abbreviation m33 :: "unit val3" where "m33 \<equiv> MapKey (undefined(m22 := Inr (Inr (IntV 6)))) TT"
 abbreviation m34 :: "unit valn" where "m34 \<equiv> MapV (Inl m33)"
 
-abbreviation mg3 :: "unit val3" where "mg3 \<equiv> MapKey [m22 \<mapsto> Inr (Inl  m11)] (TMap [] (TMap []  (TPrim TInt)))"
+abbreviation mg3 :: "unit val3" where "mg3 \<equiv> MapKey (undefined(m22 := Inr (Inl  m11))) (TMap [] (TMap []  (TPrim TInt)))"
 abbreviation mg4 :: "unit valn" where "mg4 \<equiv> MapV (Inl mg3)"
 
-abbreviation ms3 :: "unit val3" where "ms3 \<equiv> MapVal [Inr (Inr (IntV 3)) \<mapsto> m33] (TMap [] (TMap []  (TPrim TInt)))"
+abbreviation ms3 :: "unit val3" where "ms3 \<equiv> MapVal (undefined(Inr (Inr (IntV 3)) := m33)) (TMap [] (TMap []  (TPrim TInt)))"
 abbreviation ms4 :: "unit valn" where "ms4 \<equiv> MapV (Inl ms3)"
 
 
@@ -48,22 +47,22 @@ subsection \<open>Helper Functions and Lemmas\<close>
 subsection \<open>Select\<close>
 (* there needs to be as many additional store functions, as there are nesting levels *)
 (* user needs to generate these functions (is there a way to make this cleaner, macro?) *)
-fun select0 :: "'a val10 \<Rightarrow> 'a val0 \<rightharpoonup> 'a val10" where
-    "select0 (Inl (MapVal m _)) k = map_option Inl (m k)"
-  | "select0 (Inl (MapKey m _)) k = map_option Inr (m k)"
-  | "select0 _ _ = None"
+fun select0 :: "'a val10 \<Rightarrow> 'a val0 \<Rightarrow> 'a val10" where
+    "select0 (Inl (MapVal m _)) k = Inl (m k)"
+  | "select0 (Inl (MapKey m _)) k = Inr (m k)"
+  | "select0 _ _ = undefined"
 
-fun select1 :: "'a val210  \<Rightarrow> 'a val10  \<rightharpoonup> 'a val210" where
-    "select1 (Inl (MapVal m _)) k = map_option Inl (m k)"
-  | "select1 (Inl (MapKey m _)) (Inl k) = map_option Inr (m k)"
-  | "select1 (Inr m) (Inr k) = map_option Inr (select0 m k)"
-  | "select1 _ _ = None"
+fun select1 :: "'a val210  \<Rightarrow> 'a val10  \<Rightarrow> 'a val210" where
+    "select1 (Inl (MapVal m _)) k = Inl (m k)"
+  | "select1 (Inl (MapKey m _)) (Inl k) = Inr (m k)"
+  | "select1 (Inr m) (Inr k) = Inr (select0 m k)"
+  | "select1 _ _ = undefined"
 
-fun select2 :: "'a val3210 \<Rightarrow> 'a val210 \<rightharpoonup> 'a val3210" where
-    "select2 (Inl (MapVal m _)) k = map_option Inl (m k)"
-  | "select2 (Inl (MapKey m _)) (Inl k) = map_option Inr (m k)"
-  | "select2 (Inr m) (Inr k) = map_option Inr (select1 m k)"
-  | "select2 _ _ = None"
+fun select2 :: "'a val3210 \<Rightarrow> 'a val210 \<Rightarrow> 'a val3210" where
+    "select2 (Inl (MapVal m _)) k = Inl (m k)"
+  | "select2 (Inl (MapKey m _)) (Inl k) = Inr (m k)"
+  | "select2 (Inr m) (Inr k) = Inr (select1 m k)"
+  | "select2 _ _ = undefined"
 
 fun toVal3210 :: "'a valn \<Rightarrow> 'a val3210" where
     "toVal3210 (LitV v) = (Inr (Inr (Inr (LitV0 v))))"
@@ -79,19 +78,19 @@ fun val3ToValn :: "'a val3210 \<Rightarrow> 'a valn" where
   | "val3ToValn (Inr (Inl m)) = (MapV (Inr (Inl m)))"
   | "val3ToValn (Inl m) = (MapV (Inl m))"
 
-fun selectImpl' :: "'a val3210 \<Rightarrow> 'a val3210 \<rightharpoonup> 'a val3210" where
-    "selectImpl' m (Inl k) = None"
+fun selectImpl' :: "'a val3210 \<Rightarrow> 'a val3210 \<Rightarrow> 'a val3210" where
+    "selectImpl' m (Inl k) = undefined"
   | "selectImpl' m (Inr k) = select2 m k"
 
-fun selectImpl :: "'a valn \<Rightarrow> 'a valn \<rightharpoonup> 'a valn" where
-    "selectImpl (LitV _) _ = None"
-  | "selectImpl (AbsV _) _ = None"
-  | "selectImpl (MapV m) k = map_option val3ToValn (selectImpl' (toVal3210 (MapV m)) (toVal3210 k))"
+fun selectImpl :: "'a valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn" where
+    "selectImpl (LitV _) _ = undefined"
+  | "selectImpl (AbsV _) _ = undefined"
+  | "selectImpl (MapV m) k = val3ToValn (selectImpl' (toVal3210 (MapV m)) (toVal3210 k))"
 
 abbreviation example_map :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
   "example_map \<equiv> \<lparr> map_select = selectImpl, map_store = undefined, map_type = undefined \<rparr>"
 
-lemma "(map_select example_map) mg4 m24 = Some (MapV (Inr (Inr (MapKey [IntV 3 \<mapsto> IntV 2] TT))))" by simp
+lemma "(map_select example_map) mg4 m24 = (MapV (Inr (Inr (MapKey (undefined(IntV 3 := IntV 2)) TT))))" by simp
 
 subsection \<open>Store\<close>
 (*
@@ -391,39 +390,17 @@ subsubsection \<open>Extensionality Level 0\<close>
 
 lemma extensional0Val:
   assumes "select0 (Inl (MapVal m t)) = select0 (Inl (MapVal n t'))"
-  assumes "\<exists>k. select0 (Inl (MapVal m t)) k \<noteq> None"
   shows "m = n"
-proof -
-  have "\<forall>k. map_option Inl (m k) = map_option Inl (n k)"
-    by (metis (mono_tags, lifting) assms(1) option.inj_map_strong select0.simps(1)
-        sum.inject(1))
-  then have "\<forall>k. m k = n k"
-    by (metis (no_types, lifting) Inl_inject[of "the (m _)" "the (n _)"]
-        option.collapse[of "m _"] option.collapse[of "n _"] option.map_disc_iff[of Inl "n _"]
-        option.map_disc_iff[of Inl "m _"] option.map_sel[of "m _" Inl]
-        option.map_sel[of "n _" Inl])
-  then show "m = n" by auto
-qed
+  by (metis (lifting) ext Inl_inject assms select0.simps(1))
 
 lemma extensional0Key:
   assumes "select0 (Inl (MapKey m t)) = select0 (Inl (MapKey n t'))"
-  assumes "\<exists>k. select0 (Inl (MapKey m t)) k \<noteq> None"
   shows "m = n"
-proof -
-  have "\<forall>k. map_option Inr (m k) = map_option Inr (n k)"
-    by (metis assms(1) option.inj_map_strong select0.simps(2) sum.inject(2))
-  then have "\<forall>k. m k = n k"
-    by (metis (no_types, lifting) Inr_inject[of "the (m _)" "the (n _)"]
-        option.collapse[of "m _"] option.collapse[of "n _"] option.map_disc_iff[of Inr "n _"]
-        option.map_disc_iff[of Inr "m _"] option.map_sel[of "m _" Inr]
-        option.map_sel[of "n _" Inr])
-  then show "m = n" by auto
-qed
+  by (metis (lifting) ext Inl_inject assms select0.simps(1))
 
 lemma extensional0:
   assumes "select0 m = select0 n"
   assumes "type_of_val10 m = type_of_val10 n"
-  assumes "\<exists>k. select0 m k \<noteq> None"
   shows "m = n"
 proof (cases m)
   case (Inr m')
