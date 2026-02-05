@@ -6,7 +6,10 @@ begin
 
 subsection \<open>Values, State, Variable Context\<close>
 
-datatype ('k, 'p) L = MapVal "'p \<Rightarrow> ('k, 'p) L" ty |  MapKey "'k \<Rightarrow> 'p" ty
+datatype ('tk, 'tp) tyL =  TMapVal 'tp "('tk, 'tp) tyL" | TMapKey 'tk 'tp
+
+datatype ('k, 'p, 'tv, 'tk, 'tp) L =
+  MapVal "'p \<Rightarrow> ('k, 'p, 'tv, 'tk, 'tp) L" "('tp * 'tv)" |  MapKey "'k \<Rightarrow> 'p" "'tk * 'tp"
 
 text \<open>The values (and as a result the semantics) are parametrized by the carrier type 'a for the 
 abstract values (values that have a type constructed via type constructors)

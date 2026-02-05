@@ -8,13 +8,22 @@ begin
 subsection \<open>Type Definition\<close>
 (* user needs to instantiate how many nesting levels to support *)
 
+(* (type::((('a)val) => (closed_ty))) *)
+datatype ty0 =  TPrimC0 prim_ty | TConC0 tcon_id "ty list"
+type_synonym ty1 = "(ty0, ty0) tyL"
+type_synonym ty10 = "ty1 + ty0"
+type_synonym ty2 = "(ty1, ty10) tyL"
+type_synonym ty210 = "ty2 + ty10"
+type_synonym ty3 = "(ty2, ty210) tyL"
+type_synonym ty3210 = "ty3 + ty210"
+
 datatype 'a val0 = LitV0 lit | AbsV0 (the_absv: 'a)
 
-type_synonym 'a val1 = "('a val0, 'a val0) L"
+type_synonym 'a val1 = "('a val0, 'a val0, ty1, ty0, ty0) L"
 type_synonym 'a val10 = "'a val1 + 'a val0"
-type_synonym 'a val2 = "('a val1, 'a val10) L"
+type_synonym 'a val2 = "('a val1, 'a val10, ty2, ty1, ty10) L"
 type_synonym 'a val210 = "'a val2 + 'a val1 + 'a val0"
-type_synonym 'a val3 = "('a val2, 'a val210) L"
+type_synonym 'a val3 = "('a val2, 'a val210, ty3, ty2, ty210) L"
 type_synonym 'a val3210 = "'a val3 + 'a val210"
 type_synonym 'a valn = "('a, 'a val3 + 'a val2 + 'a val1) val"  (* do not inlcude val0! *)
 
@@ -24,9 +33,9 @@ subsection \<open>Examples\<close>
 value "IntV 2 :: unit valn"
 
 abbreviation IntV where "IntV i \<equiv> LitV0 (LInt i)"
-abbreviation TT where "TT \<equiv> TPrim TInt"  (* convenience for testing purposes *)
+abbreviation TT where "TT \<equiv> TPrimC0 TInt"  (* convenience for testing purposes *)
 
-abbreviation m11 :: "unit val1" where "m11 \<equiv> MapKey (undefined(IntV 3 := IntV 2)) TT"
+abbreviation m11 :: "unit val1" where "m11 \<equiv> MapKey (undefined(IntV 3 := IntV 2)) (TT, TT)"
 abbreviation m14 :: "unit valn" where "m14 \<equiv> MapV (Inr (Inr m11))"
 
 abbreviation m22 :: "unit val2" where "m22 \<equiv> MapKey (undefined(m11 := Inr (IntV 4))) TT"
@@ -90,7 +99,7 @@ fun selectImpl :: "'a valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn" where
 abbreviation example_map :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
   "example_map \<equiv> \<lparr> map_select = selectImpl, map_store = undefined, map_type = undefined \<rparr>"
 
-lemma "(map_select example_map) mg4 m24 = (MapV (Inr (Inr (MapKey (undefined(IntV 3 := IntV 2)) TT))))" by simp
+lemma "(map_select example_map) mg4 m24 = (MapV (Inr (Inr (MapKey (undefined(IntV 3 := IntV 2)) (TT, TT)))))" by simp
 
 subsection \<open>Store\<close>
 (*
@@ -119,6 +128,37 @@ abbreviation example_map2 :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" w
 primrec select_option where "select_option (Some v) k = (map_select example_map2) v k"
 lemma "select_option ((map_store example_map2) mg4 m24 (IntV 42)) m24 = Some (IntV 42)" by simp
 *)
+
+subsection \<open>Type Of Val\<close>
+
+fun ty_of_ty0 :: "ty0 \<Rightarrow> ty" where
+    "ty_of_ty0 (TPrimC0 t) = TPrim t"
+  | "ty_of_ty0 (TConC0 i ts) = TCon i ts"
+
+(*
+fun ty_of_ty210 :: "ty210 \<Rightarrow> ty" where
+
+fun ty_of_ty3 :: "ty3 \<Rightarrow> ty" where
+
+fun ty_of_val3 :: "'a val3 \<Rightarrow> ty" where
+    "ty_of_val3 (MapVal _ (tk tv)) = TMap ("
+
+fun ty_of_val312 :: "'a val3 + 'a val2 + 'a val1 \<Rightarrow> ty" where
+    "ty_of_val312 (Inl m) = ty_of_val3 m"
+  | "ty_of_val312 (Inr (Inl m)) = ty_of_val2 m"
+  | "ty_of_val312 (Inr (Inr m)) = ty_of_val1 m"
+*)
+
+lemma "type_of_val k = key_type_of_val m \<Longrightarrow> type_of_val (select m k) = val_type_of_val m"
+
+locale assume_type = 
+fixes ty_of_val312 :: "'a val3 + 'a val2 + 'a val1 \<Rightarrow> ty"
+assumes
+T3: "\<forall>m. (\<exists>x. ty_of_val312 m = TMap (TMap (TMap (TPrim x)))) \<Longrightarrow> (\<exists>m'. m = Inl m')" and
+T3: "\<forall>m. (\<exists>x. ty_of_val312 m = TMap (TMap (TMap (TPrim x)))) \<Longrightarrow> (\<exists>m'. m = Inl m')"
+begin
+
+
 subsection \<open>Array Axiom Update\<close>
 text \<open>Property to prove: (m[k] := v)[k] == v or select (store m k v) k = v\<close>
 (*
