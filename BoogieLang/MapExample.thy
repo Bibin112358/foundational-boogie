@@ -9,21 +9,13 @@ subsection \<open>Type Definition\<close>
 (* user needs to instantiate how many nesting levels to support *)
 
 (* (type::((('a)val) => (closed_ty))) *)
-datatype ty0 =  TPrimC0 prim_ty | TConC0 tcon_id "ty list"
-type_synonym ty1 = "(ty0, ty0) tyL"
-type_synonym ty10 = "ty1 + ty0"
-type_synonym ty2 = "(ty1, ty10) tyL"
-type_synonym ty210 = "ty2 + ty10"
-type_synonym ty3 = "(ty2, ty210) tyL"
-type_synonym ty3210 = "ty3 + ty210"
+datatype 'a val0 = LitV0 lit | AbsV0 (the_absv: 'a) | NoneV0
 
-datatype 'a val0 = LitV0 lit | AbsV0 (the_absv: 'a)
-
-type_synonym 'a val1 = "('a val0, 'a val0, ty1, ty0, ty0) L"
+type_synonym 'a val1 = "('a val0, 'a val0) L"
 type_synonym 'a val10 = "'a val1 + 'a val0"
-type_synonym 'a val2 = "('a val1, 'a val10, ty2, ty1, ty10) L"
+type_synonym 'a val2 = "('a val1, 'a val10) L"
 type_synonym 'a val210 = "'a val2 + 'a val1 + 'a val0"
-type_synonym 'a val3 = "('a val2, 'a val210, ty3, ty2, ty210) L"
+type_synonym 'a val3 = "('a val2, 'a val210) L"
 type_synonym 'a val3210 = "'a val3 + 'a val210"
 type_synonym 'a valn = "('a, 'a val3 + 'a val2 + 'a val1) val"  (* do not inlcude val0! *)
 
@@ -33,21 +25,21 @@ subsection \<open>Examples\<close>
 value "IntV 2 :: unit valn"
 
 abbreviation IntV where "IntV i \<equiv> LitV0 (LInt i)"
-abbreviation TT where "TT \<equiv> TPrimC0 TInt"  (* convenience for testing purposes *)
+abbreviation TT where "TT \<equiv> TPrim TInt"  (* convenience for testing purposes *)
 
 abbreviation m11 :: "unit val1" where "m11 \<equiv> MapKey (undefined(IntV 3 := IntV 2)) (TT, TT)"
 abbreviation m14 :: "unit valn" where "m14 \<equiv> MapV (Inr (Inr m11))"
 
-abbreviation m22 :: "unit val2" where "m22 \<equiv> MapKey (undefined(m11 := Inr (IntV 4))) TT"
+abbreviation m22 :: "unit val2" where "m22 \<equiv> MapKey (undefined(m11 := Inr (IntV 4))) (TT, TT)"
 abbreviation m24 :: "unit valn" where "m24 \<equiv> MapV (Inr (Inl m22))"
 
-abbreviation m33 :: "unit val3" where "m33 \<equiv> MapKey (undefined(m22 := Inr (Inr (IntV 6)))) TT"
+abbreviation m33 :: "unit val3" where "m33 \<equiv> MapKey (undefined(m22 := Inr (Inr (IntV 6)))) (TT, TT)"
 abbreviation m34 :: "unit valn" where "m34 \<equiv> MapV (Inl m33)"
 
-abbreviation mg3 :: "unit val3" where "mg3 \<equiv> MapKey (undefined(m22 := Inr (Inl  m11))) (TMap [] (TMap []  (TPrim TInt)))"
+abbreviation mg3 :: "unit val3" where "mg3 \<equiv> MapKey (undefined(m22 := Inr (Inl  m11))) (TT, (TMap TT  (TPrim TInt)))"
 abbreviation mg4 :: "unit valn" where "mg4 \<equiv> MapV (Inl mg3)"
 
-abbreviation ms3 :: "unit val3" where "ms3 \<equiv> MapVal (undefined(Inr (Inr (IntV 3)) := m33)) (TMap [] (TMap []  (TPrim TInt)))"
+abbreviation ms3 :: "unit val3" where "ms3 \<equiv> MapVal (undefined(Inr (Inr (IntV 3)) := m33)) (TT, (TMap TT  (TPrim TInt)))"
 abbreviation ms4 :: "unit valn" where "ms4 \<equiv> MapV (Inl ms3)"
 
 
@@ -59,23 +51,24 @@ subsection \<open>Select\<close>
 fun select0 :: "'a val10 \<Rightarrow> 'a val0 \<Rightarrow> 'a val10" where
     "select0 (Inl (MapVal m _)) k = Inl (m k)"
   | "select0 (Inl (MapKey m _)) k = Inr (m k)"
-  | "select0 _ _ = undefined"
+  | "select0 _ _ = Inr NoneV0"
 
 fun select1 :: "'a val210  \<Rightarrow> 'a val10  \<Rightarrow> 'a val210" where
     "select1 (Inl (MapVal m _)) k = Inl (m k)"
   | "select1 (Inl (MapKey m _)) (Inl k) = Inr (m k)"
   | "select1 (Inr m) (Inr k) = Inr (select0 m k)"
-  | "select1 _ _ = undefined"
+  | "select1 _ _ = Inr (Inr NoneV0)"
 
 fun select2 :: "'a val3210 \<Rightarrow> 'a val210 \<Rightarrow> 'a val3210" where
     "select2 (Inl (MapVal m _)) k = Inl (m k)"
   | "select2 (Inl (MapKey m _)) (Inl k) = Inr (m k)"
   | "select2 (Inr m) (Inr k) = Inr (select1 m k)"
-  | "select2 _ _ = undefined"
+  | "select2 _ _ = Inr (Inr (Inr NoneV0))"
 
 fun toVal3210 :: "'a valn \<Rightarrow> 'a val3210" where
     "toVal3210 (LitV v) = (Inr (Inr (Inr (LitV0 v))))"
   | "toVal3210 (AbsV v) = (Inr (Inr (Inr (AbsV0 v))))"
+  | "toVal3210 (NoneV) = (Inr (Inr (Inr (NoneV0))))"
   | "toVal3210 (MapV (Inr (Inr m))) = (Inr (Inr (Inl m)))"
   | "toVal3210 (MapV (Inr (Inl m))) = (Inr (Inl m))"
   | "toVal3210 (MapV (Inl m)) = (Inl m)"
@@ -83,17 +76,19 @@ fun toVal3210 :: "'a valn \<Rightarrow> 'a val3210" where
 fun val3ToValn :: "'a val3210 \<Rightarrow> 'a valn" where
     "val3ToValn (Inr (Inr (Inr (LitV0 v)))) = (LitV v)"
   | "val3ToValn (Inr (Inr (Inr (AbsV0 v)))) = (AbsV v)"
+  | "val3ToValn (Inr (Inr (Inr (NoneV0)))) = (NoneV)"
   | "val3ToValn (Inr (Inr (Inl m))) = (MapV (Inr (Inr m)))"
   | "val3ToValn (Inr (Inl m)) = (MapV (Inr (Inl m)))"
   | "val3ToValn (Inl m) = (MapV (Inl m))"
 
 fun selectImpl' :: "'a val3210 \<Rightarrow> 'a val3210 \<Rightarrow> 'a val3210" where
-    "selectImpl' m (Inl k) = undefined"
+    "selectImpl' m (Inl k) = (Inr (Inr (Inr (NoneV0))))"
   | "selectImpl' m (Inr k) = select2 m k"
 
 fun selectImpl :: "'a valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn" where
-    "selectImpl (LitV _) _ = undefined"
-  | "selectImpl (AbsV _) _ = undefined"
+    "selectImpl (LitV _) _ = NoneV"
+  | "selectImpl (AbsV _) _ = NoneV"
+  | "selectImpl (NoneV) _ = NoneV"
   | "selectImpl (MapV m) k = val3ToValn (selectImpl' (toVal3210 (MapV m)) (toVal3210 k))"
 
 abbreviation example_map :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
@@ -131,25 +126,128 @@ lemma "select_option ((map_store example_map2) mg4 m24 (IntV 42)) m24 = Some (In
 
 subsection \<open>Type Of Val\<close>
 
-fun ty_of_ty0 :: "ty0 \<Rightarrow> ty" where
-    "ty_of_ty0 (TPrimC0 t) = TPrim t"
-  | "ty_of_ty0 (TConC0 i ts) = TCon i ts"
+fun tyL where "tyL (MapVal _ (tk, tv)) = TMap tk tv" | "tyL (MapKey _ (tk, tv)) = TMap tk tv"
 
-(*
-fun ty_of_ty210 :: "ty210 \<Rightarrow> ty" where
+fun ty321 :: "'a val3 + 'a val2 + 'a val1 \<Rightarrow> ty" where
+    "ty321 (Inr (Inr m)) = tyL m"
+  | "ty321 (Inr (Inl m)) = tyL m"
+  | "ty321 (Inl m) = tyL m"
 
-fun ty_of_ty3 :: "ty3 \<Rightarrow> ty" where
+abbreviation example_map_ty :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
+  "example_map_ty \<equiv> \<lparr> map_select = selectImpl, map_store = undefined, map_type = ty321 \<rparr>"
 
-fun ty_of_val3 :: "'a val3 \<Rightarrow> ty" where
-    "ty_of_val3 (MapVal _ (tk tv)) = TMap ("
+fun key_ty where "key_ty (TMap tk _) = tk" | "key_ty _ = undefined"
+fun val_ty where "val_ty (TMap _ tv) = tv" | "val_ty _ = TNone"
 
-fun ty_of_val312 :: "'a val3 + 'a val2 + 'a val1 \<Rightarrow> ty" where
-    "ty_of_val312 (Inl m) = ty_of_val3 m"
-  | "ty_of_val312 (Inr (Inl m)) = ty_of_val2 m"
-  | "ty_of_val312 (Inr (Inr m)) = ty_of_val1 m"
-*)
+locale X =
+  fixes A :: "'a absval_ty_fun"
+begin
+  abbreviation ty_of_val where "ty_of_val \<equiv> type_of_val A example_map_ty"
+  fun wf where
+    "wf m = ((val_ty (ty_of_val m) \<noteq> TNone) \<and>
+    (\<forall>k. (ty_of_val k = key_ty (ty_of_val m)
+    \<longrightarrow> ty_of_val (selectImpl m k) = val_ty (ty_of_val m))))"
 
-lemma "type_of_val k = key_type_of_val m \<Longrightarrow> type_of_val (select m k) = val_type_of_val m"
+subsubsection \<open>Proving well formdness of a simple map\<close>
+fun fAdd1 where "fAdd1 (IntV x) = (IntV (x+1))" | "fAdd1 _ = NoneV0"
+abbreviation mAdd1 :: "'a val1" where "mAdd1 \<equiv> MapKey fAdd1 ((TPrim TInt), (TPrim TInt))"
+abbreviation vAdd1 :: "'a valn" where "vAdd1 \<equiv> MapV (Inr (Inr mAdd1))"
+
+lemma VTAdd1: "val_ty (ty_of_val vAdd1) = (TPrim TInt)"
+  using map_interface.select_convs(3) ty321.simps(1)
+      tyL.simps(2) type_of_val.simps(4)
+      val_ty.simps(1) by metis
+
+lemma KTAdd1: "key_ty (ty_of_val vAdd1) = (TPrim TInt)" 
+  using map_interface.select_convs(3) ty321.simps(1)
+      tyL.simps(2) type_of_val.simps(4)
+      key_ty.simps(1) by metis
+
+lemma ty321TMap: "\<forall>v. \<exists>tk tv. ty321 v = TMap tk tv"
+  by (metis (full_types) ty321.elims tyL.elims)
+
+lemma ty_of_val_Int: "ty_of_val k = (TPrim TInt) \<longrightarrow> (\<exists>i. k = LitV (LInt i))"
+proof (cases k)
+  case (LitV x1)
+  then show ?thesis
+    by (metis (no_types, lifting) lit.exhaust prim_ty.distinct(1,5) ty.inject(2)
+        type_of_lit.simps(1,3) type_of_val.simps(1))
+next
+  case (AbsV x2)
+  then show ?thesis by simp
+next
+  case (MapV x3)
+  then show ?thesis using ty321TMap
+    by (metis map_interface.select_convs(3) ty.distinct(11)
+        type_of_val.simps(4))
+next
+  case NoneV
+  then show ?thesis by simp
+qed
+
+lemma H2:
+  assumes "ty_of_val k = (TPrim TInt)"
+  shows "ty_of_val (selectImpl vAdd1 k) = (TPrim TInt)"
+  using assms ty_of_val_Int by fastforce
+
+lemma HH: "(\<forall>k. (ty_of_val k = key_ty (ty_of_val vAdd1)
+    \<longrightarrow> ty_of_val (selectImpl vAdd1 k) = val_ty (ty_of_val vAdd1)))"
+  using VTAdd1 KTAdd1 H2 by simp
+
+lemma "wf vAdd1" using VTAdd1 HH by auto
+
+subsubsection \<open>Well formdness of a higher order map\<close>
+fun hof where "hof (MapKey f ty) = Inl (MapKey (fAdd1 \<circ> f) ty)" | "hof _ = undefined"
+abbreviation TMII where "TMII \<equiv> TMap (TPrim TInt) (TPrim TInt)"
+abbreviation hom :: "'a val2" where "hom \<equiv> MapKey hof (TMII, TMII)"
+abbreviation homV :: "'a valn" where "homV \<equiv> MapV (Inr (Inl hom))"
+
+lemma "(val_ty (ty_of_val homV) = TMII)"
+  by (metis map_interface.select_convs(3) ty.distinct(11) ty321.simps(2)
+      tyL.simps(2) type_of_val.simps(4) val_ty.simps(1,5))
+
+lemma "(key_ty (ty_of_val homV) = TMII)"
+  by (metis map_interface.select_convs(3) ty.distinct(11) ty321.simps(2)
+      tyL.simps(2) type_of_val.simps(4) key_ty.simps(1,5))
+
+lemma "ty_of_val k = TMII \<longrightarrow> (\<exists>k'. k = MapV k')"
+  using val_ty.simps(1)[of TT TT] by fastforce
+
+lemma "ty_of_val k = TMII \<longrightarrow> False"
+  using val_ty.simps(1)[of TT TT] by fastforce
+
+lemma A: "ty_of_val vAdd1 = TMII" by simp
+lemma B: "ty_of_val vAdd1 = TMII \<Longrightarrow> False"
+  using val_ty.simps(1)[of TT TT] by fastforce
+lemma "\<exists>k. ty_of_val k = TMII"
+  by (metis map_interface.select_convs(3) ty321.simps(1) tyL.simps(2)
+      type_of_val.simps(4))
+
+lemma "False" using A B by blast (* WHAT? *)
+
+lemma "wf homV" nitpick
+
+
+lemma
+  assumes "wf (MapV (Inl (MapKey f ty)))"
+  assumes "ty_of_val k = key_ty (ty_of_val (MapV (Inl (MapKey f ty))))"
+  shows "\<exists>k'. toVal3210 k = Inr (Inl k')"
+proof -
+  have "selectImpl (MapV (Inl (MapKey f ty))) k \<noteq> NoneV"
+    using assms(1,2) by auto
+  then show ?thesis
+    by (smt (verit) select2.simps(4) selectImpl'.elims selectImpl.simps(4)
+        sum.distinct(1) sum.inject(2) toVal3210.elims toVal3210.simps(6)
+        val3ToValn.simps(3))
+    by (smt (verit) Inr_inject select2.simps(4) selectImpl'.elims selectImpl.simps(4)
+        sum.distinct(1) toVal3210.elims toVal3210.simps(6)
+        val3ToValn.simps(3))
+    by (smt (verit) Inr_inject select2.simps(4) selectImpl'.elims
+        selectImpl.simps(4) sum.distinct(1) toVal3210.elims
+        toVal3210.simps(6) val3ToValn.simps(3))
+qed
+
+end
 
 locale assume_type = 
 fixes ty_of_val312 :: "'a val3 + 'a val2 + 'a val1 \<Rightarrow> ty"

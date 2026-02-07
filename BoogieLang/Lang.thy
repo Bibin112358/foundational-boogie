@@ -22,7 +22,8 @@ datatype ty
   = TVar nat | (* type variables as de-bruijn indices *)
     TPrim prim_ty | (* primitive types *)
     TCon tcon_id "ty list" (* type constructor *) |
-    TMap "ty list" ty (* maps *)
+    TMap ty ty (* maps *) |
+    TNone
 
 primrec type_of_lit :: "lit \<Rightarrow> prim_ty"
   where 

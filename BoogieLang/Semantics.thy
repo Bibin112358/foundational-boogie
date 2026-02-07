@@ -6,17 +6,15 @@ begin
 
 subsection \<open>Values, State, Variable Context\<close>
 
-datatype ('tk, 'tp) tyL =  TMapVal 'tp "('tk, 'tp) tyL" | TMapKey 'tk 'tp
-
-datatype ('k, 'p, 'tv, 'tk, 'tp) L =
-  MapVal "'p \<Rightarrow> ('k, 'p, 'tv, 'tk, 'tp) L" "('tp * 'tv)" |  MapKey "'k \<Rightarrow> 'p" "'tk * 'tp"
+datatype ('k, 'p) L =
+  MapVal "'p \<Rightarrow> ('k, 'p) L" "ty \<times> ty" |  MapKey "'k \<Rightarrow> 'p" "ty \<times> ty"
 
 text \<open>The values (and as a result the semantics) are parametrized by the carrier type 'a for the 
 abstract values (values that have a type constructed via type constructors)
 TODO: explain Map Values
 \<close>
 datatype ('a, 'm) val = LitV lit | AbsV (the_absv: 'a)
-  | MapV 'm
+  | MapV 'm | NoneV
 
 abbreviation IntV where "IntV i \<equiv> LitV (LInt i)"
 abbreviation BoolV where "BoolV b \<equiv> LitV (LBool b)"
@@ -426,6 +424,7 @@ fun type_of_val :: "'a absval_ty_fun \<Rightarrow> ('a, 'k) map_interface \<Righ
   where
    "type_of_val A _ (LitV v) = TPrim (type_of_lit v)"
  | "type_of_val A _ (AbsV v) = TCon (fst (A v)) (snd (A v))"
+ | "type_of_val _ _ NoneV = TNone"
  | "type_of_val _ MI (MapV v) = (map_type MI) v"
 
 type_synonym rtype_env = "ty list"
