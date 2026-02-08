@@ -1,8 +1,63 @@
 section \<open>Instantiation Example for MapV\<close>
 
 theory MapExample
-imports Semantics
+  imports (* Semantics *) Main HOL.Real
 begin
+
+subsection \<open>Definitions from other files\<close>
+
+type_synonym fname = string (* function name *)
+type_synonym vname = nat (* variable name, de-bruijn index *)
+type_synonym pname = string (* procedure name *)
+
+datatype lit =  LBool bool  | LInt int | LReal real
+
+datatype binop = Eq | Neq | Add | Sub | Mul | Div | RealDiv | Mod | Lt | Le | Gt | Ge | And | Or | Imp | Iff
+datatype unop = Not | UMinus | IntToReal
+
+datatype prim_ty
+ = TBool | TInt | TReal
+
+type_synonym tcon_id = string (* type constructor id *)
+
+datatype ty
+  = TVar nat | (* type variables as de-bruijn indices *)
+    TPrim prim_ty | (* primitive types *)
+    TCon tcon_id "ty list" (* type constructor *) |
+    TMap ty ty (* maps *) |
+    TNone
+
+primrec type_of_lit :: "lit \<Rightarrow> prim_ty"
+  where
+    "type_of_lit (LBool _) = TBool"
+  | "type_of_lit (LInt _)  = TInt"
+  | "type_of_lit (LReal _) = TReal"
+
+
+datatype ('k, 'p) L =
+  MapVal "'p \<Rightarrow> ('k, 'p) L" "ty \<times> ty" |  MapKey "'k \<Rightarrow> 'p" "ty \<times> ty"
+
+text \<open>The values (and as a result the semantics) are parametrized by the carrier type 'a for the
+abstract values (values that have a type constructed via type constructors)
+TODO: explain Map Values
+\<close>
+datatype ('a, 'm) val = LitV lit | AbsV (the_absv: 'a)
+  | MapV 'm | NoneV
+
+record ('a, 'k) map_interface =
+  map_select :: "('a, 'k) val \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) val"
+  map_store :: "('a, 'k) val \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) val"
+  map_type :: "'k \<Rightarrow> ty"
+
+
+type_synonym 'a absval_ty_fun = "'a \<Rightarrow> (tcon_id \<times> ty list)"
+
+fun type_of_val :: "'a absval_ty_fun \<Rightarrow> ('a, 'k) map_interface \<Rightarrow> ('a, 'k) val \<Rightarrow> ty"
+  where
+   "type_of_val A _ (LitV v) = TPrim (type_of_lit v)"
+ | "type_of_val A _ (AbsV v) = TCon (fst (A v)) (snd (A v))"
+ | "type_of_val _ _ NoneV = TNone"
+ | "type_of_val _ MI (MapV v) = (map_type MI) v"
 
 
 subsection \<open>Type Definition\<close>
@@ -210,22 +265,22 @@ lemma "(key_ty (ty_of_val homV) = TMII)"
   by (metis map_interface.select_convs(3) ty.distinct(11) ty321.simps(2)
       tyL.simps(2) type_of_val.simps(4) key_ty.simps(1,5))
 
-lemma "ty_of_val k = TMII \<longrightarrow> (\<exists>k'. k = MapV k')"
-  using val_ty.simps(1)[of TT TT] by fastforce
-
-lemma "ty_of_val k = TMII \<longrightarrow> False"
-  using val_ty.simps(1)[of TT TT] by fastforce
-
-lemma A: "ty_of_val vAdd1 = TMII" by simp
-lemma B: "ty_of_val vAdd1 = TMII \<Longrightarrow> False"
-  using val_ty.simps(1)[of TT TT] by fastforce
 lemma "\<exists>k. ty_of_val k = TMII"
   by (metis map_interface.select_convs(3) ty321.simps(1) tyL.simps(2)
       type_of_val.simps(4))
 
-lemma "False" using A B by blast (* WHAT? *)
+lemma "ty_of_val k = TMII \<longrightarrow> (\<exists>k'. k = MapV k')"
+  by (metis ty.distinct(11)[of "type_of_lit _" TT TT]
+      ty.distinct(15)[of "fst (A _)" "snd (A _)" TT TT] ty.distinct(19)[of TT TT]
+      type_of_val.elims[of A example_map_ty k "ty_of_val k"])
 
-lemma "wf homV" nitpick
+(* Counter Example *)
+lemma "ty_of_val k = TMII \<longrightarrow> (\<exists>k'. k = MapV (Inr ( k')))" nitpick
+  oops
+lemma "ty_of_val       (MapV (Inl (MapKey f (TT, TT)))) = TMII" by simp
+lemma "selectImpl homV (MapV (Inl (MapKey f (TT, TT)))) = NoneV" by simp
+
+lemma "wf homV" oops  (* not true *)
 
 
 lemma
