@@ -194,19 +194,34 @@ abbreviation example_map_ty :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface"
 fun key_ty where "key_ty (TMap tk _) = tk" | "key_ty _ = undefined"
 fun val_ty where "val_ty (TMap _ tv) = tv" | "val_ty _ = TNone"
 
+fun count_level_map_ty :: "ty \<Rightarrow> nat" where
+    "count_level_map_ty (TMap tk tv) = max (1 + count_level_map_ty tk) (count_level_map_ty tv)"
+  | "count_level_map_ty _ = 0"
+
+fun wf_ty :: "'a valn \<Rightarrow> bool" where
+    "wf_ty (LitV v) = True"
+  | "wf_ty (AbsV v) = True"
+  | "wf_ty (NoneV) = True"
+  | "wf_ty (MapV (Inr (Inr m))) = (count_level_map_ty (tyL m) = 1)"
+  | "wf_ty (MapV (Inr (Inl m))) = (count_level_map_ty (tyL m) = 2)"
+  | "wf_ty (MapV (Inl m)) = (count_level_map_ty (tyL m) = 3)"
+
+
 locale X =
   fixes A :: "'a absval_ty_fun"
 begin
   abbreviation ty_of_val where "ty_of_val \<equiv> type_of_val A example_map_ty"
   fun wf where
     "wf m = ((val_ty (ty_of_val m) \<noteq> TNone) \<and>
-    (\<forall>k. (ty_of_val k = key_ty (ty_of_val m)
+    (\<forall>k. (wf_ty k \<and> ty_of_val k = key_ty (ty_of_val m)
     \<longrightarrow> ty_of_val (selectImpl m k) = val_ty (ty_of_val m))))"
 
 subsubsection \<open>Proving well formdness of a simple map\<close>
 fun fAdd1 where "fAdd1 (IntV x) = (IntV (x+1))" | "fAdd1 _ = NoneV0"
 abbreviation mAdd1 :: "'a val1" where "mAdd1 \<equiv> MapKey fAdd1 ((TPrim TInt), (TPrim TInt))"
 abbreviation vAdd1 :: "'a valn" where "vAdd1 \<equiv> MapV (Inr (Inr mAdd1))"
+
+lemma "wf_ty vAdd1" by simp
 
 lemma VTAdd1: "val_ty (ty_of_val vAdd1) = (TPrim TInt)"
   using map_interface.select_convs(3) ty321.simps(1)
@@ -241,11 +256,12 @@ next
 qed
 
 lemma H2:
+  assumes "wf_ty k"
   assumes "ty_of_val k = (TPrim TInt)"
   shows "ty_of_val (selectImpl vAdd1 k) = (TPrim TInt)"
   using assms ty_of_val_Int by fastforce
 
-lemma HH: "(\<forall>k. (ty_of_val k = key_ty (ty_of_val vAdd1)
+lemma HH: "(\<forall>k. (wf_ty k \<and> ty_of_val k = key_ty (ty_of_val vAdd1)
     \<longrightarrow> ty_of_val (selectImpl vAdd1 k) = val_ty (ty_of_val vAdd1)))"
   using VTAdd1 KTAdd1 H2 by simp
 
@@ -256,6 +272,8 @@ fun hof where "hof (MapKey f ty) = Inl (MapKey (fAdd1 \<circ> f) ty)" | "hof _ =
 abbreviation TMII where "TMII \<equiv> TMap (TPrim TInt) (TPrim TInt)"
 abbreviation hom :: "'a val2" where "hom \<equiv> MapKey hof (TMII, TMII)"
 abbreviation homV :: "'a valn" where "homV \<equiv> MapV (Inr (Inl hom))"
+
+lemma "wf_ty homV" by simp
 
 lemma "(val_ty (ty_of_val homV) = TMII)"
   by (metis map_interface.select_convs(3) ty.distinct(11) ty321.simps(2)
@@ -280,7 +298,45 @@ lemma "ty_of_val k = TMII \<longrightarrow> (\<exists>k'. k = MapV (Inr ( k')))"
 lemma "ty_of_val       (MapV (Inl (MapKey f (TT, TT)))) = TMII" by simp
 lemma "selectImpl homV (MapV (Inl (MapKey f (TT, TT)))) = NoneV" by simp
 
-lemma "wf homV" oops  (* not true *)
+
+(* Counter Example Fix*)
+lemma "wf_ty (MapV (Inl (MapKey f (TT, TT)))) = False" by simp
+
+lemma "wf_ty k \<and> ty_of_val k = TMII \<longrightarrow> (\<exists>k'. k = MapV (Inr ( k')))"
+  by (metis Suc_eq_plus1 add.right_neutral add_less_cancel_left
+      count_level_map_ty.simps(1,3) le_add_same_cancel2 le_imp_less_Suc
+      max_0_1(2) not_less_zero numeral_Bit1 numeral_One select_convs(3)
+      ty.distinct(15) ty.simps(24) ty321.simps(3) type_of_val.simps(1,2,3,4)
+      wf_ty.elims(1) zero_less_one_class.zero_le_one)
+
+lemma "wf_ty k \<and> ty_of_val k = TMII \<longrightarrow> count_level_map_ty (ty_of_val k) = 1"
+  by simp
+lemma KInrr: "wf_ty k \<and> ty_of_val k = TMII \<longrightarrow> (\<exists>k'. k = MapV (Inr (Inr k')))"
+  by (smt (verit) One_nat_def VTAdd1 add_cancel_left_left count_level_map_ty.simps(1,3)
+      le_imp_less_Suc max_0_1(2) not_less_zero numeral_Bit1 numeral_One one_add_one
+      plus_1_eq_Suc select_convs(3) ty.simps(18,24) ty321.simps(1,2,3) tyL.simps(2)
+      type_of_val.elims type_of_val.simps(3,4) val.distinct(3,7) val_ty.simps(4)
+      wf_ty.elims(1) zero_less_one_class.zero_le_one)
+
+lemma
+  assumes "wf_ty k \<and> ty_of_val k = TMII"
+  shows "ty_of_val (selectImpl homV k) = TMII"
+proof -
+  obtain k' where "k = MapV (Inr (Inr k'))"
+    using assms KInrr by auto
+  then have "selectImpl homV k = val3ToValn (select2 (Inr (Inl hom)) (Inr (Inl k')))"
+    by auto
+  then have "selectImpl homV k = val3ToValn (Inr (select1 (Inl hom) (Inl k')))"
+    by auto
+  then have "selectImpl homV k = val3ToValn (Inr (Inr (hof k')))"
+    by auto
+  obtain f t where "k' = MapKey f t" oops
+
+(* new counter example *)
+lemma "ty_of_val (MapV (Inr (Inr (MapVal f (TT, TT))))) = TMII" by auto
+lemma "wf_ty (MapV (Inr (Inr (MapVal f (TT, TT)))))" by simp
+
+lemma "wf homV" nitpick
 
 
 lemma
