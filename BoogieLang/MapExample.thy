@@ -198,14 +198,17 @@ fun count_level_map_ty :: "ty \<Rightarrow> nat" where
     "count_level_map_ty (TMap tk tv) = max (1 + count_level_map_ty tk) (count_level_map_ty tv)"
   | "count_level_map_ty _ = 0"
 
+fun wf_L where
+    "wf_L n (MapKey _ (tk, tv)) = ((count_level_map_ty tk = n-1) \<and> (count_level_map_ty tv \<le> n-1))"
+  | "wf_L n (MapVal _ (tk, tv)) = ((count_level_map_ty tk \<le> n-1) \<and> (count_level_map_ty tv = n))"
+
 fun wf_ty :: "'a valn \<Rightarrow> bool" where
     "wf_ty (LitV v) = True"
   | "wf_ty (AbsV v) = True"
   | "wf_ty (NoneV) = True"
-  | "wf_ty (MapV (Inr (Inr m))) = (count_level_map_ty (tyL m) = 1)"
-  | "wf_ty (MapV (Inr (Inl m))) = (count_level_map_ty (tyL m) = 2)"
-  | "wf_ty (MapV (Inl m)) = (count_level_map_ty (tyL m) = 3)"
-
+  | "wf_ty (MapV (Inr (Inr m))) = wf_L 1 m"
+  | "wf_ty (MapV (Inr (Inl m))) = wf_L 2 m"
+  | "wf_ty (MapV (Inl m)) = wf_L 3 m"
 
 locale X =
   fixes A :: "'a absval_ty_fun"
@@ -287,56 +290,74 @@ lemma "\<exists>k. ty_of_val k = TMII"
   by (metis map_interface.select_convs(3) ty321.simps(1) tyL.simps(2)
       type_of_val.simps(4))
 
-lemma "ty_of_val k = TMII \<longrightarrow> (\<exists>k'. k = MapV k')"
-  by (metis ty.distinct(11)[of "type_of_lit _" TT TT]
-      ty.distinct(15)[of "fst (A _)" "snd (A _)" TT TT] ty.distinct(19)[of TT TT]
-      type_of_val.elims[of A example_map_ty k "ty_of_val k"])
+lemma "ty_of_val k = TMII \<longrightarrow> (\<exists>k'. k = MapV k')" apply (cases k) by auto
 
-(* Counter Example *)
-lemma "ty_of_val k = TMII \<longrightarrow> (\<exists>k'. k = MapV (Inr ( k')))" nitpick
-  oops
-lemma "ty_of_val       (MapV (Inl (MapKey f (TT, TT)))) = TMII" by simp
-lemma "selectImpl homV (MapV (Inl (MapKey f (TT, TT)))) = NoneV" by simp
+lemma kTMII:
+  assumes "wf_ty k"
+  assumes "ty_of_val k = TMII"
+  shows "\<exists>f. k = MapV (Inr (Inr (MapKey f (TT, TT))))"
+proof -
+  obtain mv where MV: "k = MapV mv" apply (cases k) using assms by auto
+  show ?thesis
+  proof (cases mv)
+    case (Inl m3)
+    then show ?thesis
+      using assms MV apply (cases m3) by auto
+  next
+    case (Inr m21)
+    then have C21: "k = MapV (Inr m21)" using MV by simp
+    then show ?thesis
+    proof (cases m21)
+      case (Inl m2)
+      then show ?thesis
+        using assms C21 apply (cases m2) by auto
+    next
+      case (Inr m1)
+      have WF1: "wf_L 1 m1" using C21 assms(1) \<open>m21 = Inr m1\<close> by fastforce
+      then have Ty1: "tyL m1 = TMII" using C21 assms \<open>m21 = Inr m1\<close> by fastforce
+      then show ?thesis using C21 assms(1) \<open>m21 = Inr m1\<close> WF1 Ty1
+      proof (cases m1)
+        case (MapVal f t)
+        have "t = (TT, TT)" using Ty1 \<open>m1 = MapVal f t\<close>
+          using WF1 wf_L.elims(2) by fastforce
+        then have "((count_level_map_ty TT \<le> 0) \<and> (count_level_map_ty TT = 1))"
+          using Ty1 MapVal WF1 by force
+        then show ?thesis by simp
+      next
+        case (MapKey f t)
+        have tt: "t = (TT, TT)" using Ty1 \<open>m1 = MapKey f t\<close>
+          using WF1 wf_L.elims(2) by fastforce
+        then have "((count_level_map_ty TT = 0) \<and> (count_level_map_ty TT \<le> 0))"
+          using Ty1 MapKey WF1 by force
+        have "mv = (Inr (Inr (MapKey f t)))"
+          using C21 \<open>m21 = Inr m1\<close> \<open>m1 = MapKey f t\<close> MV by force
+        then show ?thesis using tt MV by blast
+      qed
+    qed
+  qed
+qed
 
-
-(* Counter Example Fix*)
-lemma "wf_ty (MapV (Inl (MapKey f (TT, TT)))) = False" by simp
-
-lemma "wf_ty k \<and> ty_of_val k = TMII \<longrightarrow> (\<exists>k'. k = MapV (Inr ( k')))"
-  by (metis Suc_eq_plus1 add.right_neutral add_less_cancel_left
-      count_level_map_ty.simps(1,3) le_add_same_cancel2 le_imp_less_Suc
-      max_0_1(2) not_less_zero numeral_Bit1 numeral_One select_convs(3)
-      ty.distinct(15) ty.simps(24) ty321.simps(3) type_of_val.simps(1,2,3,4)
-      wf_ty.elims(1) zero_less_one_class.zero_le_one)
-
-lemma "wf_ty k \<and> ty_of_val k = TMII \<longrightarrow> count_level_map_ty (ty_of_val k) = 1"
-  by simp
-lemma KInrr: "wf_ty k \<and> ty_of_val k = TMII \<longrightarrow> (\<exists>k'. k = MapV (Inr (Inr k')))"
-  by (smt (verit) One_nat_def VTAdd1 add_cancel_left_left count_level_map_ty.simps(1,3)
-      le_imp_less_Suc max_0_1(2) not_less_zero numeral_Bit1 numeral_One one_add_one
-      plus_1_eq_Suc select_convs(3) ty.simps(18,24) ty321.simps(1,2,3) tyL.simps(2)
-      type_of_val.elims type_of_val.simps(3,4) val.distinct(3,7) val_ty.simps(4)
-      wf_ty.elims(1) zero_less_one_class.zero_le_one)
-
-lemma
+lemma wff:
   assumes "wf_ty k \<and> ty_of_val k = TMII"
   shows "ty_of_val (selectImpl homV k) = TMII"
 proof -
-  obtain k' where "k = MapV (Inr (Inr k'))"
-    using assms KInrr by auto
-  then have "selectImpl homV k = val3ToValn (select2 (Inr (Inl hom)) (Inr (Inl k')))"
+  obtain f where K: "k = MapV (Inr (Inr (MapKey f (TT, TT))))"
+    using assms kTMII by auto
+  then have "selectImpl homV k = val3ToValn (select2 (Inr (Inl hom)) (Inr (Inl (MapKey f (TT, TT)))))"
     by auto
-  then have "selectImpl homV k = val3ToValn (Inr (select1 (Inl hom) (Inl k')))"
+  then have "selectImpl homV k = val3ToValn (Inr (select1 (Inl hom) (Inl (MapKey f (TT, TT)))))"
     by auto
-  then have "selectImpl homV k = val3ToValn (Inr (Inr (hof k')))"
+  then have "selectImpl homV k = val3ToValn (Inr (Inr (hof (MapKey f (TT, TT)))))"
     by auto
-  obtain f t where "k' = MapKey f t" oops
+  have "wf_L 1 (MapKey f (TT, TT))" using assms K by simp
+  moreover have "ty_of_val (MapV (Inr (Inr (MapKey f (TT, TT))))) = TMII" using assms K by simp
+  then show ?thesis
+    using
+      \<open>selectImpl homV k = val3ToValn (select2 (Inr (Inl hom)) (Inr (Inl (MapKey f (TT, TT)))))\<close>
+    by fastforce
+qed
 
-(* new counter example *)
-lemma "ty_of_val (MapV (Inr (Inr (MapVal f (TT, TT))))) = TMII" by auto
-lemma "wf_ty (MapV (Inr (Inr (MapVal f (TT, TT)))))" by simp
-
-lemma "wf homV" nitpick
+lemma "wf homV" using wff by simp
 
 
 lemma
