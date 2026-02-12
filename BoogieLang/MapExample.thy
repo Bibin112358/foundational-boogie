@@ -215,7 +215,7 @@ locale X =
 begin
   abbreviation ty_of_val where "ty_of_val \<equiv> type_of_val A example_map_ty"
   fun wf where
-    "wf m = ((val_ty (ty_of_val m) \<noteq> TNone) \<and>
+    "wf m = ((wf_ty m) \<and> (val_ty (ty_of_val m) \<noteq> TNone) \<and>
     (\<forall>k. (wf_ty k \<and> ty_of_val k = key_ty (ty_of_val m)
     \<longrightarrow> ty_of_val (selectImpl m k) = val_ty (ty_of_val m))))"
 
@@ -359,35 +359,37 @@ qed
 
 lemma "wf homV" using wff by simp
 
+lemma "wf k \<Longrightarrow> wf_ty k" by simp
 
+subsubsection \<open>Some more general wf properties\<close>
+
+(* conclude Isabelle type from key of a select assuming wf and typed *)
 lemma
   assumes "wf (MapV (Inl (MapKey f ty)))"
+  assumes "wf k"
   assumes "ty_of_val k = key_ty (ty_of_val (MapV (Inl (MapKey f ty))))"
   shows "\<exists>k'. toVal3210 k = Inr (Inl k')"
 proof -
-  have "selectImpl (MapV (Inl (MapKey f ty))) k \<noteq> NoneV"
-    using assms(1,2) by auto
-  then show ?thesis
-    by (smt (verit) select2.simps(4) selectImpl'.elims selectImpl.simps(4)
-        sum.distinct(1) sum.inject(2) toVal3210.elims toVal3210.simps(6)
+  have "(ty_of_val (MapV (Inl (MapKey f ty)))) \<noteq> TNone" using assms by force
+  then have "key_ty (ty_of_val (MapV (Inl (MapKey f ty)))) \<noteq> TNone"
+    using assms
+    by (metis (no_types, lifting) X.wf.simps select2.simps(4) selectImpl'.simps(2)
+        selectImpl.simps(4) toVal3210.simps(3,6) type_of_val.simps(3) val3ToValn.simps(3)
+        wf_ty.simps(3))
+  then have "selectImpl (MapV (Inl (MapKey f ty))) k \<noteq> NoneV"
+    using assms by auto
+  then obtain k' where "(toVal3210 k) = Inr k'" using assms
+    by (metis obj_sumE selectImpl'.simps(1) selectImpl.simps(4)
         val3ToValn.simps(3))
-    by (smt (verit) Inr_inject select2.simps(4) selectImpl'.elims selectImpl.simps(4)
-        sum.distinct(1) toVal3210.elims toVal3210.simps(6)
+  then obtain k'' where "k' = Inl k''"
+    using assms
+    by (metis \<open>selectImpl (MapV (Inl (MapKey f ty))) k \<noteq> NoneV\<close> old.sum.exhaust
+        select2.simps(4) selectImpl'.simps(2) selectImpl.simps(4) toVal3210.simps(6)
         val3ToValn.simps(3))
-    by (smt (verit) Inr_inject select2.simps(4) selectImpl'.elims
-        selectImpl.simps(4) sum.distinct(1) toVal3210.elims
-        toVal3210.simps(6) val3ToValn.simps(3))
+  then show ?thesis using \<open>toVal3210 k = Inr k'\<close> by blast
 qed
 
 end
-
-locale assume_type = 
-fixes ty_of_val312 :: "'a val3 + 'a val2 + 'a val1 \<Rightarrow> ty"
-assumes
-T3: "\<forall>m. (\<exists>x. ty_of_val312 m = TMap (TMap (TMap (TPrim x)))) \<Longrightarrow> (\<exists>m'. m = Inl m')" and
-T3: "\<forall>m. (\<exists>x. ty_of_val312 m = TMap (TMap (TMap (TPrim x)))) \<Longrightarrow> (\<exists>m'. m = Inl m')"
-begin
-
 
 subsection \<open>Array Axiom Update\<close>
 text \<open>Property to prove: (m[k] := v)[k] == v or select (store m k v) k = v\<close>
