@@ -217,7 +217,10 @@ begin
   fun wf where
     "wf m = ((wf_ty m) \<and> (val_ty (ty_of_val m) \<noteq> TNone) \<and>
     (\<forall>k. (wf_ty k \<and> ty_of_val k = key_ty (ty_of_val m)
-    \<longrightarrow> ty_of_val (selectImpl m k) = val_ty (ty_of_val m))))"
+    \<longrightarrow> ty_of_val (selectImpl m k) = val_ty (ty_of_val m)))
+    \<and>
+    (\<forall>k. (wf_ty k \<and> ty_of_val k \<noteq> key_ty (ty_of_val m)
+    \<longrightarrow> selectImpl m k = NoneV)))"
 
 subsubsection \<open>Proving well formdness of a simple map\<close>
 fun fAdd1 where "fAdd1 (IntV x) = (IntV (x+1))" | "fAdd1 _ = NoneV0"
@@ -268,7 +271,53 @@ lemma HH: "(\<forall>k. (wf_ty k \<and> ty_of_val k = key_ty (ty_of_val vAdd1)
     \<longrightarrow> ty_of_val (selectImpl vAdd1 k) = val_ty (ty_of_val vAdd1)))"
   using VTAdd1 KTAdd1 H2 by simp
 
-lemma "wf vAdd1" using VTAdd1 HH by auto
+lemma H3:
+  assumes "wf_ty k"
+  assumes "ty_of_val k \<noteq> TPrim TInt"
+  shows "selectImpl vAdd1 k = NoneV"
+proof (cases k)
+  case (LitV x1)
+  then show ?thesis
+  proof (cases x1)
+    case (LBool x1)
+    then show ?thesis by (simp add: LitV)
+  next
+    case (LInt x2)
+    then show ?thesis using LitV assms by auto
+  next
+    case (LReal x3)
+    then show ?thesis by (simp add: LitV)
+  qed
+next
+  case (AbsV x2)
+  then show ?thesis by simp
+next
+  case (MapV x3)
+  then show ?thesis
+  proof (cases x3)
+    case (Inl a)
+    then show ?thesis using assms MapV by simp
+  next
+    case (Inr b)
+    then show ?thesis
+    proof (cases b)
+      case (Inl a)
+      then show ?thesis using assms MapV Inr by simp
+    next
+      case (Inr b)
+      then have "selectImpl vAdd1 k = val3ToValn (Inr (select1 (Inr (Inl mAdd1)) (Inl b)))" 
+        using assms Inr Inr MapV
+        using wf_ty.elims(2) by fastforce
+      then show ?thesis by auto
+    qed
+  qed
+next
+  case NoneV
+  then show ?thesis by simp
+qed
+
+
+lemma "wf vAdd1" using VTAdd1 HH H3 by auto
 
 subsubsection \<open>Well formdness of a higher order map\<close>
 fun hof where "hof (MapKey f ty) = Inl (MapKey (fAdd1 \<circ> f) ty)" | "hof _ = undefined"
@@ -357,6 +406,13 @@ proof -
     by fastforce
 qed
 
+lemma H3homV:
+  assumes "wf_ty k"
+  assumes "ty_of_val k \<noteq> TMII"
+  shows "selectImpl homV k = NoneV"
+proof -
+
+
 lemma "wf homV" using wff by simp
 
 lemma "wf k \<Longrightarrow> wf_ty k" by simp
@@ -389,7 +445,6 @@ proof -
   then show ?thesis using \<open>toVal3210 k = Inr k'\<close> by blast
 qed
 
-end
 
 subsection \<open>Array Axiom Update\<close>
 text \<open>Property to prove: (m[k] := v)[k] == v or select (store m k v) k = v\<close>
@@ -580,37 +635,7 @@ text \<open>Property to prove: (\<forall>k. m[k] == n[k]) <==> Eq m n\<close>
 subsubsection \<open>Helper Injectivity Lemmas and Types of Map Functions\<close>
 
 lemma valBij: "toVal3210 (val3ToValn x) = x"
-proof (cases x)
-  case (Inl x')
-  then show ?thesis by simp
-next
-  case (Inr x')
-  then show ?thesis
-  proof (cases x')
-    case (Inl x'')
-    then show ?thesis using Inl Inr by fastforce
-  next
-    case (Inr x'')
-    then show ?thesis
-    proof (cases x'')
-      case (Inl x''')
-      then show ?thesis 
-        using \<open>x = Inr x'\<close> \<open>x' = Inr x''\<close> \<open>x'' = Inl x'''\<close> by simp
-    next
-      case (Inr x''')
-      then show ?thesis
-      proof (cases x''')
-        case (LitV0 v)
-        then show ?thesis
-          using \<open>x''' = LitV0 v\<close> \<open>x = Inr x'\<close> \<open>x' = Inr x''\<close> \<open>x'' = Inr x'''\<close> by simp
-      next
-        case (AbsV0 v)
-        then show ?thesis
-          using \<open>x''' = AbsV0 v\<close> \<open>x = Inr x'\<close> \<open>x' = Inr x''\<close> \<open>x'' = Inr x'''\<close> by simp
-      qed
-    qed
-  qed
-qed
+  by (cases x rule: val3ToValn.cases; simp)
 
 lemma toVal3210_inj:
   assumes "toVal3210 x = toVal3210 y"
@@ -651,13 +676,6 @@ proof -
     by (metis (no_types, lifting) option.inj_map_strong sum.inject(2) toValnOpt_inj)
 qed
 
-primrec type_of_L where
-  "type_of_L (MapKey _ t) = t" | "type_of_L (MapVal _ t) = t"
-
-fun type_of_val10  where
-    "type_of_val10 (Inl m) = type_of_L m"
-  | "type_of_val10 (Inr v) = undefined"
-
 subsubsection \<open>Extensionality Level 0\<close>
 
 lemma extensional0Val:
@@ -668,15 +686,16 @@ lemma extensional0Val:
 lemma extensional0Key:
   assumes "select0 (Inl (MapKey m t)) = select0 (Inl (MapKey n t'))"
   shows "m = n"
-  by (metis (lifting) ext Inl_inject assms select0.simps(1))
+  by (metis (no_types, lifting) ext assms not_arg_cong_Inr select0.simps(2))
 
 lemma extensional0:
   assumes "select0 m = select0 n"
-  assumes "type_of_val10 m = type_of_val10 n"
+  assumes "\<exists>m'. m = Inl m'"
+  assumes "ty_of_val (Inlm = type_of_val10 n"
   shows "m = n"
 proof (cases m)
   case (Inr m')
-  then show ?thesis using assms(3) by auto
+  then show ?thesis using assms by simp
 next
   case (Inl m')
   then show ?thesis
@@ -685,21 +704,34 @@ next
     then show ?thesis
     proof (cases n)
       case (Inr n')
-      then show ?thesis using assms(1,3) by auto
+      then show ?thesis using assms
+        by (metis Inl Inr_Inl_False MapVal select0.simps(1,3))
     next
       case (Inl n')
       then show ?thesis
       proof (cases n')
         case (MapKey n'' t')
-        obtain k v where "select0 (Inl (MapVal m'' t)) k = Some (Inl v)"
+        obtain k v where "select0 (Inl (MapVal m'' t)) k = (Inl v)"
           using \<open>m = Inl m'\<close> \<open>m' = MapVal m'' t\<close> assms by auto
         then show ?thesis
           using \<open>m = Inl m'\<close> \<open>m' = MapVal m'' t\<close> \<open>n = Inl n'\<close> \<open>n' = MapKey n'' t'\<close> assms
           by fastforce
       next
         case (MapVal n'' t')
+        then have "m = Inl (MapVal m'' t) \<and> n = Inl (MapVal n'' t')"
+          using \<open>m = Inl m'\<close> \<open>m' = MapVal m'' t\<close> \<open>n = Inl n'\<close> \<open>n' = MapVal n'' t'\<close> by simp
+        then have "select0 (Inl (MapVal m'' t)) = select0 (Inl (MapVal n'' t'))"
+          using assms by blast
+        then have 
+          using extensional0Val
+(*
+  assumes "select0 (Inl (MapVal m t)) = select0 (Inl (MapVal n t'))"
+  shows "m = n"
+*)
+
         then show ?thesis
           using extensional0Val \<open>m = Inl m'\<close> \<open>m' = MapVal m'' t\<close> \<open>n = Inl n'\<close> \<open>n' = MapVal n'' t'\<close> assms
+          try0
           by fastforce
       qed
     qed
@@ -1110,10 +1142,12 @@ abbreviation example_map3 :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" w
 
 lemma extensional:
   assumes "(map_select example_map3) m = (map_select example_map3) n"
-  assumes "\<exists>k. (map_select example_map3) m k \<noteq> None"
   assumes "type_of_val A example_map3 m = type_of_val A example_map3 n"
   shows "m = n"
   by (smt (verit) assms(1,2,3) extensionalImplMapV map_interface.select_convs(1,3)
       selectImpl.elims type_of_val.simps(3))
+
+
+end
 
 end
