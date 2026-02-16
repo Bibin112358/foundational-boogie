@@ -685,7 +685,7 @@ lemma extensional0Key:
 lemma extensional0:
   assumes "select0 m = select0 n"
   assumes "\<exists>m'. m = Inl m'"
-  assumes "ty_of_val (Inlm = type_of_val10 n"
+  assumes "ty_of_val (val3ToValn (Inr (Inr m))) = ty_of_val (val3ToValn (Inr (Inr n)))"
   shows "m = n"
 proof (cases m)
   case (Inr m')
@@ -699,7 +699,7 @@ next
     proof (cases n)
       case (Inr n')
       then show ?thesis using assms
-        by (metis Inl Inr_Inl_False MapVal select0.simps(1,3))
+        by (metis (no_types, lifting) C0Inrrr Inr_inject InrrrC0 sum.distinct(1) valBij)
     next
       case (Inl n')
       then show ?thesis
@@ -716,17 +716,10 @@ next
           using \<open>m = Inl m'\<close> \<open>m' = MapVal m'' t\<close> \<open>n = Inl n'\<close> \<open>n' = MapVal n'' t'\<close> by simp
         then have "select0 (Inl (MapVal m'' t)) = select0 (Inl (MapVal n'' t'))"
           using assms by blast
-        then have 
-          using extensional0Val
-(*
-  assumes "select0 (Inl (MapVal m t)) = select0 (Inl (MapVal n t'))"
-  shows "m = n"
-*)
-
         then show ?thesis
           using extensional0Val \<open>m = Inl m'\<close> \<open>m' = MapVal m'' t\<close> \<open>n = Inl n'\<close> \<open>n' = MapVal n'' t'\<close> assms
-          try0
-          by fastforce
+          by (metis (no_types, opaque_lifting) select_convs(3) surj_pair toVal3210.simps(3) toVal3210_inj
+              ty.inject(4) ty321.simps(1) tyL.simps(1) type_of_val.simps(3) valBij)
       qed
     qed
   next
@@ -734,13 +727,14 @@ next
     then show ?thesis
     proof (cases n)
       case (Inr n')
-      then show ?thesis using assms(1,3) by auto
+      then show ?thesis using assms(1,3)
+        by (metis (no_types, lifting) C0Inrrr Inl X.InrrrC0 sum.distinct(1) sum.inject(2) valBij)
     next
       case (Inl n')
       then show ?thesis
       proof (cases n')
         case (MapVal n'' t')
-        obtain k v where "select0 (Inl (MapKey m'' t)) k = Some (Inr v)"
+        obtain k v where "select0 (Inl (MapKey m'' t)) k = (Inr v)"
           using \<open>m = Inl m'\<close> \<open>m' = MapKey m'' t\<close> assms by auto
         then show ?thesis
           using \<open>m = Inl m'\<close> \<open>m' = MapKey m'' t\<close> \<open>n = Inl n'\<close> \<open>n' = MapVal n'' t'\<close> assms
@@ -749,7 +743,8 @@ next
         case (MapKey n'' t')
         then show ?thesis
         using extensional0Key \<open>m = Inl m'\<close> \<open>m' = MapKey m'' t\<close> \<open>n = Inl n'\<close> \<open>n' = MapKey n'' t'\<close> assms
-          by fastforce
+        by (metis (no_types, opaque_lifting) select_convs(3) surj_pair toVal3210.simps(3) toVal3210_inj
+            ty.inject(4) ty321.simps(1) tyL.simps(2) type_of_val.simps(3) valBij)
       qed
     qed
   qed
@@ -760,100 +755,40 @@ subsubsection \<open>Extensionality Level 1\<close>
 
 lemma extensional1Val:
   assumes "select1 (Inl (MapVal m t)) = select1 (Inl (MapVal n t'))"
-  assumes "\<exists>k. select1 (Inl (MapVal m t)) k \<noteq> None"
   shows "m = n"
-proof -
-  have "\<forall>k. map_option Inl (m k) = map_option Inl (n k)"
-    by (metis (mono_tags, lifting) assms(1) option.inj_map_strong select1.simps(1)
-        sum.inject(1))
-  then have "\<forall>k. m k = n k"
-    by (metis (no_types, lifting) Inl_inject[of "the (m _)" "the (n _)"]
-        option.collapse[of "m _"] option.collapse[of "n _"] option.map_disc_iff[of Inl "n _"]
-        option.map_disc_iff[of Inl "m _"] option.map_sel[of "m _" Inl]
-        option.map_sel[of "n _" Inl])
-  then show "m = n" by auto
-qed
+  by (metis (no_types, lifting) ext assms select1.simps(1) sum.inject(1))
 
 lemma extensional1Key:
   assumes "select1 (Inl (MapKey m t)) = select1 (Inl (MapKey n t'))"
-  assumes "\<exists>k. select1 (Inl (MapKey m t)) k \<noteq> None"
   shows "m = n"
-proof -
-  have "\<forall>k. map_option Inr (m k) = map_option Inr (n k)"
-    by (metis (mono_tags, lifting) assms(1) option.inj_map_strong select1.simps(2)
-          sum.inject(2))
-  then have "\<forall>k. m k = n k"
-    by (metis (no_types, lifting) Inr_inject[of "the (m _)" "the (n _)"]
-        option.collapse[of "m _"] option.collapse[of "n _"] option.map_disc_iff[of Inr "n _"]
-        option.map_disc_iff[of Inr "m _"] option.map_sel[of "m _" Inr]
-        option.map_sel[of "n _" Inr])
-  then show "m = n" by auto
-qed
-
-fun type_of_val210  where
-    "type_of_val210 (Inl m) = type_of_L m"
-  | "type_of_val210 (Inr v) = type_of_val10 v"
+  by (metis (no_types, lifting) ext assms not_arg_cong_Inr select1.simps(2))
 
 lemma extensional1Rec:
   assumes "select1 (Inr m') = select1 (Inr n')"
-  assumes "type_of_val10 m' = type_of_val10 n'"
-  assumes "\<exists>k. select1 (Inr m') k \<noteq> None"
-  shows "m' = n'"
+  assumes "\<exists>m''. m' = Inl m''"
+  assumes "ty_of_val (val3ToValn (Inr (Inr m'))) = ty_of_val (val3ToValn (Inr (Inr n')))"
+  shows "m' = n'" using extensional0 assms
+  (* by (metis (lifting) ext not_arg_cong_Inr select1.simps(3)) *)
 proof -
   have "\<forall>k. select0 m' k = select0 n' k"
   proof rule
     fix k
-    have "select1 (Inr m') (Inr k) = map_option Inr (select0 m' k)"
-      by simp
-    moreover have "select1 (Inr n') (Inr k) = map_option Inr (select0 n' k)"
-      by simp
-    ultimately have "map_option Inr (select0 m' k) = map_option Inr (select0 n' k)"
-      by (metis (mono_tags, lifting) assms(1) option.inj_map_strong sum.inject(2))
-    then show "select0 m' k = select0 n' k"
-      by (metis option.inj_map_strong sum.inject(2))
+    have "select1 (Inr m') (Inr k) = Inr (select0 m' k)" by simp
+    moreover have "select1 (Inr n') (Inr k) = Inr (select0 n' k)" by simp
+    ultimately have "Inr (select0 m' k) = Inr (select0 n' k)" using assms by simp
+    then show "select0 m' k = select0 n' k" by simp
   qed
   then have "select0 m' = select0 n'" by auto
-  have "\<exists>k. select0 m' k \<noteq> None"
-  proof -
-    obtain k where "select1 (Inr m') k \<noteq> None" using assms by auto
-    obtain k' where "select1 (Inr m') k = map_option Inr (select0 m' k')"
-      by (smt (verit) Inr_not_Inl \<open>select1 (Inr m') k \<noteq> None\<close> select1.elims
-          sum.inject(2))
-    then show ?thesis using \<open>select1 (Inr m') k \<noteq> None\<close> by auto
-  qed
-  have "type_of_val10 m' = type_of_val10 n'" using assms by auto
   then show ?thesis using assms extensional0
-    using \<open>\<exists>k. select0 m' k \<noteq> None\<close> \<open>select0 m' = select0 n'\<close> by blast
+    using \<open>select0 m' = select0 n'\<close>
+    by blast
 qed
 
-(*
-lemma extensional1':
-  assumes "select1 m = select1 n"
-  assumes "type_of_val10 m = type_of_val10 n"
-  assumes "\<exists>k. select1 m k \<noteq> None"
-  shows "m = n"
-proof (cases rule: select1.cases)
-  case (1 m uu k)
-  then show ?thesis sorry
-next
-  case (2 m uv k)
-  then show ?thesis sorry
-next
-  case (3 m k)
-  then show ?thesis sorry
-next
-  case ("4_1" va vb v)
-  then show ?thesis sorry
-next
-  case ("4_2" v va)
-  then show ?thesis sorry
-qed
-*)
 
 lemma extensional1:
   assumes "select1 m = select1 n"
-  assumes "type_of_val210 m = type_of_val210 n"
-  assumes "\<exists>k. select1 m k \<noteq> None"
+  assumes "ty_of_val (val3ToValn (Inr (m))) = ty_of_val (val3ToValn (Inr (n)))"
+  assumes "\<exists>m'. m = Inr m' \<Longrightarrow> \<exists>m''. m = Inr (Inl m'')"
   shows "m = n"
 proof (cases m)
   case (Inr m')
@@ -862,9 +797,13 @@ proof (cases m)
     case (Inl n')
     then show ?thesis using assms(1) [unfolded \<open>m = _\<close> \<open>n = _\<close>, simplified]
       proof -
-        obtain k v where A: "select1 (Inr m') k = Some v" using assms(3) Inr by auto
-        then obtain v' where "v = Inr v'" apply (cases k) by auto
-        then obtain k' where "k = Inr k'" using A apply (cases k) by auto
+        obtain k v where A: "select1 (Inr m') k = v" using assms(3) Inr by auto
+        then obtain v' where "v = Inr v'" apply (cases k)
+          apply (metis Inr_not_Inl L.exhaust \<open>select1 (Inr m') = select1 (Inl n')\<close> select1.simps(1,2,3))
+          by auto
+        then obtain k' where "k = Inr k'" using A apply (cases k)
+          using Extraction.exE_realizer Extraction.exE_realizer'
+              HOL.cnf.weakening_thm HOL.forw_subst try
         have "select1 (Inl n') (Inr k') \<noteq> Some (Inr v')"
           using \<open>v = Inr v'\<close> \<open>k = Inr k'\<close> apply (cases n') by auto
         then show ?thesis
