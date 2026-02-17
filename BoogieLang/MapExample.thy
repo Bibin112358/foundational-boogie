@@ -136,6 +136,17 @@ fun selectImpl' :: "'a val3210 \<Rightarrow> 'a val3210 \<Rightarrow> 'a val3210
     "selectImpl' m (Inl k) = undefined"
   | "selectImpl' m (Inr k) = select2 m k"
 
+fun selectImplAux :: "'a val3210 \<Rightarrow> 'a val3210 \<Rightarrow> 'a val3210" where
+    "selectImplAux (Inr (Inr (Inr (LitV0 v)))) _ = undefined"
+  | "selectImplAux (Inr (Inr (Inr (AbsV0 v)))) _ = undefined"
+  | "selectImplAux (Inr (Inr (Inl (MapVal m _)))) (Inr (Inr (Inr k))) = Inr (Inr (Inl (m k)))"
+  | "selectImplAux (Inr (Inr (Inl (MapKey m _)))) (Inr (Inr (Inr k))) = Inr (Inr (Inr (m k)))"
+  | "selectImplAux (Inr (Inl (MapVal m _))) (Inr (Inr k)) = Inr (Inl (m k))"
+  | "selectImplAux (Inr (Inl (MapKey m _))) (Inr (Inr (Inl k))) = Inr (Inr (m k))"
+  | "selectImplAux (Inl (MapVal m _)) (Inr k) = Inl (m k)"
+  | "selectImplAux (Inl (MapKey m _)) (Inr (Inl k)) = Inr (m k)"
+  | "selectImplAux _ _ = undefined"
+
 fun selectImpl :: "'a valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn" where
     "selectImpl (LitV _) _ = undefined"
   | "selectImpl (AbsV _) _ = undefined"
@@ -670,6 +681,123 @@ proof -
     by (metis (no_types, lifting) option.inj_map_strong sum.inject(2) toValnOpt_inj)
 qed
 
+
+subsubsection \<open>Extensionality Aux\<close>
+lemma extensionalityAux:
+  assumes "wf (MapV m)"
+  assumes "wf (MapV n)"
+  assumes "selectImplAux (toVal3210 (MapV m)) = selectImplAux (toVal3210 (MapV n))"
+  assumes "ty_of_val (MapV m) = ty_of_val (MapV n)"
+  shows "m = n"
+  proof (cases m rule: ty321.cases)
+    case (1 m')
+    then show ?thesis
+    proof -
+      have "count_level_map_ty (ty_of_val (MapV m)) = 1"
+        using "1" InrrlC1 assms(1) toVal3210.simps(3) wf.elims(2) by blast
+      then have "count_level_map_ty (ty_of_val (MapV n)) = 1"
+        using assms(4) by argo
+      then obtain n' where "n = Inr (Inr n')"
+        by (metis C1Inrrl assms(2) toVal3210_inj val.inject(3) val3ToValn.simps(3) valBij
+            wf.simps)
+      then show ?thesis
+      proof (cases m')
+        case (MapVal m'' tm)
+        then show ?thesis
+        proof (cases n')
+          case (MapVal n'' tn)
+          have "tm = tn" using assms(4) 1 MapVal \<open>m' = MapVal m'' tm\<close>
+            by (metis \<open>n = Inr (Inr n')\<close> key_ty.simps(1) select_convs(3) surj_pair ty321.simps(1)
+                tyL.simps(1) type_of_val.simps(3) val_ty.simps(1))
+          moreover have "m'' = n''"
+          proof (rule ext)
+            fix k show "m'' k = n'' k"
+            using assms(3) 1 MapVal \<open>m' = MapVal m'' tm\<close> \<open>n' = MapVal n'' tn\<close>
+            selectImplAux.simps(3) sum.inject(2) toVal3210.simps(3)
+            by (metis \<open>n = Inr (Inr n')\<close> old.sum.inject(1))
+          qed
+          ultimately show ?thesis using 1 MapVal \<open>m' = MapVal m'' tm\<close> \<open>n' = MapVal n'' tn\<close>
+            using \<open>n = Inr (Inr n')\<close> by force
+        next
+          case (MapKey x21 x22)
+          (* This case is impossible because selectImplAux would return Inl for m and Inr for n *)
+          fix f k
+          have "selectImplAux (toVal3210 (MapV m)) (Inr (Inr (Inr k))) = Inr (Inr (Inl (m'' k)))"
+            using 1 MapVal by simp
+          moreover have "selectImplAux (toVal3210 (MapV n)) (Inr (Inr (Inr k))) = Inr (Inr (Inr (f k)))"
+            using MapKey toVal3210.simps
+            using MapKey \<open>n = Inr (Inr n')\<close> assms(3) calculation by force
+          ultimately show ?thesis using assms(3) sum.distinct(1) by simp
+        qed
+      next
+        case (MapKey m'' tm)
+        then show ?thesis
+        proof (cases n')
+          case (MapKey n'' tn)
+          have "tm = tn" using assms(4) 1 MapKey \<open>m' = MapKey m'' tm\<close> ty321.simps(1)
+            by (metis \<open>n = Inr (Inr n')\<close> select_convs(3) surj_pair ty.inject(4) tyL.simps(2)
+                type_of_val.simps(3))
+          moreover have "m'' = n''"
+          proof (rule ext)
+            fix k show "m'' k = n'' k"
+              using assms(3) 1 MapKey \<open>m' = MapKey m'' tm\<close> \<open>n' = MapKey n'' tn\<close>
+              selectImplAux.simps(4) sum.inject(2) toVal3210.simps(3)
+              by (metis \<open>n = Inr (Inr n')\<close>)
+          qed
+          ultimately show ?thesis using 1 MapKey \<open>m' = MapKey m'' tm\<close> \<open>n' = MapKey n'' tn\<close>
+            using \<open>n = Inr (Inr n')\<close> by force
+        next
+          case (MapVal f tn)
+          fix k
+          have "selectImplAux (toVal3210 (MapV m)) (Inr (Inr (Inr k))) = Inr (Inr (Inr (m'' k)))" 
+            using 1 MapKey by simp
+          moreover have "selectImplAux (toVal3210 (MapV n)) (Inr (Inr (Inr k))) = Inr (Inr (Inl (f k)))"
+            using \<open>n = Inr (Inr n')\<close> MapVal by simp
+          ultimately show ?thesis using assms(3) sum.distinct(1) by auto
+        qed
+      qed
+    qed
+next
+  case (2 m')
+  then show ?thesis 
+  proof -
+    have "count_level_map_ty (ty_of_val (MapV m)) = 2"
+      using "2" InrlC2 assms(1) toVal3210.simps(4) wf_ty.simps(4)
+      by fastforce
+    then have "count_level_map_ty (ty_of_val (MapV n)) = 2"
+      using assms(4) by argo
+    then obtain n' where N: "n = Inr (Inl n')"
+      using C2Inrl assms(2) toVal3210_inj val.inject(3) val3ToValn.simps(4) valBij
+      by (metis wf.elims(1))
+    then show ?thesis 
+      using assms(3,4) 2 N apply (cases m'; cases n')
+      apply (auto simp: fun_eq_iff dest: spec[of _ "Inr (Inr _)"])
+      apply (metis Inl_Inr_False selectImplAux.simps(5,6) sum.sel(2))
+      apply (metis not_arg_cong_Inr old.sum.distinct(1) selectImplAux.simps(5,6))
+      by (metis old.sum.inject(2) selectImplAux.simps(6))
+  qed
+next
+  case (3 m')
+  then show ?thesis 
+  proof -
+    have "count_level_map_ty (ty_of_val (MapV m)) = 3"
+      using "3" InlC3 assms(1) toVal3210.simps(5) wf_ty.simps(5)
+      by fastforce
+    then have "count_level_map_ty (ty_of_val (MapV n)) = 3"
+      using assms(4) by argo
+    then obtain n' where N: "n = Inl n'"
+      using C3Inl assms toVal3210_inj val.inject(3) val3ToValn.simps(5) valBij
+      by (metis wf.elims(1))
+    then show ?thesis 
+      using assms(3,4) 3 N apply (cases m'; cases n')
+      apply (auto simp: fun_eq_iff dest: spec[of _ "Inr _"])
+      apply (metis old.sum.distinct(1) selectImplAux.simps(7,8))
+      apply (metis selectImplAux.simps(7,8) sum.distinct(1))
+      by (metis selectImplAux.simps(8) sum.sel(2))
+  qed
+qed
+
+(*
 subsubsection \<open>Extensionality Level 0\<close>
 
 lemma extensional0Val:
@@ -796,7 +924,8 @@ proof (cases m)
   proof (cases n)
     case (Inl n')
     then show ?thesis using assms(1) [unfolded \<open>m = _\<close> \<open>n = _\<close>, simplified]
-      proof -
+    proof -
+      show ?thesis
         obtain k v where A: "select1 (Inr m') k = v" using assms(3) Inr by auto
         then obtain v' where "v = Inr v'" apply (cases k)
           apply (metis Inr_not_Inl L.exhaust \<open>select1 (Inr m') = select1 (Inl n')\<close> select1.simps(1,2,3))
@@ -1026,6 +1155,7 @@ next
     qed
   qed
 qed
+*)
 
 subsubsection \<open>Extensionality Impl\<close>
 
