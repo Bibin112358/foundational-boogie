@@ -116,20 +116,18 @@ fun val3ToValn :: "'a val3210 \<Rightarrow> 'a valn" where
   | "val3ToValn (Inl m) = (MapV (Inl m))"
 
 fun selectImplAux :: "'a val3210 \<Rightarrow> 'a val3210 \<Rightarrow> 'a val3210" where
-    "selectImplAux (Inr (Inr (Inr (LitV0 v)))) _ = undefined"
-  | "selectImplAux (Inr (Inr (Inr (AbsV0 v)))) _ = undefined"
+    "selectImplAux (Inr (Inr (Inr (LitV0 v)))) _ = (Inr (Inr (Inr undefined)))"
+  | "selectImplAux (Inr (Inr (Inr (AbsV0 v)))) _ = (Inr (Inr (Inr undefined)))"
   | "selectImplAux (Inr (Inr (Inl (MapVal m _)))) (Inr (Inr (Inr k))) = Inr (Inr (Inl (m k)))"
   | "selectImplAux (Inr (Inr (Inl (MapKey m _)))) (Inr (Inr (Inr k))) = Inr (Inr (Inr (m k)))"
   | "selectImplAux (Inr (Inl (MapVal m _))) (Inr (Inr k)) = Inr (Inl (m k))"
   | "selectImplAux (Inr (Inl (MapKey m _))) (Inr (Inr (Inl k))) = Inr (Inr (m k))"
   | "selectImplAux (Inl (MapVal m _)) (Inr k) = Inl (m k)"
   | "selectImplAux (Inl (MapKey m _)) (Inr (Inl k)) = Inr (m k)"
-  | "selectImplAux _ _ = undefined"
+  | "selectImplAux _ _ = (Inr (Inr (Inr undefined)))"
 
 fun selectImpl :: "'a valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn" where
-    "selectImpl (LitV _) _ = undefined"
-  | "selectImpl (AbsV _) _ = undefined"
-  | "selectImpl (MapV m) k = val3ToValn (selectImplAux (toVal3210 (MapV m)) (toVal3210 k))"
+  "selectImpl m k = val3ToValn (selectImplAux (toVal3210 m) (toVal3210 k))"
 
 abbreviation example_map :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
   "example_map \<equiv> \<lparr> map_select = selectImpl, map_store = undefined, map_type = undefined \<rparr>"
@@ -139,8 +137,8 @@ lemma "(map_select example_map) mg4 m24 = (MapV (Inr (Inr (MapKey (undefined(Int
 subsection \<open>Store\<close>
 
 fun storeImplAux :: "'a val3210 \<Rightarrow> 'a val3210 \<Rightarrow> 'a val3210 \<Rightarrow> 'a val3210" where
-    "storeImplAux (Inr (Inr (Inr (LitV0 v)))) _ _ = undefined"
-  | "storeImplAux (Inr (Inr (Inr (AbsV0 v)))) _ _ = undefined"
+    "storeImplAux (Inr (Inr (Inr (LitV0 v)))) _ _ = (Inr (Inr (Inr undefined)))"
+  | "storeImplAux (Inr (Inr (Inr (AbsV0 v)))) _ _ = (Inr (Inr (Inr undefined)))"
   | "storeImplAux (Inr (Inr (Inl (MapVal m t)))) (Inr (Inr (Inr k))) (Inr (Inr (Inl v)))
       = (Inr (Inr (Inl (MapVal (m(k := v)) t))))"
   | "storeImplAux (Inr (Inr (Inl (MapKey m t)))) (Inr (Inr (Inr k))) (Inr (Inr (Inr v)))
@@ -153,12 +151,10 @@ fun storeImplAux :: "'a val3210 \<Rightarrow> 'a val3210 \<Rightarrow> 'a val321
       = (Inl (MapVal (m(k := v)) t))"
   | "storeImplAux (Inl (MapKey m t)) (Inr (Inl k)) (Inr v)
       = (Inl (MapKey (m(k := v)) t))"
-  | "storeImplAux _ _ _ = undefined"
+  | "storeImplAux _ _ _ = (Inr (Inr (Inr undefined)))"
 
 fun storeImpl :: "'a valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn" where
-    "storeImpl (LitV _) _ _ = undefined"
-  | "storeImpl (AbsV _) _ _ = undefined"
-  | "storeImpl (MapV m) k v = val3ToValn (storeImplAux (toVal3210 (MapV m)) (toVal3210 k) (toVal3210 v))"
+  "storeImpl m k v = val3ToValn (storeImplAux (toVal3210 m) (toVal3210 k) (toVal3210 v))"
 
 abbreviation example_map2 :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
   "example_map2 \<equiv> \<lparr> map_select = selectImpl, map_store = storeImpl, map_type = undefined \<rparr>"
@@ -205,11 +201,8 @@ begin
 abbreviation ty_of_val where "ty_of_val \<equiv> type_of_val A example_map_ty"
 
 inductive wf where
-    Prim: "wf (LitV (LInt x))"
-    | MapKey0: "((\<exists>m' t'. m = (MapV (Inr (Inr (MapKey m' t'))))) \<and> wf_ty m
-      \<and> (\<forall>k. (wf_ty k \<and> ty_of_val k = key_ty (ty_of_val m) \<longrightarrow> ((ty_of_val (selectImpl m k) = val_ty (ty_of_val m))) )))
-      \<Longrightarrow> wf m"
-    | ind: "(wf_ty m
+    wfLitV: "wf (LitV v)" | wfAbsV: "wf (AbsV v)" |
+    wfMapV: "(wf_ty m
       \<and> (\<forall>k. (wf_ty k \<and> ty_of_val k = key_ty (ty_of_val m) \<longrightarrow> ((ty_of_val (selectImpl m k) = val_ty (ty_of_val m)) \<and>  wf (selectImpl m k)))))
       \<Longrightarrow> wf m"
 
@@ -218,7 +211,7 @@ inductive wf where
     (\<forall>k. (wf_ty k \<and> ty_of_val k = key_ty (ty_of_val m)
     \<longrightarrow> ((ty_of_val (selectImpl m k) = val_ty (ty_of_val m))) )))"
 
-lemma "(wf (LitV (LInt 2)))" using local.wf.Prim by simp
+lemma "(wf (LitV (LInt 2)))" using local.wf.wfLitV by simp
 
 
 subsubsection "Bijection between count_level_map_ty and sum type levels"
@@ -339,8 +332,9 @@ lemma HH: "(\<forall>k. (wf_ty k \<and> ty_of_val k = key_ty (ty_of_val vAdd1)
     \<longrightarrow> ty_of_val (selectImpl vAdd1 k) = val_ty (ty_of_val vAdd1)))"
   using VTAdd1 KTAdd1 H2 by simp
 
-lemma "wf vAdd1" using VTAdd1 HH 
-  by (simp add: MapKey0)
+lemma "wf vAdd1" using VTAdd1 HH
+  using X.wf.simps[of A "LitV (LInt _)"] X.wf.simps[of A vAdd1]
+    ty_of_val_Int[of "selectImpl vAdd1 _"] by fastforce
 
 subsubsection \<open>Well formdness of a higher order map\<close>
 fun hof where "hof (MapKey f ty) = (case wf (MapV (Inr (Inr (MapKey (fAdd1 \<circ> f) ty)))) of True \<Rightarrow> Inl (MapKey (fAdd1 \<circ> f) ty) | False \<Rightarrow> Inl mAdd1)" | "hof _ = undefined"
@@ -417,13 +411,12 @@ proof -
   then show ?thesis
     using
       \<open>selectImpl homV k = val3ToValn (Inr (Inr (hof (MapKey f (TT, TT)))))\<close>
-    by (smt (verit) HH MapKey0 X.hof.simps(1) calculation select_convs(3) ty321.simps(1)
-        tyL.simps(2) type_of_val.simps(3) val3ToValn.simps(3) wf_L.simps(1)
-        wf_ty.simps(3))
+    by (smt (verit) HH X.hof.simps(1) X.wf.simps calculation select_convs(3) ty321.simps(1)
+        tyL.simps(2) ty_of_val_Int type_of_val.simps(3) val3ToValn.simps(3) val_ty.simps(1)
+        wf_L.simps(1) wf_ty.simps(3))
 qed
 
-
-lemma "wf homV" using wff One_nat_def add_diff_cancel_left' count_level_map_ty.simps(1,3) ind
+lemma "wf homV" using wff One_nat_def add_diff_cancel_left' count_level_map_ty.simps(1,3) wfMapV
       key_ty.simps(1) by simp
 
 lemma wf_impl_wf_ty: "wf k \<Longrightarrow> wf_ty k" using wf.cases by force
@@ -445,6 +438,26 @@ proof -
   then have "count_level_map_ty (ty_of_val k) = 2" using assms by auto
   then show ?thesis using C2Inrl using assms(2) wf_impl_wf_ty by auto
 qed
+
+subsubsection \<open>Select is closed under wf\<close>
+lemma
+  assumes "wf m"
+  assumes "wf k"
+  shows "wf (selectImpl m k)"
+  (* how to case on selectImplAux, i.e. apply (cases m' k' rule: selectImplAux.cases) *)
+  apply (cases m rule: toVal3210.cases; cases k rule: toVal3210.cases; auto)
+  apply (metis X.wfAbsV X.wfLitV val0.exhaust val3ToValn.simps(1,2))
+  apply (metis X.wfAbsV X.wfLitV val0.exhaust val3ToValn.simps(1,2))
+  apply (metis X.wfAbsV X.wfLitV val0.exhaust val3ToValn.simps(1,2))
+  apply (metis X.wfAbsV X.wfLitV val0.exhaust val3ToValn.simps(1,2))
+  apply (metis X.wfAbsV X.wfLitV val0.exhaust val3ToValn.simps(1,2))
+  apply (metis X.wfAbsV X.wfLitV val0.exhaust val3ToValn.simps(1,2))
+  apply (metis X.wfAbsV X.wfLitV val0.exhaust val3ToValn.simps(1,2))
+  apply (metis X.wfAbsV X.wfLitV val0.exhaust val3ToValn.simps(1,2))
+  apply (metis X.wfAbsV X.wfLitV val0.exhaust val3ToValn.simps(1,2))
+  apply (metis X.wfAbsV X.wfLitV val0.exhaust val3ToValn.simps(1,2))
+  apply (case_tac ma)
+  oops
 
 subsection \<open>Array Axiom Update\<close>
 text \<open>Property to prove: (m[k] := v)[k] == v or select (store m k v) k = v\<close>
@@ -802,8 +815,7 @@ next
   then show ?thesis 
   proof -
     have "count_level_map_ty (ty_of_val (MapV m)) = 3"
-      using "3" InlC3 assms(1) toVal3210.simps(5) wf_ty.simps(5)
-      by fastforce
+      using "3" InlC3 assms(1) toVal3210.simps(5) wf_ty.simps(5) wf_impl_wf_ty by blast
     then have "count_level_map_ty (ty_of_val (MapV n)) = 3"
       using assms(4) by argo
     then obtain n' where N: "n = Inl n'"
