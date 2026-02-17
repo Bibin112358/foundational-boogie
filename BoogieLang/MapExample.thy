@@ -202,11 +202,23 @@ lemma map_level_gt_0: "count_level_map_ty (TMap tv tk) \<ge> 1" by auto
 locale X =
   fixes A :: "'a absval_ty_fun"
 begin
-  abbreviation ty_of_val where "ty_of_val \<equiv> type_of_val A example_map_ty"
-  fun wf where
-    "wf m = ((wf_ty m) \<and>
+abbreviation ty_of_val where "ty_of_val \<equiv> type_of_val A example_map_ty"
+
+inductive wf where
+    Prim: "wf (LitV (LInt x))"
+    | MapKey0: "((\<exists>m' t'. m = (MapV (Inr (Inr (MapKey m' t'))))) \<and> wf_ty m
+      \<and> (\<forall>k. (wf_ty k \<and> ty_of_val k = key_ty (ty_of_val m) \<longrightarrow> ((ty_of_val (selectImpl m k) = val_ty (ty_of_val m))) )))
+      \<Longrightarrow> wf m"
+    | ind: "(wf_ty m
+      \<and> (\<forall>k. (wf_ty k \<and> ty_of_val k = key_ty (ty_of_val m) \<longrightarrow> ((ty_of_val (selectImpl m k) = val_ty (ty_of_val m)) \<and>  wf (selectImpl m k)))))
+      \<Longrightarrow> wf m"
+
+  fun wf' where
+    "wf' m = ((wf_ty m) \<and>
     (\<forall>k. (wf_ty k \<and> ty_of_val k = key_ty (ty_of_val m)
-    \<longrightarrow> ty_of_val (selectImpl m k) = val_ty (ty_of_val m))))"
+    \<longrightarrow> ((ty_of_val (selectImpl m k) = val_ty (ty_of_val m))) )))"
+
+lemma "(wf (LitV (LInt 2)))" using local.wf.Prim by simp
 
 
 subsubsection "Bijection between count_level_map_ty and sum type levels"
@@ -327,10 +339,11 @@ lemma HH: "(\<forall>k. (wf_ty k \<and> ty_of_val k = key_ty (ty_of_val vAdd1)
     \<longrightarrow> ty_of_val (selectImpl vAdd1 k) = val_ty (ty_of_val vAdd1)))"
   using VTAdd1 KTAdd1 H2 by simp
 
-lemma "wf vAdd1" using VTAdd1 HH by auto
+lemma "wf vAdd1" using VTAdd1 HH 
+  by (simp add: MapKey0)
 
 subsubsection \<open>Well formdness of a higher order map\<close>
-fun hof where "hof (MapKey f ty) = Inl (MapKey (fAdd1 \<circ> f) ty)" | "hof _ = undefined"
+fun hof where "hof (MapKey f ty) = (case wf (MapV (Inr (Inr (MapKey (fAdd1 \<circ> f) ty)))) of True \<Rightarrow> Inl (MapKey (fAdd1 \<circ> f) ty) | False \<Rightarrow> Inl mAdd1)" | "hof _ = undefined"
 abbreviation TMII where "TMII \<equiv> TMap (TPrim TInt) (TPrim TInt)"
 abbreviation hom :: "'a val2" where "hom \<equiv> MapKey hof (TMII, TMII)"
 abbreviation homV :: "'a valn" where "homV \<equiv> MapV (Inr (Inl hom))"
@@ -393,7 +406,7 @@ qed
 
 lemma wff:
   assumes "wf_ty k \<and> ty_of_val k = TMII"
-  shows "ty_of_val (selectImpl homV k) = TMII"
+  shows "ty_of_val (selectImpl homV k) = TMII \<and> wf (selectImpl homV k)"
 proof -
   obtain f where K: "k = MapV (Inr (Inr (MapKey f (TT, TT))))"
     using assms kTMII by auto
@@ -404,13 +417,17 @@ proof -
   then show ?thesis
     using
       \<open>selectImpl homV k = val3ToValn (Inr (Inr (hof (MapKey f (TT, TT)))))\<close>
-    by fastforce
+    by (smt (verit) HH MapKey0 X.hof.simps(1) calculation select_convs(3) ty321.simps(1)
+        tyL.simps(2) type_of_val.simps(3) val3ToValn.simps(3) wf_L.simps(1)
+        wf_ty.simps(3))
 qed
 
 
-lemma "wf homV" using wff by simp
+lemma "wf homV" using wff One_nat_def add_diff_cancel_left' count_level_map_ty.simps(1,3) ind
+      key_ty.simps(1) by simp
 
-lemma "wf k \<Longrightarrow> wf_ty k" by simp
+lemma wf_impl_wf_ty: "wf k \<Longrightarrow> wf_ty k" using wf.cases by force
+
 
 subsubsection \<open>Some more general wf properties\<close>
 
@@ -422,11 +439,11 @@ lemma
   shows "\<exists>k'. toVal3210 k = Inr (Inl k')"
 proof -
   have "count_level_map_ty (ty_of_val (MapV (Inl (MapKey f ty)))) = 3"
-    using InlC3 X.wf.simps assms(1) toVal3210.simps by blast
+    using InlC3 X.wf.simps assms(1) toVal3210.simps wf_impl_wf_ty by fast
   then have "count_level_map_ty (key_ty (ty_of_val (MapV (Inl (MapKey f ty))))) = 2"
-    using assms(1) wf_L.elims(2) by fastforce
+    using assms(1) wf_L.elims(2) wf_impl_wf_ty by fastforce
   then have "count_level_map_ty (ty_of_val k) = 2" using assms by auto
-  then show ?thesis using C2Inrl using assms(2) by auto
+  then show ?thesis using C2Inrl using assms(2) wf_impl_wf_ty by auto
 qed
 
 subsection \<open>Array Axiom Update\<close>
@@ -672,12 +689,12 @@ lemma extensionalityAux:
     then show ?thesis
     proof -
       have "count_level_map_ty (ty_of_val (MapV m)) = 1"
-        using "1" InrrlC1 assms(1) toVal3210.simps(3) wf.elims(2) by blast
+        using "1" InrrlC1 assms(1) toVal3210.simps(3) wf_impl_wf_ty by blast
       then have "count_level_map_ty (ty_of_val (MapV n)) = 1"
         using assms(4) by argo
       then obtain n' where "n = Inr (Inr n')"
-        by (metis C1Inrrl assms(2) toVal3210_inj val.inject(3) val3ToValn.simps(3) valBij
-            wf.simps)
+        using C1Inrrl assms(2) toVal3210_inj val.inject(3) val3ToValn.simps(3) valBij
+            wf.simps wf_impl_wf_ty by metis
       then show ?thesis
       proof (cases m')
         case (MapVal m'' tm)
@@ -740,13 +757,13 @@ next
   then show ?thesis 
   proof -
     have "count_level_map_ty (ty_of_val (MapV m)) = 2"
-      using "2" InrlC2 assms(1) toVal3210.simps(4) wf_ty.simps(4)
+      using "2" InrlC2 assms(1) toVal3210.simps(4) wf_ty.simps(4) wf_impl_wf_ty
       by fastforce
     then have "count_level_map_ty (ty_of_val (MapV n)) = 2"
       using assms(4) by argo
     then obtain n' where N: "n = Inr (Inl n')"
       using C2Inrl assms(2) toVal3210_inj val.inject(3) val3ToValn.simps(4) valBij
-      by (metis wf.elims(1))
+      by (metis wf_impl_wf_ty)
     then show ?thesis 
       using assms(3,4) 2 N apply (cases m'; cases n')
       apply (auto simp: fun_eq_iff dest: spec[of _ "Inr (Inr _)"])
@@ -765,7 +782,7 @@ next
       using assms(4) by argo
     then obtain n' where N: "n = Inl n'"
       using C3Inl assms toVal3210_inj val.inject(3) val3ToValn.simps(5) valBij
-      by (metis wf.elims(1))
+      by (metis wf_impl_wf_ty)
     then show ?thesis 
       using assms(3,4) 3 N apply (cases m'; cases n')
       apply (auto simp: fun_eq_iff dest: spec[of _ "Inr _"])
