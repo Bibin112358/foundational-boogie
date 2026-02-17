@@ -137,32 +137,35 @@ abbreviation example_map :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" wh
 lemma "(map_select example_map) mg4 m24 = (MapV (Inr (Inr (MapKey (undefined(IntV 3 := IntV 2)) (TT, TT)))))" by simp
 
 subsection \<open>Store\<close>
-(*
-fun store0 :: "_ M \<Rightarrow> _ M \<Rightarrow> _ M \<rightharpoonup> _ M" where
-    "store0 (MapAux m) (Up k) v = Some (MapAux (m(k \<mapsto> v)))"
-  | "store0 _ _ _ = None"
 
-fun store1 :: "_ M \<Rightarrow> _ M \<Rightarrow> _ M \<rightharpoonup> _ M" where
-    "store1 (MapAux m) (Up k) v = Some (MapAux (m(k \<mapsto> v)))"
-  | "store1 (Up m) (Up k) (Up v) = map_option Up (store0 m k v)"
-  | "store1 _ _ _ = None"
+fun storeImplAux :: "'a val3210 \<Rightarrow> 'a val3210 \<Rightarrow> 'a val3210 \<Rightarrow> 'a val3210" where
+    "storeImplAux (Inr (Inr (Inr (LitV0 v)))) _ _ = undefined"
+  | "storeImplAux (Inr (Inr (Inr (AbsV0 v)))) _ _ = undefined"
+  | "storeImplAux (Inr (Inr (Inl (MapVal m t)))) (Inr (Inr (Inr k))) (Inr (Inr (Inl v)))
+      = (Inr (Inr (Inl (MapVal (m(k := v)) t))))"
+  | "storeImplAux (Inr (Inr (Inl (MapKey m t)))) (Inr (Inr (Inr k))) (Inr (Inr (Inr v)))
+      = (Inr (Inr (Inl (MapKey (m(k := v)) t))))"
+  | "storeImplAux (Inr (Inl (MapVal m t))) (Inr (Inr k)) (Inr (Inl v))
+      = (Inr (Inl (MapVal (m(k := v)) t)))"
+  | "storeImplAux (Inr (Inl (MapKey m t))) (Inr (Inr (Inl k))) (Inr (Inr v))
+      = (Inr (Inl (MapKey (m(k := v)) t)))"
+  | "storeImplAux (Inl (MapVal m t)) (Inr k) (Inl v)
+      = (Inl (MapVal (m(k := v)) t))"
+  | "storeImplAux (Inl (MapKey m t)) (Inr (Inl k)) (Inr v)
+      = (Inl (MapKey (m(k := v)) t))"
+  | "storeImplAux _ _ _ = undefined"
 
-fun store2 :: "_ M \<Rightarrow> _ M \<Rightarrow> _ M \<rightharpoonup> _ M" where
-    "store2 (MapAux m) (Up k) v = Some (MapAux (m(k \<mapsto> v)))"
-  | "store2 (Up m) (Up k) (Up v) = map_option Up (store1 m k v)"
-  | "store2 _ _ _ = None"
-
-primrec store_impl :: "'a valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn \<rightharpoonup> 'a valn" where
-    "store_impl (MapV tks tv m) k v = MtoVal (store2 m (valtoM k) (valtoM v)) (TMap tks tv)"
-  | "store_impl (LitV _) _ _ = None"
-  | "store_impl (AbsV _) _ _ = None"
+fun storeImpl :: "'a valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn" where
+    "storeImpl (LitV _) _ _ = undefined"
+  | "storeImpl (AbsV _) _ _ = undefined"
+  | "storeImpl (MapV m) k v = val3ToValn (storeImplAux (toVal3210 (MapV m)) (toVal3210 k) (toVal3210 v))"
 
 abbreviation example_map2 :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
   "example_map2 \<equiv> \<lparr> map_select = selectImpl, map_store = storeImpl, map_type = undefined \<rparr>"
 
-primrec select_option where "select_option (Some v) k = (map_select example_map2) v k"
-lemma "select_option ((map_store example_map2) mg4 m24 (IntV 42)) m24 = Some (IntV 42)" by simp
-*)
+lemma "(map_select example_map2) ((map_store example_map2) mg4 m24 (LitV (LInt 42))) m24
+  = (LitV (LInt 42))" by simp
+
 
 subsection \<open>Type Of Val\<close>
 
