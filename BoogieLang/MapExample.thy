@@ -448,6 +448,32 @@ qed
 
 subsection \<open>Array Axiom Update\<close>
 text \<open>Property to prove: (m[k] := v)[k] == v or select (store m k v) k = v\<close>
+
+lemma ArrayAxUpdate1Key:
+  assumes "M = MapV (Inr (Inr (MapKey f t)))"
+  assumes "wf M"
+  assumes "wf k"
+  assumes "wf v"
+  assumes "ty_of_val M = TMap (ty_of_val k) (ty_of_val v)"
+  shows "selectImpl (storeImpl M k v) k = v"
+proof -
+  have "count_level_map_ty (ty_of_val k) = 0"
+    using assms InrrlC1 wf_impl_wf_ty by fastforce
+  then obtain k' where K: "toVal3210 k = Inr (Inr (Inr k'))"
+    using C0Inrrr by blast
+  have "count_level_map_ty (ty_of_val v) = 0"
+    using assms wf_L.elims(2) wf_impl_wf_ty by fastforce
+  then obtain v' where V: "toVal3210 v = Inr (Inr (Inr v'))"
+    using C0Inrrr by blast
+  have "storeImpl M k v = val3ToValn (Inr (Inr (Inl (MapKey (f(k' := v')) t))))"
+    using assms K V by auto
+  have "selectImpl (storeImpl M k v) k = val3ToValn (Inr (Inr (Inr ((f(k' := v')) k'))))"
+    using assms K V by simp
+  moreover have "val3ToValn (Inr (Inr (Inr v'))) = v" using V toVal3210.elims by force
+  ultimately show ?thesis by auto
+qed
+
+
 (*
 lemma update0:
   assumes "store0 m k v = Some ms"
