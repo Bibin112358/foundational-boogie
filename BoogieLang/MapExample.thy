@@ -80,23 +80,20 @@ value "IntV 2 :: unit valn"
 abbreviation IntV where "IntV i \<equiv> LitV0 (LInt i)"
 abbreviation TT where "TT \<equiv> TPrim TInt"  (* convenience for testing purposes *)
 
-abbreviation m11 :: "unit val1" where "m11 \<equiv> MapKey (undefined(IntV 3 := IntV 2)) (TT, TT)"
-abbreviation m14 :: "unit valn" where "m14 \<equiv> MapV (Inr (Inr m11))"
+abbreviation m11 :: "'a val1" where "m11 \<equiv> MapKey (undefined(IntV 3 := IntV 2)) (TT, TT)"
+abbreviation m14 :: "'a valn" where "m14 \<equiv> MapV (Inr (Inr m11))"
 
-abbreviation m22 :: "unit val2" where "m22 \<equiv> MapKey (undefined(m11 := Inr (IntV 4))) (TT, TT)"
-abbreviation m24 :: "unit valn" where "m24 \<equiv> MapV (Inr (Inl m22))"
+abbreviation m22 :: "'a val2" where "m22 \<equiv> MapKey (undefined(m11 := Inr (IntV 4))) (TT, TT)"
+abbreviation m24 :: "'a valn" where "m24 \<equiv> MapV (Inr (Inl m22))"
 
-abbreviation m33 :: "unit val3" where "m33 \<equiv> MapKey (undefined(m22 := Inr (Inr (IntV 6)))) (TT, TT)"
-abbreviation m34 :: "unit valn" where "m34 \<equiv> MapV (Inl m33)"
+abbreviation m33 :: "'a val3" where "m33 \<equiv> MapKey (undefined(m22 := Inr (Inr (IntV 6)))) (TT, TT)"
+abbreviation m34 :: "'a valn" where "m34 \<equiv> MapV (Inl m33)"
 
-abbreviation mg3 :: "unit val3" where "mg3 \<equiv> MapKey (undefined(m22 := Inr (Inl  m11))) (TT, (TMap TT  (TPrim TInt)))"
-abbreviation mg4 :: "unit valn" where "mg4 \<equiv> MapV (Inl mg3)"
+abbreviation mg3 :: "'a val3" where "mg3 \<equiv> MapKey (undefined(m22 := Inr (Inl  m11))) (TT, TT)"
+abbreviation mg4 :: "'a valn" where "mg4 \<equiv> MapV (Inl mg3)"
 
-abbreviation ms3 :: "unit val3" where "ms3 \<equiv> MapVal (undefined(Inr (Inr (IntV 3)) := m33)) (TT, (TMap TT  (TPrim TInt)))"
-abbreviation ms4 :: "unit valn" where "ms4 \<equiv> MapV (Inl ms3)"
-
-
-subsection \<open>Helper Functions and Lemmas\<close>
+abbreviation ms3 :: "'a val3" where "ms3 \<equiv> MapVal (undefined(Inr (Inr (IntV 3)) := m33)) (TT, (TMap TT  (TPrim TInt)))"
+abbreviation ms4 :: "'a valn" where "ms4 \<equiv> MapV (Inl ms3)"
 
 subsection \<open>Select\<close>
 (* there needs to be as many additional store functions, as there are nesting levels *)
@@ -134,34 +131,6 @@ abbreviation example_map :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" wh
 
 lemma "(map_select example_map) mg4 m24 = (MapV (Inr (Inr (MapKey (undefined(IntV 3 := IntV 2)) (TT, TT)))))" by simp
 
-subsection \<open>Store\<close>
-
-fun storeImplAux :: "'a val3210 \<Rightarrow> 'a val3210 \<Rightarrow> 'a val3210 \<Rightarrow> 'a val3210" where
-    "storeImplAux (Inr (Inr (Inr (LitV0 v)))) _ _ = (Inr (Inr (Inr undefined)))"
-  | "storeImplAux (Inr (Inr (Inr (AbsV0 v)))) _ _ = (Inr (Inr (Inr undefined)))"
-  | "storeImplAux (Inr (Inr (Inl (MapVal m t)))) (Inr (Inr (Inr k))) (Inr (Inr (Inl v)))
-      = (Inr (Inr (Inl (MapVal (m(k := v)) t))))"
-  | "storeImplAux (Inr (Inr (Inl (MapKey m t)))) (Inr (Inr (Inr k))) (Inr (Inr (Inr v)))
-      = (Inr (Inr (Inl (MapKey (m(k := v)) t))))"
-  | "storeImplAux (Inr (Inl (MapVal m t))) (Inr (Inr k)) (Inr (Inl v))
-      = (Inr (Inl (MapVal (m(k := v)) t)))"
-  | "storeImplAux (Inr (Inl (MapKey m t))) (Inr (Inr (Inl k))) (Inr (Inr v))
-      = (Inr (Inl (MapKey (m(k := v)) t)))"
-  | "storeImplAux (Inl (MapVal m t)) (Inr k) (Inl v)
-      = (Inl (MapVal (m(k := v)) t))"
-  | "storeImplAux (Inl (MapKey m t)) (Inr (Inl k)) (Inr v)
-      = (Inl (MapKey (m(k := v)) t))"
-  | "storeImplAux _ _ _ = (Inr (Inr (Inr undefined)))"
-
-fun storeImpl :: "'a valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn" where
-  "storeImpl m k v = val3ToValn (storeImplAux (toVal3210 m) (toVal3210 k) (toVal3210 v))"
-
-abbreviation example_map2 :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
-  "example_map2 \<equiv> \<lparr> map_select = selectImpl, map_store = storeImpl, map_type = undefined \<rparr>"
-
-lemma "(map_select example_map2) ((map_store example_map2) mg4 m24 (LitV (LInt 42))) m24
-  = (LitV (LInt 42))" by simp
-
 
 subsection \<open>Type Of Val\<close>
 
@@ -171,9 +140,6 @@ fun ty321 :: "'a val3 + 'a val2 + 'a val1 \<Rightarrow> ty" where
     "ty321 (Inr (Inr m)) = tyL m"
   | "ty321 (Inr (Inl m)) = tyL m"
   | "ty321 (Inl m) = tyL m"
-
-abbreviation example_map_ty :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
-  "example_map_ty \<equiv> \<lparr> map_select = selectImpl, map_store = undefined, map_type = ty321 \<rparr>"
 
 fun key_ty where "key_ty (TMap tk _) = tk" | "key_ty _ = undefined"
 fun val_ty where "val_ty (TMap _ tv) = tv" | "val_ty _ = undefined"
@@ -195,23 +161,56 @@ fun wf_ty :: "'a valn \<Rightarrow> bool" where
 
 lemma map_level_gt_0: "count_level_map_ty (TMap tv tk) \<ge> 1" by auto
 
-subsection \<open>Well Formedness\<close>
+
+subsection \<open>Theory dependent on A::"'a absval_ty_fun"\<close>
+
+abbreviation example_map_ty :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
+  "example_map_ty \<equiv> \<lparr> map_select = selectImpl, map_store = undefined, map_type = ty321 \<rparr>"
 
 locale X =
   fixes A :: "'a absval_ty_fun"
 begin
 abbreviation ty_of_val where "ty_of_val \<equiv> type_of_val A example_map_ty"
 
+
+subsection \<open>Store\<close>
+
+fun storeImplAux :: "'a val3210 \<Rightarrow> 'a val3210 \<Rightarrow> 'a val3210 \<Rightarrow> 'a val3210" where
+    "storeImplAux (Inr (Inr (Inl (MapVal m t)))) (Inr (Inr (Inr k))) (Inr (Inr (Inl v)))
+      = (Inr (Inr (Inl (MapVal (m(k := v)) t))))"
+  | "storeImplAux (Inr (Inr (Inl (MapKey m t)))) (Inr (Inr (Inr k))) (Inr (Inr (Inr v)))
+      = (Inr (Inr (Inl (MapKey (m(k := v)) t))))"
+  | "storeImplAux (Inr (Inl (MapVal m t))) (Inr (Inr k)) (Inr (Inl v))
+      = (Inr (Inl (MapVal (m(k := v)) t)))"
+  | "storeImplAux (Inr (Inl (MapKey m t))) (Inr (Inr (Inl k))) (Inr (Inr v))
+      = (Inr (Inl (MapKey (m(k := v)) t)))"
+  | "storeImplAux (Inl (MapVal m t)) (Inr k) (Inl v)
+      = (Inl (MapVal (m(k := v)) t))"
+  | "storeImplAux (Inl (MapKey m t)) (Inr (Inl k)) (Inr v)
+      = (Inl (MapKey (m(k := v)) t))"
+  | "storeImplAux x _ _ = x"
+
+fun storeImpl :: "'a valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn" where
+  "storeImpl m k v = (if ty_of_val v = val_ty (ty_of_val m)
+    then val3ToValn (storeImplAux (toVal3210 m) (toVal3210 k) (toVal3210 v))
+    else m)"
+
+abbreviation example_map2 :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
+  "example_map2 \<equiv> \<lparr> map_select = selectImpl, map_store = storeImpl, map_type = undefined \<rparr>"
+
+lemma "ty_of_val (LitV (LInt 42)) = TT" by simp
+lemma "val_ty (ty_of_val mg4) = TT" by simp
+lemma "(map_select example_map2) ((map_store example_map2) mg4 m24 (LitV (LInt 42))) m24
+  = (LitV (LInt 42))" by simp
+
+
+subsection \<open>Well Formedness\<close>
+
 inductive wf where
     wfLitV: "wf (LitV v)" | wfAbsV: "wf (AbsV v)" |
-    wfMapV: "(wf_ty m  \<and>  (\<forall>k. wf (selectImpl m k))  \<and>
+    wfMapV: "\<lbrakk> wf_ty m;  (\<forall>k. wf (selectImpl m k));
       (\<forall>k. wf_ty k \<and> ty_of_val k = key_ty (ty_of_val m) \<longrightarrow> ty_of_val (selectImpl m k) = val_ty (ty_of_val m))
-      ) \<Longrightarrow> wf m"
-
-  fun wf' where
-    "wf' m = ((wf_ty m) \<and>
-    (\<forall>k. (wf_ty k \<and> ty_of_val k = key_ty (ty_of_val m)
-    \<longrightarrow> ((ty_of_val (selectImpl m k) = val_ty (ty_of_val m))) )))"
+      \<rbrakk> \<Longrightarrow> wf m"
 
 lemma "(wf (LitV (LInt 2)))" using local.wf.wfLitV by simp
 lemma wfundef: "(wf (val3ToValn (Inr (Inr (Inr undefined)))))"
@@ -473,11 +472,9 @@ lemma storeClosedWfTy:
   assumes "wf k"
   assumes "wf v"
   assumes "ty_of_val v = val_ty (ty_of_val m)"
-  shows "wf (storeImpl m k v)"
-  (* how to case on storeImplAux, i.e. apply (cases m' k' v' rule: storeImplAux.cases) *)
-  apply (cases m rule: toVal3210.cases; simp add: wf_impl_wf_ty wfundef; case_tac ma;
-      cases k rule: toVal3210.cases; simp add: wf_impl_wf_ty wfundef;
-      cases v rule: toVal3210.cases; simp add: wf_impl_wf_ty wfundef)
+  shows "wf_ty (storeImpl m k v)"
+  thm storeImplAux.cases
+  apply (cases "(toVal3210 m, toVal3210 k, toVal3210 v)" rule: storeImplAux.cases; simp add: wf_impl_wf_ty wfundef)
   oops
 
 
