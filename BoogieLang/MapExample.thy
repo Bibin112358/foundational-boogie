@@ -502,187 +502,86 @@ proof -
   ultimately show ?thesis by auto
 qed
 
-
-(*
-lemma update0:
-  assumes "store0 m k v = Some ms"
-  shows "select0 ms k = Some v"
-  using assms store0.elims by force
-
-lemma update1Up:
-  assumes "store1 (Up m') k v = Some ms"
-  shows "select1 ms k = Some v"
+lemma ArrayAxUpdate3Val:
+  assumes "M = MapV (Inl (MapVal f t))"
+  assumes "wf M"
+  assumes "wf k"
+  assumes "wf v"
+  assumes "ty_of_val M = TMap (ty_of_val k) (ty_of_val v)"
+  shows "selectImpl (storeImpl M k v) k = v"
 proof -
-  obtain k' v' where "k = Up k' \<and> v = Up v'"
-    by (metis M.exhaust assms option.discI store1.simps(4,5))
-  then show ?thesis using assms update0 by fastforce
+  obtain tk tv where "t = (tk, tv)" by fastforce
+  have "wf_L 3 (MapVal f t)" using assms
+    using wf_impl_wf_ty wf_ty.simps(5) by blast
+  then have "count_level_map_ty (ty_of_val k) \<le> 2" using assms \<open>t = (tk, tv)\<close> by simp
+  then obtain k' where K: "toVal3210 k = Inr k'"
+    by (metis Suc_n_not_le_n X.InlC3 X.wf_impl_wf_ty assms(3) numeral_2_eq_2 numeral_3_eq_3
+        sumE)
+  have "count_level_map_ty (ty_of_val v) = 3"
+    using assms wf_L.elims(2) wf_impl_wf_ty by fastforce
+  then obtain v' where V: "toVal3210 v = Inl v'"
+    using C3Inl assms wf_impl_wf_ty by blast
+  have "storeImpl M k v = val3ToValn (Inl (MapVal (f(k' := v')) t))"
+    using assms K V by auto
+  have "selectImpl (storeImpl M k v) k = val3ToValn (Inl ((f(k' := v')) k'))"
+    using assms K V by simp
+  moreover have "val3ToValn (Inl v') = v" using V toVal3210.elims by force
+  ultimately show ?thesis by auto
 qed
 
-lemma update1Map:
-  assumes "store1 (MapAux m') k v = Some ms"
-  shows "select1 ms k = Some v"
-proof -
-  obtain k' where "k = Up k'"
-    by (metis M.exhaust assms(1) option.discI store1.simps(5))
-  thus ?thesis using assms by fastforce
-qed
+lemma ArrayAxUpdateLitV:
+  assumes "M = LitV l"
+  assumes "wf M"
+  assumes "wf k"
+  assumes "wf v"
+  assumes "ty_of_val M = TMap (ty_of_val k) (ty_of_val v)"
+  shows "selectImpl (storeImpl M k v) k = v"
+  using assms(1,5) by force
 
-lemma update1:
-  assumes "store1 m k v = Some ms"
-  shows "select1 ms k = Some v"
-  using M.exhaust assms update1Map update1Up by metis
 
-lemma update2Up:
-  assumes "store2 (Up m') k v = Some ms"
-  shows "select2 ms k = Some v"
-proof -
-  obtain k' v' where "k = Up k' \<and> v = Up v'"
-    by (metis M.exhaust assms(1) option.discI store2.simps(4,5))
-  thus ?thesis using assms update1 by fastforce
-qed
-
-lemma update2Map:
-  assumes "store2 (MapAux m') k v = Some ms"
-  shows "select2 ms k = Some v"
-proof -
-  obtain k' where "k = Up k'"
-    by (metis M.exhaust assms(1) option.discI store2.simps(5))
-  thus ?thesis using assms by fastforce
-qed
-
-lemma update2:
-  assumes "store2 m k v = Some ms"
-  shows "select2 ms k = Some v"
-  using M.exhaust assms update2Map update2Up by metis
-
-lemma ArrayAxUpdate:
-  assumes wf_v: "wf v"
-  assumes "store_impl m k v = Some ms"
-  assumes "m = (MapV tks tv m')"  (* should be deducible *)
-  assumes "ms = (MapV tks tv ms')"  (* should be deducible *)
-  assumes "select_impl ms k \<noteq> None"  (* should be deducible *)
-  shows "Eq (select_impl ms k) (Some v)"
-proof -
-  have "Some ms' = store2 m' (valtoM k) (valtoM v)"
-    by (metis assms(2-4) MtoVal.simps(7) MtoVal_inj option.exhaust option.simps(3) store_impl.simps(1))
-  then have "Some (valtoM v) = select2 ms' (valtoM k)"
-    by (simp add: update2)
-  moreover obtain w where "Some w = MtoVal (Some (valtoM v)) tv"
-    using assms(4,5) calculation by force
-  ultimately show ?thesis using MtoVal_valtoM wf_v assms by fastforce
-qed
-*)
 subsection \<open>Array Axiom Stable\<close>
 text \<open>Property to prove:
   y \<noteq> x ==> (m[x] := v)[y] == m[y]
   y \<noteq> x ==> select (store m x v) y = select m y\<close>
-(*
-lemma stable0:
-  assumes "x \<noteq> y"
-  assumes "store0 m x v = Some ms"
-  shows "select0 ms y = select0 m y"
-proof (cases y)
-  case (MapAux y')
-  then show ?thesis by simp
-next
-  case (Up y')
-  moreover obtain m' x' where "m = MapAux m' \<and> x = Up x'"
-    by (metis assms(2) option.discI store0.elims)
-  ultimately show ?thesis using assms by auto
-qed
 
-lemma stable1:
+lemma ArrayAxStable1Val:
+  assumes "M = MapV (Inr (Inr (MapVal f t)))"
+  assumes "wf M"
+  assumes "wf x"
+  assumes "wf y"
+  assumes "wf v"
   assumes "x \<noteq> y"
-  assumes "store1 m x v = Some ms"
-  shows "select1 ms y = select1 m y"
-proof (cases y)
-  case (MapAux y')
-  then show ?thesis by simp
-next
-  case (Up y')
-  show ?thesis
-  proof (cases m)
-    case (MapAux m')
-    moreover obtain x' where "x = Up x'"
-      by (metis M.exhaust assms(2) option.discI store1.simps(5))
-    then have "ms = MapAux (m'(x' \<mapsto> v))" using assms(2) calculation by fastforce
-    then show ?thesis using Up \<open>x = Up x'\<close> assms(1) calculation by auto
-  next
-    case (Up m')
-    obtain x' where "x = Up x'"
-      by (metis M.exhaust assms(2) option.discI store1.simps(5))
-    obtain v' where "v = Up v'"
-      by (metis M.exhaust Up assms(2) option.discI store1.simps(4))
-    obtain ms' where "Some ms' = store0 m' x' v'"
-      using Up \<open>v = Up v'\<close> \<open>x = Up x'\<close> assms(2) by auto
-    have "ms = Up ms'"
-      using Up \<open>Some ms' = store0 m' x' v'\<close> \<open>v = Up v'\<close> \<open>x = Up x'\<close> assms(2) by force
-    have "y' \<noteq> x'" using assms \<open>x = Up x'\<close> \<open>y = Up y'\<close> by simp
-    then show ?thesis using \<open>ms = Up ms'\<close> \<open>m = Up m'\<close> \<open>y = Up y'\<close>
-      by (metis \<open>Some ms' = store0 m' x' v'\<close> select1.simps(2) stable0)
-  qed
-qed
+  shows "selectImpl (storeImpl M x v) y = selectImpl M y"
+  apply (cases "(toVal3210 M, toVal3210 x, toVal3210 v)" rule: storeImplAux.cases; (simp add: assms))
+  apply (cases y rule: toVal3210.cases; simp)
+   apply (metis assms(6) toVal3210.simps(1) toVal3210_inj)
+  by (metis assms(6) toVal3210.simps(2) toVal3210_inj)
 
-lemma stable2:
+lemma ArrayAxStable3Key:
+  assumes "M = MapV (Inl (MapVal f t))"
+  assumes "wf M"
+  assumes "wf x"
+  assumes "wf y"
+  assumes "wf v"
   assumes "x \<noteq> y"
-  assumes "store2 m x v = Some ms"
-  shows "select2 ms y = select2 m y"
-proof (cases y)
-  case (MapAux y')
-  then show ?thesis by simp
-next
-  case (Up y')
-  show ?thesis
-  proof (cases m)
-    case (MapAux m')
-    moreover obtain x' where "x = Up x'"
-      by (metis M.exhaust assms(2) option.discI store2.simps(5))
-    then have "ms = MapAux (m'(x' \<mapsto> v))" using assms(2) calculation by fastforce
-    then show ?thesis using Up \<open>x = Up x'\<close> assms(1) calculation by auto
-  next
-    case (Up m')
-    obtain x' where "x = Up x'"
-      by (metis M.exhaust assms(2) option.discI store2.simps(5))
-    obtain v' where "v = Up v'"
-      by (metis M.exhaust Up assms(2) option.discI store2.simps(4))
-    obtain ms' where "Some ms' = store1 m' x' v'"
-      using Up \<open>v = Up v'\<close> \<open>x = Up x'\<close> assms(2) by auto
-    have "ms = Up ms'"
-      using Up \<open>Some ms' = store1 m' x' v'\<close> \<open>v = Up v'\<close> \<open>x = Up x'\<close> assms(2) by force
-    have "y' \<noteq> x'" using assms \<open>x = Up x'\<close> \<open>y = Up y'\<close> by simp
-    then show ?thesis using \<open>ms = Up ms'\<close> \<open>m = Up m'\<close> \<open>y = Up y'\<close>
-      by (metis \<open>Some ms' = store1 m' x' v'\<close> select2.simps(2) stable1)
-  qed
-qed
+  shows "selectImpl (storeImpl M x v) y = selectImpl M y"
+  apply (cases "(toVal3210 M, toVal3210 x, toVal3210 v)" rule: storeImplAux.cases; (simp add: assms))
+  apply (cases y rule: toVal3210.cases; simp)
+     apply (metis assms(6) toVal3210.simps(1) toVal3210_inj)
+     apply (metis assms(6) toVal3210.simps(2) toVal3210_inj)
+     apply (metis assms(6) toVal3210.simps(3) toVal3210_inj)
+     apply (metis assms(6) toVal3210.simps(4) toVal3210_inj)
+done
 
-lemma ArrayAxStable:
-  assumes wf_x: "wf x"
-  assumes wf_y: "wf y"
-  assumes "\<not>(Eq (Some x) (Some y))"
-  assumes "store_impl m x v = Some ms"
-  assumes "m = (MapV tks tv m')"  (* should be deducible *)
-  assumes "ms = (MapV tks tv ms')"  (* should be deducible *)
-  shows "select_impl ms y = select_impl m y"
-proof -
-  have "Some ms' = store2 m' (valtoM x) (valtoM v)"
-    by (metis assms MtoVal.simps(7) MtoVal_inj option.exhaust option.simps(3) store_impl.simps(1))
-  then have "Some (valtoM v) = select2 ms' (valtoM x)"  (* delete? *)
-    by (simp add: update2)
-  have "valtoM x \<noteq> valtoM y"
-  proof (cases y)
-    case (LitV y')
-    then show ?thesis using MtoVal_valtoM assms(3) wf_x by force
-  next
-    case (AbsV y')
-    then show ?thesis by (metis Eq.simps(4) MtoVal.simps(2) MtoVal_valtoM assms(3) valtoM.simps(3) wf_x)
-  next
-    case (MapV x31 x32 x33)
-    then show ?thesis using assms(3) wf.elims(2) wf_x wf_y by fastforce
-  qed
-  then show ?thesis
-    by (simp add: \<open>Some ms' = store2 m' (valtoM x) (valtoM v)\<close> assms(5,6) stable2)
-qed
-*)
+lemma ArrayAxStableLitV:
+  assumes "M = LitV l"
+  assumes "wf M"
+  assumes "wf k"
+  assumes "wf v"
+  assumes "x \<noteq> y"
+  shows "selectImpl (storeImpl M x v) y = selectImpl M y"
+  using assms(1,5) by force
+
 
 subsection \<open>Array Axiom Extensionality\<close>
 text \<open>Property to prove: (\<forall>k. m[k] == n[k]) <==> Eq m n\<close>
