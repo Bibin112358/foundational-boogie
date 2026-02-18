@@ -51,11 +51,11 @@ record ('a, 'k) map_interface =
 
 type_synonym 'a absval_ty_fun = "'a \<Rightarrow> (tcon_id \<times> ty list)"
 
-fun type_of_val :: "'a absval_ty_fun \<Rightarrow> ('a, 'k) map_interface \<Rightarrow> ('a, 'k) val \<Rightarrow> ty"
+fun type_of_val :: "'a absval_ty_fun \<Rightarrow> ('m \<Rightarrow> (ty \<times> ty)) \<Rightarrow> ('a, 'm) val \<Rightarrow> ty"
   where
    "type_of_val A _ (LitV v) = TPrim (type_of_lit v)"
  | "type_of_val A _ (AbsV v) = TCon (fst (A v)) (snd (A v))"
- | "type_of_val _ MI (MapV v) = (map_type MI) v"
+ | "type_of_val _ M (MapV v) = TMap (fst (M v)) (snd (M v))"
 
 
 subsection \<open>Type Definition\<close>
@@ -134,9 +134,9 @@ lemma "(map_select example_map) mg4 m24 = (MapV (Inr (Inr (MapKey (undefined(Int
 
 subsection \<open>Type Of Val\<close>
 
-fun tyL where "tyL (MapVal _ (tk, tv)) = TMap tk tv" | "tyL (MapKey _ (tk, tv)) = TMap tk tv"
+fun tyL where "tyL (MapVal _ (tk, tv)) = (tk, tv)" | "tyL (MapKey _ (tk, tv)) = (tk, tv)"
 
-fun ty321 :: "'a val3 + 'a val2 + 'a val1 \<Rightarrow> ty" where
+fun ty321 :: "'a val3 + 'a val2 + 'a val1 \<Rightarrow> ty \<times> ty" where
     "ty321 (Inr (Inr m)) = tyL m"
   | "ty321 (Inr (Inl m)) = tyL m"
   | "ty321 (Inl m) = tyL m"
@@ -164,13 +164,10 @@ lemma map_level_gt_0: "count_level_map_ty (TMap tv tk) \<ge> 1" by auto
 
 subsection \<open>Theory dependent on A::"'a absval_ty_fun"\<close>
 
-abbreviation example_map_ty :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
-  "example_map_ty \<equiv> \<lparr> map_select = selectImpl, map_store = undefined, map_type = ty321 \<rparr>"
-
 locale X =
   fixes A :: "'a absval_ty_fun"
 begin
-abbreviation ty_of_val where "ty_of_val \<equiv> type_of_val A example_map_ty"
+abbreviation ty_of_val where "ty_of_val \<equiv> type_of_val A ty321"
 
 
 subsection \<open>Store\<close>
@@ -224,7 +221,7 @@ lemma C0Inrrr:
   shows "\<exists>v'. toVal3210 v = Inr (Inr (Inr v'))"
   apply (cases v)
     apply auto
-  by (metis assms map_level_gt_0 not_one_le_zero select_convs(3) ty321.elims tyL.elims
+  by (metis assms map_level_gt_0 not_one_le_zero
       type_of_val.simps(3))
 
 lemma InrrrC0:
@@ -297,18 +294,9 @@ abbreviation vAdd1 :: "'a valn" where "vAdd1 \<equiv> MapV (Inr (Inr mAdd1))"
 
 lemma "wf_ty vAdd1" by simp
 
-lemma VTAdd1: "val_ty (ty_of_val vAdd1) = (TPrim TInt)"
-  using map_interface.select_convs(3) ty321.simps(1)
-      tyL.simps(2) type_of_val.simps(3)
-      val_ty.simps(1) by metis
+lemma VTAdd1: "val_ty (ty_of_val vAdd1) = (TPrim TInt)" by simp
 
-lemma KTAdd1: "key_ty (ty_of_val vAdd1) = (TPrim TInt)" 
-  using map_interface.select_convs(3) ty321.simps(1)
-      tyL.simps(2) type_of_val.simps(3)
-      key_ty.simps(1) by metis
-
-lemma ty321TMap: "\<forall>v. \<exists>tk tv. ty321 v = TMap tk tv"
-  by (metis (full_types) ty321.elims tyL.elims)
+lemma KTAdd1: "key_ty (ty_of_val vAdd1) = (TPrim TInt)" by simp
 
 lemma ty_of_val_Int: "ty_of_val k = (TPrim TInt) \<longrightarrow> (\<exists>i. k = LitV (LInt i))"
 proof (cases k)
@@ -321,8 +309,7 @@ next
   then show ?thesis by simp
 next
   case (MapV x3)
-  then show ?thesis using ty321TMap
-    by (metis select_convs(3) ty.simps(14) type_of_val.simps(3))
+  then show ?thesis by simp
 qed
 
 lemma H2:
@@ -358,9 +345,6 @@ lemma "(val_ty (ty_of_val homV) = TMII)" by simp
 
 lemma "(key_ty (ty_of_val homV) = TMII)" by simp
 
-lemma "\<exists>k. ty_of_val k = TMII"
-  by (metis select_convs(3) ty321.simps(1) tyL.simps(2) type_of_val.simps(3))
-
 lemma "ty_of_val k = TMII \<longrightarrow> (\<exists>k'. k = MapV k')" apply (cases k) by auto
 
 lemma kTMII:
@@ -368,44 +352,13 @@ lemma kTMII:
   assumes "ty_of_val k = TMII"
   shows "\<exists>f. k = MapV (Inr (Inr (MapKey f (TT, TT))))"
 proof -
-  obtain mv where MV: "k = MapV mv" apply (cases k) using assms by auto
-  show ?thesis
-  proof (cases mv)
-    case (Inl m3)
-    then show ?thesis
-      using assms MV apply (cases m3) by auto
-  next
-    case (Inr m21)
-    then have C21: "k = MapV (Inr m21)" using MV by simp
-    then show ?thesis
-    proof (cases m21)
-      case (Inl m2)
-      then show ?thesis
-        using assms C21 apply (cases m2) by auto
-    next
-      case (Inr m1)
-      have WF1: "wf_L 1 m1" using C21 assms(1) \<open>m21 = Inr m1\<close> by fastforce
-      then have Ty1: "tyL m1 = TMII" using C21 assms \<open>m21 = Inr m1\<close> by fastforce
-      then show ?thesis using C21 assms(1) \<open>m21 = Inr m1\<close> WF1 Ty1
-      proof (cases m1)
-        case (MapVal f t)
-        have "t = (TT, TT)" using Ty1 \<open>m1 = MapVal f t\<close>
-          using WF1 wf_L.elims(2) by fastforce
-        then have "((count_level_map_ty TT \<le> 0) \<and> (count_level_map_ty TT = 1))"
-          using Ty1 MapVal WF1 by force
-        then show ?thesis by simp
-      next
-        case (MapKey f t)
-        have tt: "t = (TT, TT)" using Ty1 \<open>m1 = MapKey f t\<close>
-          using WF1 wf_L.elims(2) by fastforce
-        then have "((count_level_map_ty TT = 0) \<and> (count_level_map_ty TT \<le> 0))"
-          using Ty1 MapKey WF1 by force
-        have "mv = (Inr (Inr (MapKey f t)))"
-          using C21 \<open>m21 = Inr m1\<close> \<open>m1 = MapKey f t\<close> MV by force
-        then show ?thesis using tt MV by blast
-      qed
-    qed
-  qed
+  have "count_level_map_ty (ty_of_val k) = 1" using assms by simp
+  then obtain k' where "toVal3210 k = Inr (Inr (Inl k'))" using C1Inrrl assms by blast
+  then have K: "k = MapV (Inr (Inr k'))" using toVal3210.elims by auto
+  then have "wf_L 1 k'" using assms by force
+  then show ?thesis
+    apply (cases k')
+    using K assms(2) by auto
 qed
 
 lemma wff:
@@ -760,8 +713,8 @@ lemma extensionalityAux:
         proof (cases n')
           case (MapVal n'' tn)
           have "tm = tn" using assms(4) 1 MapVal \<open>m' = MapVal m'' tm\<close>
-            by (metis \<open>n = Inr (Inr n')\<close> key_ty.simps(1) select_convs(3) surj_pair ty321.simps(1)
-                tyL.simps(1) type_of_val.simps(3) val_ty.simps(1))
+            by (metis \<open>n = Inr (Inr n')\<close> prod.collapse ty.inject(4) ty321.simps(1) tyL.simps(1)
+                type_of_val.simps(3))
           moreover have "m'' = n''"
           proof (rule ext)
             fix k show "m'' k = n'' k"
@@ -788,8 +741,7 @@ lemma extensionalityAux:
         proof (cases n')
           case (MapKey n'' tn)
           have "tm = tn" using assms(4) 1 MapKey \<open>m' = MapKey m'' tm\<close> ty321.simps(1)
-            by (metis \<open>n = Inr (Inr n')\<close> select_convs(3) surj_pair ty.inject(4) tyL.simps(2)
-                type_of_val.simps(3))
+            by (metis \<open>n = Inr (Inr n')\<close> prod.collapse ty.inject(4) tyL.simps(2) type_of_val.simps(3))
           moreover have "m'' = n''"
           proof (rule ext)
             fix k show "m'' k = n'' k"
