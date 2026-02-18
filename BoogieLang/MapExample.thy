@@ -195,6 +195,8 @@ fun wf_ty :: "'a valn \<Rightarrow> bool" where
 
 lemma map_level_gt_0: "count_level_map_ty (TMap tv tk) \<ge> 1" by auto
 
+subsection \<open>Well Formedness\<close>
+
 locale X =
   fixes A :: "'a absval_ty_fun"
 begin
@@ -202,9 +204,9 @@ abbreviation ty_of_val where "ty_of_val \<equiv> type_of_val A example_map_ty"
 
 inductive wf where
     wfLitV: "wf (LitV v)" | wfAbsV: "wf (AbsV v)" |
-    wfMapV: "(wf_ty m
-      \<and> (\<forall>k. (wf_ty k \<and> ty_of_val k = key_ty (ty_of_val m) \<longrightarrow> ((ty_of_val (selectImpl m k) = val_ty (ty_of_val m)) \<and>  wf (selectImpl m k)))))
-      \<Longrightarrow> wf m"
+    wfMapV: "(wf_ty m  \<and>  (\<forall>k. wf (selectImpl m k))  \<and>
+      (\<forall>k. wf_ty k \<and> ty_of_val k = key_ty (ty_of_val m) \<longrightarrow> ty_of_val (selectImpl m k) = val_ty (ty_of_val m))
+      ) \<Longrightarrow> wf m"
 
   fun wf' where
     "wf' m = ((wf_ty m) \<and>
@@ -212,6 +214,8 @@ inductive wf where
     \<longrightarrow> ((ty_of_val (selectImpl m k) = val_ty (ty_of_val m))) )))"
 
 lemma "(wf (LitV (LInt 2)))" using local.wf.wfLitV by simp
+lemma wfundef: "(wf (val3ToValn (Inr (Inr (Inr undefined)))))"
+  by (metis wfAbsV wfLitV val0.exhaust val3ToValn.simps(1,2))
 
 
 subsubsection "Bijection between count_level_map_ty and sum type levels"
@@ -332,12 +336,19 @@ lemma HH: "(\<forall>k. (wf_ty k \<and> ty_of_val k = key_ty (ty_of_val vAdd1)
     \<longrightarrow> ty_of_val (selectImpl vAdd1 k) = val_ty (ty_of_val vAdd1)))"
   using VTAdd1 KTAdd1 H2 by simp
 
-lemma "wf vAdd1" using VTAdd1 HH
-  using X.wf.simps[of A "LitV (LInt _)"] X.wf.simps[of A vAdd1]
-    ty_of_val_Int[of "selectImpl vAdd1 _"] by fastforce
+lemma vAdd1wfSelect: "wf (selectImpl vAdd1 k)"
+  apply (cases k rule: toVal3210.cases; simp add: wfundef)
+      apply (case_tac v; simp add: wfundef)
+        apply (simp add: wfLitV)
+  done
+
+lemma "wf vAdd1" using VTAdd1 HH vAdd1wfSelect
+  using X.wf.simps[of A vAdd1] by auto
+
 
 subsubsection \<open>Well formdness of a higher order map\<close>
-fun hof where "hof (MapKey f ty) = (case wf (MapV (Inr (Inr (MapKey (fAdd1 \<circ> f) ty)))) of True \<Rightarrow> Inl (MapKey (fAdd1 \<circ> f) ty) | False \<Rightarrow> Inl mAdd1)" | "hof _ = undefined"
+(* TODO: I actually want to only assume wf (MapV (Inr (Inr (MapKey (f) ty)))) *)
+fun hof where "hof (MapKey f ty) = (case wf (MapV (Inr (Inr (MapKey (fAdd1 \<circ> f) ty)))) of True \<Rightarrow> Inl (MapKey (fAdd1 \<circ> f) ty) | False \<Rightarrow> Inl mAdd1)" | "hof _ = Inl mAdd1"
 abbreviation TMII where "TMII \<equiv> TMap (TPrim TInt) (TPrim TInt)"
 abbreviation hom :: "'a val2" where "hom \<equiv> MapKey hof (TMII, TMII)"
 abbreviation homV :: "'a valn" where "homV \<equiv> MapV (Inr (Inl hom))"
@@ -400,7 +411,7 @@ qed
 
 lemma wff:
   assumes "wf_ty k \<and> ty_of_val k = TMII"
-  shows "ty_of_val (selectImpl homV k) = TMII \<and> wf (selectImpl homV k)"
+  shows "ty_of_val (selectImpl homV k) = TMII"
 proof -
   obtain f where K: "k = MapV (Inr (Inr (MapKey f (TT, TT))))"
     using assms kTMII by auto
@@ -411,13 +422,21 @@ proof -
   then show ?thesis
     using
       \<open>selectImpl homV k = val3ToValn (Inr (Inr (hof (MapKey f (TT, TT)))))\<close>
-    by (smt (verit) HH X.hof.simps(1) X.wf.simps calculation select_convs(3) ty321.simps(1)
-        tyL.simps(2) ty_of_val_Int type_of_val.simps(3) val3ToValn.simps(3) val_ty.simps(1)
-        wf_L.simps(1) wf_ty.simps(3))
+    by (smt (verit) X.hof.simps(1) select_convs(3) ty321.simps(1) tyL.simps(2) type_of_val.simps(3)
+        val3ToValn.simps(3))
 qed
 
-lemma "wf homV" using wff One_nat_def add_diff_cancel_left' count_level_map_ty.simps(1,3) wfMapV
-      key_ty.simps(1) by simp
+lemma vhomVwfSelect: "wf (selectImpl homV k)"
+  apply (cases k rule: toVal3210.cases; simp add: wfundef)
+      apply (case_tac m; auto)
+        using HH X.wf.simps[of A vAdd1] vAdd1wfSelect apply auto[1]
+        apply (smt (verit) X.HH X.vAdd1wfSelect
+            \<open>local.wf vAdd1 = ((\<exists>v. vAdd1 = LitV v) \<or> (\<exists>v. vAdd1 = AbsV v) \<or> (\<exists>m. vAdd1 = m \<and> wf_ty m \<and> (\<forall>k. local.wf (selectImpl m k)) \<and> (\<forall>k. wf_ty k \<and> ty_of_val k = key_ty (ty_of_val m) \<longrightarrow> ty_of_val (selectImpl m k) = val_ty (ty_of_val m))))\<close>
+            count_level_map_ty.simps(3) diff_is_0_eq le_numeral_extra(3,4) val3ToValn.simps(3) wf_L.simps(1)
+            wf_ty.simps(3))
+  done
+
+lemma "wf homV" using wff vhomVwfSelect X.wf.simps[of A homV] by simp
 
 lemma wf_impl_wf_ty: "wf k \<Longrightarrow> wf_ty k" using wf.cases by force
 
@@ -439,25 +458,28 @@ proof -
   then show ?thesis using C2Inrl using assms(2) wf_impl_wf_ty by auto
 qed
 
-subsubsection \<open>Select is closed under wf\<close>
-lemma
+subsubsection \<open>Select & Store is closed under wf\<close>
+lemma selectClosedWf:
+  assumes "wf m"
+  (* assumes "wf k" *)  (* not needed *)
+  shows "wf (selectImpl m k)"
+  by (metis X.wf.cases assms(1) selectImpl.elims selectImplAux.simps(1,2) toVal3210.simps(1,2)
+      wfundef)
+
+(* (wf_ty m  \<and>  (\<forall>k. wf (selectImpl m k))  *)
+
+lemma storeClosedWfTy:
   assumes "wf m"
   assumes "wf k"
-  shows "wf (selectImpl m k)"
-  (* how to case on selectImplAux, i.e. apply (cases m' k' rule: selectImplAux.cases) *)
-  apply (cases m rule: toVal3210.cases; cases k rule: toVal3210.cases; auto)
-  apply (metis X.wfAbsV X.wfLitV val0.exhaust val3ToValn.simps(1,2))
-  apply (metis X.wfAbsV X.wfLitV val0.exhaust val3ToValn.simps(1,2))
-  apply (metis X.wfAbsV X.wfLitV val0.exhaust val3ToValn.simps(1,2))
-  apply (metis X.wfAbsV X.wfLitV val0.exhaust val3ToValn.simps(1,2))
-  apply (metis X.wfAbsV X.wfLitV val0.exhaust val3ToValn.simps(1,2))
-  apply (metis X.wfAbsV X.wfLitV val0.exhaust val3ToValn.simps(1,2))
-  apply (metis X.wfAbsV X.wfLitV val0.exhaust val3ToValn.simps(1,2))
-  apply (metis X.wfAbsV X.wfLitV val0.exhaust val3ToValn.simps(1,2))
-  apply (metis X.wfAbsV X.wfLitV val0.exhaust val3ToValn.simps(1,2))
-  apply (metis X.wfAbsV X.wfLitV val0.exhaust val3ToValn.simps(1,2))
-  apply (case_tac ma)
+  assumes "wf v"
+  assumes "ty_of_val v = val_ty (ty_of_val m)"
+  shows "wf (storeImpl m k v)"
+  (* how to case on storeImplAux, i.e. apply (cases m' k' v' rule: storeImplAux.cases) *)
+  apply (cases m rule: toVal3210.cases; simp add: wf_impl_wf_ty wfundef; case_tac ma;
+      cases k rule: toVal3210.cases; simp add: wf_impl_wf_ty wfundef;
+      cases v rule: toVal3210.cases; simp add: wf_impl_wf_ty wfundef)
   oops
+
 
 subsection \<open>Array Axiom Update\<close>
 text \<open>Property to prove: (m[k] := v)[k] == v or select (store m k v) k = v\<close>
