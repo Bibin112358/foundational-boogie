@@ -162,6 +162,51 @@ fun wf_ty :: "'a valn \<Rightarrow> bool" where
 lemma map_level_gt_0: "count_level_map_ty (TMap tv tk) \<ge> 1" by auto
 
 
+subsection \<open>Helper Injectivity Lemmas for toVal3210 and val3ToValn\<close>
+
+lemma valBij: "toVal3210 (val3ToValn x) = x"
+  by (cases x rule: val3ToValn.cases; simp)
+
+lemma toVal3210_inj:
+  assumes "toVal3210 x = toVal3210 y"
+  shows "x = y"
+  apply (cases x rule: toVal3210.cases; cases y rule: toVal3210.cases)
+  using assms by auto
+
+lemma val3ToValn_inj:
+  assumes "val3ToValn x = val3ToValn y"
+  shows "x = y"
+  using valBij by (metis assms)
+
+lemma toValnOpt_inj:
+  assumes "map_option val3ToValn x = map_option val3ToValn y"
+  shows "x = y"
+  using assms option.inj_map_strong[of x y val3ToValn val3ToValn] val3ToValn_inj
+  by blast
+
+lemma toValnInrOpt_inj:
+  assumes "map_option ((val3ToValn) \<circ> Inr) x = map_option ((val3ToValn) \<circ> Inr) y"
+  shows "x = y"
+proof -
+  have "map_option val3ToValn (map_option Inr x)
+      = map_option val3ToValn (map_option Inr y)"
+    by (simp add: assms option.map_comp)
+  then show "x = y"
+    by (metis (no_types, lifting) option.inj_map_strong sum.inject(2) toValnOpt_inj)
+qed
+
+lemma toValnInrrOpt_inj:
+  assumes "map_option ((val3ToValn) \<circ> Inr \<circ> Inr) x = map_option ((val3ToValn) \<circ> Inr \<circ> Inr) y"
+  shows "x = y"
+proof -
+  have "map_option val3ToValn (map_option Inr (map_option Inr x))
+      = map_option val3ToValn (map_option Inr (map_option Inr y))"
+    by (metis assms option.map_comp)
+  then show "x = y"
+    by (metis (no_types, lifting) option.inj_map_strong sum.inject(2) toValnOpt_inj)
+qed
+
+
 subsection \<open>Theory dependent on A::"'a absval_ty_fun"\<close>
 
 locale X =
@@ -410,7 +455,7 @@ proof -
   then show ?thesis using C2Inrl using assms(2) wf_impl_wf_ty by auto
 qed
 
-subsubsection \<open>Select & Store is closed under wf\<close>
+subsection \<open>Select & Store is closed under wf\<close>
 lemma selectClosedWf:
   assumes "wf m"
   (* assumes "wf k" *)  (* not needed *)
@@ -424,10 +469,9 @@ lemma storeClosedWfTy:
   assumes "wf m"
   assumes "wf k"
   assumes "wf v"
-  assumes "ty_of_val v = val_ty (ty_of_val m)"
-  shows "wf_ty (storeImpl m k v)"
+  shows "wf (storeImpl m k v)"
   thm storeImplAux.cases
-  apply (cases "(toVal3210 m, toVal3210 k, toVal3210 v)" rule: storeImplAux.cases; simp add: wf_impl_wf_ty wfundef)
+  apply (cases "(toVal3210 m, toVal3210 k, toVal3210 v)" rule: storeImplAux.cases; (auto simp add: assms))
   oops
 
 
@@ -642,51 +686,6 @@ qed
 
 subsection \<open>Array Axiom Extensionality\<close>
 text \<open>Property to prove: (\<forall>k. m[k] == n[k]) <==> Eq m n\<close>
-
-subsubsection \<open>Helper Injectivity Lemmas and Types of Map Functions\<close>
-
-lemma valBij: "toVal3210 (val3ToValn x) = x"
-  by (cases x rule: val3ToValn.cases; simp)
-
-lemma toVal3210_inj:
-  assumes "toVal3210 x = toVal3210 y"
-  shows "x = y"
-  apply (cases x rule: toVal3210.cases; cases y rule: toVal3210.cases)
-  using assms by auto
-
-lemma val3ToValn_inj:
-  assumes "val3ToValn x = val3ToValn y"
-  shows "x = y"
-  using valBij by (metis assms)
-
-lemma toValnOpt_inj:
-  assumes "map_option val3ToValn x = map_option val3ToValn y"
-  shows "x = y"
-  using assms option.inj_map_strong[of x y val3ToValn val3ToValn] val3ToValn_inj
-  by blast
-
-lemma toValnInrOpt_inj:
-  assumes "map_option ((val3ToValn) \<circ> Inr) x = map_option ((val3ToValn) \<circ> Inr) y"
-  shows "x = y"
-proof -
-  have "map_option val3ToValn (map_option Inr x)
-      = map_option val3ToValn (map_option Inr y)"
-    by (simp add: assms option.map_comp)
-  then show "x = y"
-    by (metis (no_types, lifting) option.inj_map_strong sum.inject(2) toValnOpt_inj)
-qed
-
-lemma toValnInrrOpt_inj:
-  assumes "map_option ((val3ToValn) \<circ> Inr \<circ> Inr) x = map_option ((val3ToValn) \<circ> Inr \<circ> Inr) y"
-  shows "x = y"
-proof -
-  have "map_option val3ToValn (map_option Inr (map_option Inr x))
-      = map_option val3ToValn (map_option Inr (map_option Inr y))"
-    by (metis assms option.map_comp)
-  then show "x = y"
-    by (metis (no_types, lifting) option.inj_map_strong sum.inject(2) toValnOpt_inj)
-qed
-
 
 subsubsection \<open>Extensionality Aux\<close>
 lemma extensionalityAux:
