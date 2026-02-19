@@ -314,11 +314,11 @@ lemma C2Inrl:
 
 lemma InlC3:
   assumes "wf_ty v"
-  assumes "\<exists>v'. toVal3210 v = (Inl v')"
+  assumes "toVal3210 v = (Inl v')"
   shows "count_level_map_ty (ty_of_val v) = 3"
   apply (cases v rule: toVal3210.cases)
   using assms apply auto
-  apply (case_tac m) using assms
+  apply (cases v') using assms
   by fastforce+
 
 lemma C3Inl:
@@ -547,54 +547,90 @@ lemma MapLevels:
   assumes "n = count_level_map_ty (ty_of_val M)"
   shows "count_level_map_ty (ty_of_val k) \<le> n-1 \<and> count_level_map_ty (ty_of_val v) \<le> n
     \<and> (count_level_map_ty (ty_of_val k) = n-1 \<or> count_level_map_ty (ty_of_val v) = n)"
-proof (cases M rule: wf_ty.cases)
-  case (1 v)
-  then show ?thesis using assms(4) by force
-next
-  case (2 v)
-  then show ?thesis using assms(4) by force
-next
-  case (3 m)
-  have "wf_L 1 m" using assms wf_impl_wf_ty "3" by fastforce
-  then show ?thesis using assms by auto
-next
-  case (4 m)
-  have "wf_L 2 m" using assms wf_impl_wf_ty "4" by fastforce
-  then show ?thesis using assms by auto
-next
-  case (5 m)
-  have "wf_L 3 m" using assms wf_impl_wf_ty "5" by fastforce
-  then show ?thesis using assms by auto
+  using assms by auto
+
+lemma MapLevelsKey:
+  assumes "wf M"
+  assumes "wf k"
+  assumes "wf v"
+  assumes "ty_of_val M = TMap (ty_of_val k) (ty_of_val v)"
+  assumes "n = count_level_map_ty (ty_of_val M)"
+  assumes "count_level_map_ty (ty_of_val v) \<le> n-1"
+  shows "count_level_map_ty (ty_of_val k) = n-1"
+  using assms by auto
+
+lemma MapLevelsVal:
+  assumes "wf M"
+  assumes "wf k"
+  assumes "wf v"
+  assumes "ty_of_val M = TMap (ty_of_val k) (ty_of_val v)"
+  assumes "n = count_level_map_ty (ty_of_val M)"
+  assumes "count_level_map_ty (ty_of_val v) = n"
+  shows "count_level_map_ty (ty_of_val k) \<le> n-1"
+  using assms by auto
+
+lemma "Inr x \<noteq> Inl y" by simp
+
+lemma Map3KeyForms:
+  assumes "wf M \<and> wf k \<and> wf v"
+  assumes "ty_of_val M = TMap (ty_of_val k) (ty_of_val v)"
+  assumes "toVal3210 M = Inl (MapKey f t)"
+  shows "(\<exists>k'. toVal3210 k = Inr (Inl k')) \<and> (\<exists>v'. toVal3210 v = Inr v')"
+proof -
+  have MVT: "M = MapV (Inl (MapKey f t))" using assms by (simp add: toVal3210_inj)
+  obtain tv tk where "t = (tv, tk)" by fastforce
+  then have T: "t = ((ty_of_val k), (ty_of_val v))" using assms MVT by fastforce
+  have KL: "count_level_map_ty (ty_of_val k) = 2" using assms MVT wf_impl_wf_ty T  by force
+  have VL: "count_level_map_ty (ty_of_val v) \<le> 2" using assms MVT wf_impl_wf_ty T  by force
+  then show ?thesis using assms MVT wf_impl_wf_ty KL VL C2Inrl C1Inrrl C0Inrrr
+    by (cases v rule: toVal3210.cases; force)
 qed
 
+lemma Map3ValForms:
+  assumes "wf M \<and> wf k \<and> wf v"
+  assumes "wf_ty k"
+  assumes "ty_of_val M = TMap (ty_of_val k) (ty_of_val v)"
+  assumes "toVal3210 M = Inl (MapVal f t)"
+  shows "(\<exists>k'. toVal3210 k = Inr k') \<and> (\<exists>v'. toVal3210 v = Inl v')"
+proof -
+  have MVT: "M = MapV (Inl (MapVal f t))" using assms by (simp add: toVal3210_inj)
+  obtain tv tk where "t = (tv, tk)" by fastforce
+  then have T: "t = ((ty_of_val k), (ty_of_val v))" using assms MVT by fastforce
+  have KL: "count_level_map_ty (ty_of_val k) \<le> 2" using assms MVT wf_impl_wf_ty T  by force
+  have VL: "count_level_map_ty (ty_of_val v) = 3" using assms MVT wf_impl_wf_ty T  by force
+  then show ?thesis using assms MVT wf_impl_wf_ty KL VL InlC3 C3Inl C2Inrl C1Inrrl C0Inrrr
+    by (cases "toVal3210 k" rule: val3ToValn.cases; simp)
+qed
 
-lemma
+lemma AAUInlInl:
   assumes "wf M"
   assumes "wf k"
   assumes "wf v"
   assumes "ty_of_val M = TMap (ty_of_val k) (ty_of_val v)"
   assumes "toVal3210 M = Inl (MapKey va vb)"
-  assumes " toVal3210 k = Inl vc"
+  assumes "toVal3210 k = Inl vc"
   shows False
 proof -
   have "count_level_map_ty (ty_of_val M) = 3" using assms InlC3 wf_impl_wf_ty by blast
-  then have "count_level_map_ty (ty_of_val k) \<le> 2" using assms MapLevels by simp
-  then show ?thesis using assms InlC3 wf_impl_wf_ty MapLevels by simp
-(*
-  have A: "count_level_map_ty (ty_of_val k) = 3" using assms InlC3 wf_impl_wf_ty by blast
-  obtain tk tv where T: "vb = (tk, tv)" by fastforce
-  have "wf_ty M" using assms wf_impl_wf_ty by blast
-  then have B: "wf_L 3 (MapKey va vb)" using assms T
-    by (metis toVal3210_inj val3ToValn.simps(5) valBij wf_ty.simps(5))
-  (* have "ty_of_val M = TMap tk tv" using assms T try *)
-  have C: "vb = ((ty_of_val k), (ty_of_val v))" using assms T
-    by (metis (mono_tags, lifting) prod.collapse toVal3210.simps(5)
-        toVal3210_inj ty.inject(4) ty321.simps(3) tyL.simps(2)
-        type_of_val.simps(3))
-  then have "count_level_map_ty (ty_of_val k) = 2" using assms B C by auto
-  then show ?thesis using A by simp
-*)
+  then show ?thesis using assms InlC3 wf_impl_wf_ty by simp
+qed
 
+lemma AAUInlInrr:
+  assumes "wf M"
+  assumes "wf k"
+  assumes "wf v"
+  assumes "ty_of_val M = TMap (ty_of_val k) (ty_of_val v)"
+  assumes "toVal3210 M = Inl (MapKey va vb)"
+  assumes "toVal3210 k = Inr (Inr vc)"
+  shows False
+proof -
+  have TV: "M = MapV (Inl (MapKey va vb))" using assms by (simp add: toVal3210_inj)
+  obtain tv tk where "vb = (tv, tk)" by fastforce
+  then have "vb = ((ty_of_val k), (ty_of_val v))" using assms TV by fastforce
+  then have C2: "count_level_map_ty (ty_of_val k) = 2" using TV wf_impl_wf_ty assms(1) by fastforce
+  have C1: "count_level_map_ty (ty_of_val k) \<le> 1" using assms wf_impl_wf_ty InrrrC0 InrrlC1
+    by (cases vc; simp)
+  then show ?thesis using C2 C1 by simp
 qed
 
 
@@ -604,14 +640,24 @@ lemma ArrayAxUpdate:
   assumes "wf v"
   assumes "ty_of_val M = TMap (ty_of_val k) (ty_of_val v)"
   shows "selectImpl (storeImpl M k v) k = v"
-  apply (cases "(toVal3210 M, toVal3210 k, toVal3210 v)" rule: storeImplAux.cases;
-      (simp add: assms))
-    apply (metis assms toVal3210.simps toVal3210_inj)
-    apply (simp add: toVal3210_inj valBij)+
-    using assms InlC3 wf_impl_wf_ty MapLevels
-    apply (metis Suc_eq_plus1 Suc_n_not_le_n add_diff_cancel_left' numeral_Bit1 plus_1_eq_Suc)
+  apply (cases "(toVal3210 M, toVal3210 k, toVal3210 v)" rule: storeImplAux.cases)
+  apply (simp add: assms(4) toVal3210_inj)
+  apply (simp add: assms(4) toVal3210_inj valBij)+
+  using Map3KeyForms assms apply fastforce
+  using Map3KeyForms assms apply fastforce
+  using Map3KeyForms assms apply fastforce
+  apply (case_tac va)
+    using Map3ValForms assms wf_impl_wf_ty apply fastforce
+    using Map3KeyForms assms apply fastforce
+  using Map3ValForms assms wf_impl_wf_ty apply fastforce
+  apply (case_tac va)
+    using Map3ValForms assms wf_impl_wf_ty apply fastforce
+    using Map3KeyForms assms apply fastforce
+  apply (case_tac va)
+    using Map3ValForms assms wf_impl_wf_ty apply fastforce
+    using Map3KeyForms assms apply fastforce
     oops
-
+qed
 
 subsection \<open>Array Axiom Stable\<close>
 text \<open>Property to prove:
