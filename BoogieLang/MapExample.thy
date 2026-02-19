@@ -778,17 +778,205 @@ proof -
 qed
 
 
-lemma storeClosedWfTy:
+lemma storeClosedWfTyped:
+  assumes "wf m" "wf k" "wf v"
+  assumes "ty_of_val m = TMap (ty_of_val k) (ty_of_val v)"
+  shows "wf (storeImpl m k v)"
+proof (cases m rule: ValnCases)
+  case (1 v)
+  then show ?thesis using assms(4) by force
+next
+  case (2 v)
+  then show ?thesis using assms(4) by force
+next
+  case (3 f tk tv)
+  have C: "count_level_map_ty (ty_of_val k) = 0  \<and>  count_level_map_ty (ty_of_val v) \<le> 0"
+    using assms wf_impl_wf_ty "3" by fastforce
+  obtain k' where K: "toVal3210 k = Inr (Inr (Inr k'))"
+    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+    by (cases k; simp)
+  obtain v' where V: "toVal3210 v = Inr (Inr (Inr v'))"
+    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+    by (cases v; simp)
+
+  have wf2: "(\<forall>k'. wf (selectImpl (storeImpl m k v) k'))"
+    by (metis ArrayAxStable ArrayAxUpdate assms(1,2,3,4) selectClosedWf)
+  have wf1: "wf_ty (storeImpl m k v)"
+    using "3" K V assms(1) wf_impl_wf_ty by fastforce
+
+  have STO: "(storeImpl m k v) = MapV (Inr (Inr (MapKey (f(k' := v')) (tk, tv))))"
+    using "3" K V assms(4) by force
+  have UP: "selectImpl (storeImpl m k v) k = v" using ArrayAxUpdate assms by simp
+
+  have wf3: "(\<forall>x. wf_ty x \<and> ty_of_val x = key_ty (ty_of_val (storeImpl m k v))
+    \<longrightarrow> ty_of_val (selectImpl (storeImpl m k v) x) = val_ty (ty_of_val (storeImpl m k v)))"
+    by (metis "3" ArrayAxStable[of k _ m v] STO UP assms(1,4)
+        ty321.simps(1)[of "MapKey (f(k' := v')) (tk, tv)"] ty321.simps(1)[of "MapKey f (tk, tv)"]
+        tyL.simps(2)[of "f(k' := v')" tk tv] tyL.simps(2)[of f tk tv]
+        type_of_val.simps(3)[of A ty321 "Inr (Inr (MapKey f (tk, tv)))"]
+        type_of_val.simps(3)[of A ty321 "Inr (Inr (MapKey (f(k' := v')) (tk, tv)))"]
+        val.distinct(3)[of _ "Inr (Inr (MapKey f (tk, tv)))"]
+        val.distinct(5)[of _ "Inr (Inr (MapKey f (tk, tv)))"]
+        val_ty.simps(1)[of "ty_of_val k" "ty_of_val v"] wf.simps[of m])
+
+  show ?thesis using wf1 wf2 wf3 wfMapV by blast
+next
+  case (4 f tk tv)  (* M = MapV (Inr (Inr (MapVal f (tk, tv)))) *)
+  have C: "count_level_map_ty (ty_of_val k) \<le> 0  \<and>  count_level_map_ty (ty_of_val v) = 1"
+    using assms wf_impl_wf_ty "4" by fastforce
+  obtain k' where K: "toVal3210 k = Inr (Inr (Inr k'))"
+    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+    by (cases k; simp)
+  obtain v' where V: "toVal3210 v = Inr (Inr (Inl v'))"
+    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+    apply (cases v; simp) by fastforce
+
+  have wf2: "(\<forall>k'. wf (selectImpl (storeImpl m k v) k'))"
+    by (metis ArrayAxStable ArrayAxUpdate assms(1,2,3,4) selectClosedWf)
+  have wf1: "wf_ty (storeImpl m k v)"
+    using "4" K V assms(1) wf_impl_wf_ty by fastforce
+
+  have STO: "(storeImpl m k v) = MapV (Inr (Inr (MapVal (f(k' := v')) (tk, tv))))"
+    using "4" K V assms(4) by force
+  have UP: "selectImpl (storeImpl m k v) k = v" using ArrayAxUpdate assms by simp
+
+  have wf3: "(\<forall>x. wf_ty x \<and> ty_of_val x = key_ty (ty_of_val (storeImpl m k v))
+    \<longrightarrow> ty_of_val (selectImpl (storeImpl m k v) x) = val_ty (ty_of_val (storeImpl m k v)))"
+    by (metis (no_types, lifting) "4" ArrayAxStable STO UP assms(1,4) ty321.simps(1) tyL.simps(1)
+        type_of_val.simps(3) val.distinct(3,5) val_ty.simps(1) wf.simps)
+
+  show ?thesis using wf1 wf2 wf3 wfMapV by blast
+next
+  case (5 f tk tv)
+  have C: "count_level_map_ty (ty_of_val k) = 1  \<and>  count_level_map_ty (ty_of_val v) \<le> 1"
+    using assms wf_impl_wf_ty "5" by fastforce
+  obtain k' where K: "toVal3210 k = Inr (Inr (Inl k'))"
+    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+    apply (cases k; simp) by fastforce
+  obtain v' where V: "toVal3210 v = Inr (Inr v')"
+    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+    apply (cases v; simp) by fastforce
+
+  have wf2: "(\<forall>k'. wf (selectImpl (storeImpl m k v) k'))"
+    by (metis ArrayAxStable ArrayAxUpdate assms(1,2,3,4) selectClosedWf)
+  have wf1: "wf_ty (storeImpl m k v)"
+    using "5" K V assms(1) wf_impl_wf_ty by fastforce
+
+  have STO: "(storeImpl m k v) = MapV (Inr (Inl (MapKey (f(k' := v')) (tk, tv))))"
+    using "5" K V assms(4) by force
+  have UP: "selectImpl (storeImpl m k v) k = v" using ArrayAxUpdate assms by simp
+
+  have wf3: "(\<forall>x. wf_ty x \<and> ty_of_val x = key_ty (ty_of_val (storeImpl m k v))
+    \<longrightarrow> ty_of_val (selectImpl (storeImpl m k v) x) = val_ty (ty_of_val (storeImpl m k v)))"
+    by (metis "5" ArrayAxStable[of k _ m v] STO UP assms(1,4)
+        ty321.simps(2)[of "MapKey (f(k' := v')) (tk, tv)"] ty321.simps(2)[of "MapKey f (tk, tv)"]
+        tyL.simps(2)[of "f(k' := v')" tk tv] tyL.simps(2)[of f tk tv]
+        type_of_val.simps(3)[of A ty321 "Inr (Inl (MapKey f (tk, tv)))"]
+        type_of_val.simps(3)[of A ty321 "Inr (Inl (MapKey (f(k' := v')) (tk, tv)))"]
+        val.distinct(3)[of _ "Inr (Inl (MapKey f (tk, tv)))"]
+        val.distinct(5)[of _ "Inr (Inl (MapKey f (tk, tv)))"]
+        val_ty.simps(1)[of "ty_of_val k" "ty_of_val v"] wf.simps[of m])
+
+  show ?thesis using wf1 wf2 wf3 wfMapV by blast
+next
+  case (6 f tk tv)
+  have C: "count_level_map_ty (ty_of_val k) \<le> 1  \<and>  count_level_map_ty (ty_of_val v) = 2"
+    using assms wf_impl_wf_ty "6" by fastforce
+  obtain k' where K: "toVal3210 k = Inr (Inr k')"
+    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+    apply (cases k; simp) by fastforce
+  obtain v' where V: "toVal3210 v = Inr (Inl v')"
+    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+    apply (cases v; simp) by fastforce
+
+  have wf2: "(\<forall>k'. wf (selectImpl (storeImpl m k v) k'))"
+    by (metis ArrayAxStable ArrayAxUpdate assms(1,2,3,4) selectClosedWf)
+  have wf1: "wf_ty (storeImpl m k v)"
+    using "6" K V assms(1) wf_impl_wf_ty by fastforce
+
+  have STO: "(storeImpl m k v) = MapV (Inr (Inl (MapVal (f(k' := v')) (tk, tv))))"
+    using "6" K V assms(4) by force
+  have UP: "selectImpl (storeImpl m k v) k = v" using ArrayAxUpdate assms by simp
+
+  have wf3: "(\<forall>x. wf_ty x \<and> ty_of_val x = key_ty (ty_of_val (storeImpl m k v))
+    \<longrightarrow> ty_of_val (selectImpl (storeImpl m k v) x) = val_ty (ty_of_val (storeImpl m k v)))"
+    by (metis (no_types, lifting) "6" ArrayAxStable STO UP assms(1,4) ty321.simps(2) tyL.simps(1)
+        type_of_val.simps(3) val.distinct(3,5) val_ty.simps(1) wf.simps)
+
+  show ?thesis using wf1 wf2 wf3 wfMapV by blast
+next
+  case (7 f tk tv)
+  have C: "count_level_map_ty (ty_of_val k) = 2  \<and>  count_level_map_ty (ty_of_val v) \<le> 2"
+    using assms wf_impl_wf_ty "7" by fastforce
+  obtain k' where K: "toVal3210 k = Inr (Inl k')"
+    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+    apply (cases k; simp) by fastforce
+  obtain v' where V: "toVal3210 v = Inr v'"
+    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+    apply (cases v; simp) by fastforce
+
+  have wf2: "(\<forall>k'. wf (selectImpl (storeImpl m k v) k'))"
+    by (metis ArrayAxStable ArrayAxUpdate assms(1,2,3,4) selectClosedWf)
+  have wf1: "wf_ty (storeImpl m k v)"
+    using "7" K V assms(1) wf_impl_wf_ty by fastforce
+
+  have STO: "(storeImpl m k v) = MapV ((Inl (MapKey (f(k' := v')) (tk, tv))))"
+    using "7" K V assms(4) by force
+  have UP: "selectImpl (storeImpl m k v) k = v" using ArrayAxUpdate assms by simp
+
+  have wf3: "(\<forall>x. wf_ty x \<and> ty_of_val x = key_ty (ty_of_val (storeImpl m k v))
+    \<longrightarrow> ty_of_val (selectImpl (storeImpl m k v) x) = val_ty (ty_of_val (storeImpl m k v)))"
+    by (metis "7" ArrayAxStable[of k _ m v] STO UP assms(1,4)
+        ty321.simps(3)[of "MapKey (f(k' := v')) (tk, tv)"] ty321.simps(3)[of "MapKey f (tk, tv)"]
+        tyL.simps(2)[of "f(k' := v')" tk tv] tyL.simps(2)[of f tk tv]
+        type_of_val.simps(3)[of A ty321 "(Inl (MapKey f (tk, tv)))"]
+        type_of_val.simps(3)[of A ty321 "(Inl (MapKey (f(k' := v')) (tk, tv)))"]
+        val.distinct(3)[of _ "(Inl (MapKey f (tk, tv)))"]
+        val.distinct(5)[of _ "(Inl (MapKey f (tk, tv)))"]
+        val_ty.simps(1)[of "ty_of_val k" "ty_of_val v"] wf.simps[of m])
+
+  show ?thesis using wf1 wf2 wf3 wfMapV by blast
+next
+  case (8 f tk tv)
+  have C: "count_level_map_ty (ty_of_val k) \<le> 2  \<and>  count_level_map_ty (ty_of_val v) = 3"
+    using assms wf_impl_wf_ty "8" by fastforce
+  obtain k' where K: "toVal3210 k = Inr k'"
+    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+    apply (cases k; simp) by fastforce
+  obtain v' where V: "toVal3210 v = Inl v'"
+    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+    apply (cases v; simp) by fastforce
+
+  have wf2: "(\<forall>k'. wf (selectImpl (storeImpl m k v) k'))"
+    by (metis ArrayAxStable ArrayAxUpdate assms(1,2,3,4) selectClosedWf)
+  have wf1: "wf_ty (storeImpl m k v)"
+    using "8" K V assms(1) wf_impl_wf_ty by fastforce
+
+  have STO: "(storeImpl m k v) = MapV ((Inl (MapVal (f(k' := v')) (tk, tv))))"
+    using "8" K V assms(4) by force
+  have UP: "selectImpl (storeImpl m k v) k = v" using ArrayAxUpdate assms by simp
+
+  have wf3: "(\<forall>x. wf_ty x \<and> ty_of_val x = key_ty (ty_of_val (storeImpl m k v))
+    \<longrightarrow> ty_of_val (selectImpl (storeImpl m k v) x) = val_ty (ty_of_val (storeImpl m k v)))"
+    by (metis (no_types, lifting) "8" ArrayAxStable STO UP assms(1,4) ty321.simps(3) tyL.simps(1)
+        type_of_val.simps(3) val.distinct(3,5) val_ty.simps(1) wf.simps)
+
+  show ?thesis using wf1 wf2 wf3 wfMapV by blast
+qed
+
+
+lemma storeClosedWf:
   assumes "wf m"
   assumes "wf k"
   assumes "wf v"
   shows "wf (storeImpl m k v)"
-  thm storeImplAux.cases
-  apply (cases "(toVal3210 m, toVal3210 k, toVal3210 v)" rule: storeImplAux.cases; (auto simp add: assms))
-  using assms(1,2,3) tmp apply force
-  oops
+proof (cases "ty_of_val m = TMap (ty_of_val k) (ty_of_val v)")
+  case False
+  then show ?thesis using assms(1) by simp
+next
+  case True
+  then show ?thesis using assms(1,2,3) storeClosedWfTyped by blast
 qed
-
 
 
 (* partially fixed Gemini suggestion *)
