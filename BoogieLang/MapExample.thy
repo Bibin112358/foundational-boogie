@@ -539,6 +539,80 @@ lemma ArrayAxUpdateLitV:
   using assms(1,5) by force
 
 
+lemma MapLevels:
+  assumes "wf M"
+  assumes "wf k"
+  assumes "wf v"
+  assumes "ty_of_val M = TMap (ty_of_val k) (ty_of_val v)"
+  assumes "n = count_level_map_ty (ty_of_val M)"
+  shows "count_level_map_ty (ty_of_val k) \<le> n-1 \<and> count_level_map_ty (ty_of_val v) \<le> n
+    \<and> (count_level_map_ty (ty_of_val k) = n-1 \<or> count_level_map_ty (ty_of_val v) = n)"
+proof (cases M rule: wf_ty.cases)
+  case (1 v)
+  then show ?thesis using assms(4) by force
+next
+  case (2 v)
+  then show ?thesis using assms(4) by force
+next
+  case (3 m)
+  have "wf_L 1 m" using assms wf_impl_wf_ty "3" by fastforce
+  then show ?thesis using assms by auto
+next
+  case (4 m)
+  have "wf_L 2 m" using assms wf_impl_wf_ty "4" by fastforce
+  then show ?thesis using assms by auto
+next
+  case (5 m)
+  have "wf_L 3 m" using assms wf_impl_wf_ty "5" by fastforce
+  then show ?thesis using assms by auto
+qed
+
+
+lemma
+  assumes "wf M"
+  assumes "wf k"
+  assumes "wf v"
+  assumes "ty_of_val M = TMap (ty_of_val k) (ty_of_val v)"
+  assumes "toVal3210 M = Inl (MapKey va vb)"
+  assumes " toVal3210 k = Inl vc"
+  shows False
+proof -
+  have "count_level_map_ty (ty_of_val M) = 3" using assms InlC3 wf_impl_wf_ty by blast
+  then have "count_level_map_ty (ty_of_val k) \<le> 2" using assms MapLevels by simp
+  then show ?thesis using assms InlC3 wf_impl_wf_ty MapLevels by simp
+(*
+  have A: "count_level_map_ty (ty_of_val k) = 3" using assms InlC3 wf_impl_wf_ty by blast
+  obtain tk tv where T: "vb = (tk, tv)" by fastforce
+  have "wf_ty M" using assms wf_impl_wf_ty by blast
+  then have B: "wf_L 3 (MapKey va vb)" using assms T
+    by (metis toVal3210_inj val3ToValn.simps(5) valBij wf_ty.simps(5))
+  (* have "ty_of_val M = TMap tk tv" using assms T try *)
+  have C: "vb = ((ty_of_val k), (ty_of_val v))" using assms T
+    by (metis (mono_tags, lifting) prod.collapse toVal3210.simps(5)
+        toVal3210_inj ty.inject(4) ty321.simps(3) tyL.simps(2)
+        type_of_val.simps(3))
+  then have "count_level_map_ty (ty_of_val k) = 2" using assms B C by auto
+  then show ?thesis using A by simp
+*)
+
+qed
+
+
+lemma ArrayAxUpdate:
+  assumes "wf M"
+  assumes "wf k"
+  assumes "wf v"
+  assumes "ty_of_val M = TMap (ty_of_val k) (ty_of_val v)"
+  shows "selectImpl (storeImpl M k v) k = v"
+  apply (cases "(toVal3210 M, toVal3210 k, toVal3210 v)" rule: storeImplAux.cases;
+      (simp add: assms))
+    apply (metis assms toVal3210.simps toVal3210_inj)
+    apply (simp add: toVal3210_inj valBij)+
+    using assms InlC3 wf_impl_wf_ty MapLevels
+    apply (metis Suc_eq_plus1 Suc_n_not_le_n add_diff_cancel_left' numeral_Bit1 plus_1_eq_Suc)
+    oops
+
+
 subsection \<open>Array Axiom Stable\<close>
 text \<open>Property to prove:
   y \<noteq> x ==> (m[x] := v)[y] == m[y]
@@ -573,14 +647,20 @@ lemma ArrayAxStable3Key:
      apply (metis assms(6) toVal3210.simps(4) toVal3210_inj)
 done
 
-lemma ArrayAxStableLitV:
-  assumes "M = LitV l"
+lemma ArrayAxStableLitV: "selectImpl (storeImpl (LitV l) x v) y = selectImpl (LitV l) y"
+  by auto
+
+lemma ArrayAxStable:
   assumes "wf M"
-  assumes "wf k"
+  assumes "wf x"
+  assumes "wf y"
   assumes "wf v"
   assumes "x \<noteq> y"
   shows "selectImpl (storeImpl M x v) y = selectImpl M y"
-  using assms(1,5) by force
+  apply (cases "(toVal3210 M, toVal3210 x, toVal3210 v)" rule: storeImplAux.cases; (simp add: assms);
+      cases y rule: toVal3210.cases; (simp add: valBij))
+     apply (metis assms(5) toVal3210.simps toVal3210_inj)+
+  done
 
 
 subsection \<open>Array Axiom Extensionality\<close>
