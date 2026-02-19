@@ -46,7 +46,7 @@ datatype ('a, 'm) val = LitV lit | AbsV (the_absv: 'a)
 record ('a, 'k) map_interface =
   map_select :: "('a, 'k) val \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) val"
   map_store :: "('a, 'k) val \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) val"
-  map_type :: "'k \<Rightarrow> ty"
+  map_type :: "'k \<Rightarrow> (ty \<times> ty)"
 
 
 type_synonym 'a absval_ty_fun = "'a \<Rightarrow> (tcon_id \<times> ty list)"
@@ -595,7 +595,7 @@ lemma ArrayAxStable:
 subsection \<open>Array Axiom Extensionality\<close>
 text \<open>Property to prove: (\<forall>k. m[k] == n[k]) <==> Eq m n\<close>
 
-subsubsection \<open>Extensionality Aux\<close>
+subsubsection \<open>Extensionality\<close>
 lemma extensionalityAux:
   assumes "wf (MapV m)"
   assumes "wf (MapV n)"
@@ -709,60 +709,51 @@ next
 qed
 
 
-subsubsection \<open>Extensionality Impl\<close>
-
-lemma extensionalImpl':
-  assumes "selectImpl' m = selectImpl' n"
-  assumes "type_of_val3210 m = type_of_val3210 n"
-  assumes "\<exists>k. selectImpl' m k \<noteq> None"
-  shows "m = n"
-  by (metis (no_types, lifting) ext assms(1,2,3) extensional2[of n m]
-      selectImpl'.elims[of m _ "selectImpl' m _"] selectImpl'.simps(2)[of n]
-      selectImpl'.simps(2)[of m])
-
-fun type_of_Impl where
-    "type_of_Impl m = type_of_val3210 (toVal3210 (MapV m))"
-
-lemma extensionalImplMapV:
+lemma extensionalityMapV:
+  assumes "wf (MapV m)"
+  assumes "wf (MapV n)"
+  assumes "ty_of_val (MapV m) = ty_of_val (MapV n)"
   assumes "selectImpl (MapV m) = selectImpl (MapV n)"
-  assumes "type_of_Impl m = type_of_Impl n"
-  assumes "\<exists>k. selectImpl (MapV m) k \<noteq> None"
   shows "m = n"
-proof -  
-  (* injectivity of map_option val3ToValn *)
-  have "\<forall>k'. map_option val3ToValn (selectImpl' (toVal3210 (MapV m)) (toVal3210 k'))
-    = map_option val3ToValn (selectImpl' (toVal3210 (MapV n)) (toVal3210 k'))"
-    by (metis assms(1) selectImpl.simps(3))
-  then have "\<forall>k'. (selectImpl' (toVal3210 (MapV m)) (toVal3210 k'))
-    = (selectImpl' (toVal3210 (MapV n)) (toVal3210 k'))"
-    using toValnOpt_inj by blast
-  then have "\<forall>k. (selectImpl' (toVal3210 (MapV m)) k)
-    = (selectImpl' (toVal3210 (MapV n)) k)" by (metis valBij)
-
-  (* lemma extensionalImpl' *)
-  moreover have "type_of_val3210 (toVal3210 (MapV m)) = type_of_val3210 (toVal3210 (MapV n))"
-    using assms(2) by auto
-  moreover have "\<exists>k. selectImpl' (toVal3210 (MapV m)) k \<noteq> None"
-    using assms(3) by auto
-  ultimately have "(toVal3210 (MapV m)) = (toVal3210 (MapV n))"
-    using assms extensionalImpl' by blast
-
-  (* injectivity of toVal3210 *)
-  then show ?thesis using toVal3210_inj by auto
-qed
-
-abbreviation example_map3 :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
-  "example_map3 \<equiv> \<lparr> map_select = selectImpl, map_store = undefined, map_type = type_of_Impl \<rparr>"
+  by (metis (no_types, lifting) ext X.extensionalityAux assms(1,2,3,4) selectImpl.simps
+      valBij)
 
 
-lemma extensional:
-  assumes "(map_select example_map3) m = (map_select example_map3) n"
-  assumes "type_of_val A example_map3 m = type_of_val A example_map3 n"
+subsection \<open>Summary\<close>
+
+abbreviation MI :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
+  "MI \<equiv> \<lparr> map_select = selectImpl, map_store = storeImpl, map_type = ty321 \<rparr>"
+
+(* TODO: make summary, escpecially store & wf, outside of the locale? *)
+lemma Ax1:
+  assumes "wf m \<and> wf k \<and> wf v"
+  assumes "type_of_val A (map_type MI) m = TMap (type_of_val A (map_type MI) k) (type_of_val A (map_type MI) v)"
+  shows "(map_select MI) ((map_store MI) m k v) k = v"
+  using assms ArrayAxUpdate by simp
+
+lemma Ax2:
+  assumes "wf m \<and> wf x \<and> wf y \<and> wf v"
+  shows "x = y \<or> (map_select MI) ((map_store MI) m x v) y = (map_select MI) m y"
+  using assms ArrayAxStable by fastforce
+
+lemma Ex:
+  assumes "wf m \<and> wf n"
+  assumes "m = MapV m' \<and> n = MapV n'"
+  assumes "type_of_val A (map_type MI) m = type_of_val A (map_type MI) n"
+  assumes "(map_select MI) m = (map_select MI) n"
   shows "m = n"
-  by (smt (verit) assms(1,2,3) extensionalImplMapV map_interface.select_convs(1,3)
-      selectImpl.elims type_of_val.simps(3))
+  using assms extensionalityMapV by auto
 
+lemma SelectClosedUnderWF:
+  assumes "wf m \<and> wf k"
+  shows "wf ((map_select MI) m k)"
+  using assms selectClosedWf by auto
 
-end
+lemma StoreClosedUnderWF:
+  assumes "wf m \<and> wf k \<and> wf v"
+  shows "wf ((map_store MI) m k v)"
+  using assms oops
+
+end  (* locale fixes A :: "'a absval_ty_fun" *)
 
 end
