@@ -478,17 +478,6 @@ lemma selectClosedWf:
   by (metis X.wf.cases assms(1) selectImpl.elims selectImplAux.simps(1,2) toVal3210.simps(1,2)
       wfundef)
 
-(* (wf_ty m  \<and>  (\<forall>k. wf (selectImpl m k))  *)
-
-lemma storeClosedWfTy:
-  assumes "wf m"
-  assumes "wf k"
-  assumes "wf v"
-  shows "wf (storeImpl m k v)"
-  thm storeImplAux.cases
-  apply (cases "(toVal3210 m, toVal3210 k, toVal3210 v)" rule: storeImplAux.cases; (auto simp add: assms))
-  oops
-qed
 
 subsection \<open>Array Axiom Update\<close>
 text \<open>Property to prove: (m[k] := v)[k] == v or select (store m k v) k = v\<close>
@@ -580,15 +569,17 @@ text \<open>Property to prove:
   y \<noteq> x ==> select (store m x v) y = select m y\<close>
 
 lemma ArrayAxStable:
+(*  apparently not needed
   assumes "wf M"
   assumes "wf x"
   assumes "wf y"
   assumes "wf v"
+*)
   assumes "x \<noteq> y"
   shows "selectImpl (storeImpl M x v) y = selectImpl M y"
   apply (cases "(toVal3210 M, toVal3210 x, toVal3210 v)" rule: storeImplAux.cases; (simp add: assms);
       cases y rule: toVal3210.cases; (simp add: valBij))
-     apply (metis assms(5) toVal3210.simps toVal3210_inj)+
+     apply (metis assms toVal3210.simps toVal3210_inj)+
   done
 
 
@@ -753,6 +744,84 @@ lemma StoreClosedUnderWF:
   assumes "wf m \<and> wf k \<and> wf v"
   shows "wf ((map_store MI) m k v)"
   using assms oops
+
+
+lemma tmp:
+  assumes "wf m"
+  assumes "wf k"
+  assumes "wf v"
+  assumes "toVal3210 m = Inr (Inr (Inl (MapVal ma (tk, tv))))"
+  assumes "toVal3210 k = Inr (Inr (Inr ka))"
+  assumes "toVal3210 v = Inr (Inr (Inl va))"
+  assumes "ty_of_val v = val_ty (ty_of_val m)"
+  shows "wf (MapV (Inr (Inr (MapVal (ma(ka := va)) (tk, tv)))))"
+proof -
+  have "wf_ty m" using assms wf_impl_wf_ty by simp
+  then have wf1: "wf_ty (MapV (Inr (Inr (MapVal (ma(ka := va)) (tk, tv)))))"
+    using assms
+    by (metis (no_types, lifting) toVal3210.simps(3) toVal3210_inj wf_L.simps(2)
+        wf_ty.simps(3))
+
+  (* begin: (\<forall>k. wf (selectImpl m k)) *)
+  have sto: "(storeImpl m k v) = (MapV (Inr (Inr (MapVal (ma(ka := va)) (tk, tv)))))"
+    using assms by simp
+
+  (* (\<forall>x. x \<noteq> k \<longrightarrow> wf (selectImpl m k)) *)
+  obtain x where "x \<noteq> k" by (metis val.distinct(3))
+  then have sel: "selectImpl (MapV (Inr (Inr (MapVal (ma(ka := va)) (tk, tv))))) x = selectImpl m x"
+    using assms ArrayAxStable sto by metis
+  then have wf21: "wf (selectImpl (MapV (Inr (Inr (MapVal (ma(ka := va)) (tk, tv))))) x)"
+    using assms selectClosedWf by presburger
+
+  (* (\<forall>x. x = k \<longrightarrow> wf (selectImpl m k)) *)
+  have wf22: "wf (selectImpl (MapV (Inr (Inr (MapVal (ma(ka := va)) (tk, tv))))) k)"
+    using assms
+    by (metis (no_types, lifting) fun_upd_same selectImpl.simps selectImplAux.simps(3)
+        toVal3210.simps(3) toVal3210_inj valBij)
+
+  (* end: (\<forall>k. wf (selectImpl m k)) *)
+  have wf2: "(\<forall>k. wf (selectImpl (MapV (Inr (Inr (MapVal (ma(ka := va)) (tk, tv))))) k))"
+    using wf22
+    by (metis ArrayAxStable assms(1) selectClosedWf sto)
+
+  (* (\<forall>k. wf_ty k \<and> ty_of_val k = key_ty (ty_of_val m)
+    \<longrightarrow> ty_of_val (selectImpl m k) = val_ty (ty_of_val m)) *)
+  (* (\<forall>x. x \<noteq> k \<longrightarrow> *)
+  then have "wf_ty x \<and> ty_of_val x = key_ty (ty_of_val m) \<longrightarrow> ty_of_val (selectImpl m x) = val_ty (ty_of_val m)"
+    using assms  wf.cases by fastforce
+  then have wf3x: "wf_ty x \<and> ty_of_val x = key_ty (ty_of_val (MapV (Inr (Inr (MapVal (ma(ka := va)) (tk, tv))))))
+    \<longrightarrow> ty_of_val (selectImpl (MapV (Inr (Inr (MapVal (ma(ka := va)) (tk, tv))))) x) = val_ty (ty_of_val (MapV (Inr (Inr (MapVal (ma(ka := va)) (tk, tv))))))"
+    using assms sel wf.cases
+    by (metis (no_types, lifting) toVal3210.simps(3) toVal3210_inj ty321.simps(1) tyL.simps(1)
+        type_of_val.simps(3))
+
+  (* (\<forall>x. x = k \<longrightarrow> *)
+  have wf3k: "wf_ty k \<and> ty_of_val k = key_ty (ty_of_val (MapV (Inr (Inr (MapVal (ma(ka := va)) (tk, tv))))))
+    \<longrightarrow> ty_of_val (selectImpl (MapV (Inr (Inr (MapVal (ma(ka := va)) (tk, tv))))) k) = val_ty (ty_of_val (MapV (Inr (Inr (MapVal (ma(ka := va)) (tk, tv))))))"
+    using assms
+    by (smt (verit, del_insts) fun_upd_same selectImpl.simps selectImplAux.simps(3) toVal3210.simps(3)
+        toVal3210_inj ty321.simps(1) tyL.simps(1) type_of_val.simps(3) valBij)
+
+  have wf3: "(\<forall>k. wf_ty k \<and> ty_of_val k = key_ty (ty_of_val (MapV (Inr (Inr (MapVal (ma(ka := va)) (tk, tv))))))
+    \<longrightarrow> ty_of_val (selectImpl (MapV (Inr (Inr (MapVal (ma(ka := va)) (tk, tv))))) k) = val_ty (ty_of_val (MapV (Inr (Inr (MapVal (ma(ka := va)) (tk, tv)))))))"
+    using wf3k
+    by (metis (no_types, lifting) ArrayAxStable assms(1,4) sto toVal3210_inj ty321.simps(1)
+        tyL.simps(1) type_of_val.simps(3) val.distinct(3,5) val3ToValn.simps(3) valBij wf.simps)
+
+  show ?thesis using assms wf1 wf2 wf3 using wfMapV by blast
+qed
+
+
+lemma storeClosedWfTy:
+  assumes "wf m"
+  assumes "wf k"
+  assumes "wf v"
+  shows "wf (storeImpl m k v)"
+  thm storeImplAux.cases
+  apply (cases "(toVal3210 m, toVal3210 k, toVal3210 v)" rule: storeImplAux.cases; (auto simp add: assms))
+  using assms(1,2,3) tmp apply force
+  oops
+qed
 
 end  (* locale fixes A :: "'a absval_ty_fun" *)
 
