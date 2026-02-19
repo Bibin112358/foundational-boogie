@@ -132,6 +132,20 @@ abbreviation example_map :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" wh
 lemma "(map_select example_map) mg4 m24 = (MapV (Inr (Inr (MapKey (undefined(IntV 3 := IntV 2)) (TT, TT)))))" by simp
 
 
+subsection \<open>Helper Case Distinction\<close>
+thm val3ToValn.cases
+lemma ValnCases:
+"(\<And>v. x = LitV v \<Longrightarrow> P) \<Longrightarrow>
+(\<And>v. x = AbsV v \<Longrightarrow> P) \<Longrightarrow>
+(\<And>f tk tv. x = MapV (Inr (Inr (MapKey f (tk, tv)))) \<Longrightarrow> P) \<Longrightarrow>
+(\<And>f tk tv. x = MapV (Inr (Inr (MapVal f (tk, tv)))) \<Longrightarrow> P) \<Longrightarrow>
+(\<And>f tk tv. x = MapV (Inr (Inl (MapKey f (tk, tv)))) \<Longrightarrow> P) \<Longrightarrow>
+(\<And>f tk tv. x = MapV (Inr (Inl (MapVal f (tk, tv)))) \<Longrightarrow> P) \<Longrightarrow>
+(\<And>f tk tv. x = MapV (Inl (MapKey f (tk, tv))) \<Longrightarrow> P) \<Longrightarrow>
+(\<And>f tk tv. x = MapV (Inl (MapVal f (tk, tv))) \<Longrightarrow> P) \<Longrightarrow> P"
+  by (metis L.exhaust sumE surj_pair val.exhaust_sel)
+
+
 subsection \<open>Type Of Val\<close>
 
 fun tyL where "tyL (MapVal _ (tk, tv)) = (tk, tv)" | "tyL (MapKey _ (tk, tv)) = (tk, tv)"
@@ -270,17 +284,17 @@ lemma C0Inrrr:
       type_of_val.simps(3))
 
 lemma InrrrC0:
-  assumes "\<exists>v'. toVal3210 v = Inr (Inr (Inr v'))"
+  assumes "toVal3210 v = Inr (Inr (Inr v'))"
   shows "count_level_map_ty (ty_of_val v) = 0"
   using assms count_level_map_ty.simps(4) toVal3210.elims by force
 
 lemma InrrlC1:
   assumes "wf_ty v"
-  assumes "\<exists>v'. toVal3210 v = Inr (Inr (Inl v'))"
+  assumes "toVal3210 v = Inr (Inr (Inl v'))"
   shows "count_level_map_ty (ty_of_val v) = 1"
   apply (cases v rule: toVal3210.cases)
   using assms apply auto
-  apply (case_tac m) using assms
+  apply (cases v') using assms
   by fastforce+
 
 lemma C1Inrrl:
@@ -295,11 +309,11 @@ done
 
 lemma InrlC2:
   assumes "wf_ty v"
-  assumes "\<exists>v'. toVal3210 v = Inr (Inl v')"
+  assumes "toVal3210 v = Inr (Inl v')"
   shows "count_level_map_ty (ty_of_val v) = 2"
   apply (cases v rule: toVal3210.cases)
   using assms apply auto
-  apply (case_tac m) using assms
+  apply (cases v') using assms
   by fastforce+
 
 lemma C2Inrl:
@@ -455,6 +469,7 @@ proof -
   then show ?thesis using C2Inrl using assms(2) wf_impl_wf_ty by auto
 qed
 
+
 subsection \<open>Select & Store is closed under wf\<close>
 lemma selectClosedWf:
   assumes "wf m"
@@ -478,110 +493,6 @@ qed
 subsection \<open>Array Axiom Update\<close>
 text \<open>Property to prove: (m[k] := v)[k] == v or select (store m k v) k = v\<close>
 
-lemma
-  assumes "M = MapV (Inr (Inr (MapKey f t)))"
-  assumes "wf M"
-  assumes "wf k"
-  assumes "wf v"
-  assumes "ty_of_val M = TMap (ty_of_val k) (ty_of_val v)"
-  shows "selectImpl (storeImpl M k v) k = v"
-proof -
-  have "count_level_map_ty (ty_of_val k) = 0"
-    using assms InrrlC1 wf_impl_wf_ty by fastforce
-  then obtain k' where K: "toVal3210 k = Inr (Inr (Inr k'))"
-    using C0Inrrr by blast
-  have "count_level_map_ty (ty_of_val v) = 0"
-    using assms wf_L.elims(2) wf_impl_wf_ty by fastforce
-  then obtain v' where V: "toVal3210 v = Inr (Inr (Inr v'))"
-    using C0Inrrr by blast
-  have "storeImpl M k v = val3ToValn (Inr (Inr (Inl (MapKey (f(k' := v')) t))))"
-    using assms K V by auto
-  have "selectImpl (storeImpl M k v) k = val3ToValn (Inr (Inr (Inr ((f(k' := v')) k'))))"
-    using assms K V by simp
-  moreover have "val3ToValn (Inr (Inr (Inr v'))) = v" using V toVal3210.elims by force
-  ultimately show ?thesis by auto
-qed
-
-lemma
-  assumes "M = MapV (Inl (MapVal f t))"
-  assumes "wf M"
-  assumes "wf k"
-  assumes "wf v"
-  assumes "ty_of_val M = TMap (ty_of_val k) (ty_of_val v)"
-  shows "selectImpl (storeImpl M k v) k = v"
-proof -
-  obtain tk tv where "t = (tk, tv)" by fastforce
-  have "wf_L 3 (MapVal f t)" using assms
-    using wf_impl_wf_ty wf_ty.simps(5) by blast
-  then have "count_level_map_ty (ty_of_val k) \<le> 2" using assms \<open>t = (tk, tv)\<close> by simp
-  then obtain k' where K: "toVal3210 k = Inr k'"
-    by (metis Suc_n_not_le_n X.InlC3 X.wf_impl_wf_ty assms(3) numeral_2_eq_2 numeral_3_eq_3
-        sumE)
-  have "count_level_map_ty (ty_of_val v) = 3"
-    using assms wf_L.elims(2) wf_impl_wf_ty by fastforce
-  then obtain v' where V: "toVal3210 v = Inl v'"
-    using C3Inl assms wf_impl_wf_ty by blast
-  have "storeImpl M k v = val3ToValn (Inl (MapVal (f(k' := v')) t))"
-    using assms K V by auto
-  have "selectImpl (storeImpl M k v) k = val3ToValn (Inl ((f(k' := v')) k'))"
-    using assms K V by simp
-  moreover have "val3ToValn (Inl v') = v" using V toVal3210.elims by force
-  ultimately show ?thesis by auto
-qed
-
-lemma
-  assumes "M = LitV l"
-  assumes "wf M"
-  assumes "wf k"
-  assumes "wf v"
-  assumes "ty_of_val M = TMap (ty_of_val k) (ty_of_val v)"
-  shows "selectImpl (storeImpl M k v) k = v"
-  using assms(1,5) by force
-
-
-lemma
-  assumes "wf M \<and> wf k \<and> wf v"
-  assumes "ty_of_val M = TMap (ty_of_val k) (ty_of_val v)"
-  assumes "toVal3210 M = Inl (MapKey f t)"
-  shows "(\<exists>k'. toVal3210 k = Inr (Inl k')) \<and> (\<exists>v'. toVal3210 v = Inr v')"
-proof -
-  have MVT: "M = MapV (Inl (MapKey f t))" using assms by (simp add: toVal3210_inj)
-  obtain tv tk where "t = (tv, tk)" by fastforce
-  then have T: "t = ((ty_of_val k), (ty_of_val v))" using assms MVT by fastforce
-  have KL: "count_level_map_ty (ty_of_val k) = 2" using assms MVT wf_impl_wf_ty T  by force
-  have VL: "count_level_map_ty (ty_of_val v) \<le> 2" using assms MVT wf_impl_wf_ty T  by force
-  then show ?thesis using assms MVT wf_impl_wf_ty KL VL C2Inrl C1Inrrl C0Inrrr
-    by (cases v rule: toVal3210.cases; force)
-qed
-
-lemma
-  assumes "wf M \<and> wf k \<and> wf v"
-  assumes "ty_of_val M = TMap (ty_of_val k) (ty_of_val v)"
-  assumes "toVal3210 M = Inl (MapVal f (tv, tk))"
-  shows "(\<exists>k'. toVal3210 k = Inr k') \<and> (\<exists>v'. toVal3210 v = Inl v')"
-proof -
-  have MVT: "M = MapV (Inl (MapVal f (tv, tk)))" using assms by (simp add: toVal3210_inj)
-  then have T: "(tv, tk) = ((ty_of_val k), (ty_of_val v))" using assms MVT by fastforce
-  have KL: "count_level_map_ty (ty_of_val k) \<le> 2" using assms MVT wf_impl_wf_ty T  by force
-  have VL: "count_level_map_ty (ty_of_val v) = 3" using assms MVT wf_impl_wf_ty T  by force
-  then show ?thesis using assms MVT wf_impl_wf_ty KL VL InlC3 C3Inl C2Inrl C1Inrrl C0Inrrr
-    by (cases "toVal3210 k" rule: val3ToValn.cases; simp)
-qed
-  
-
-thm val3ToValn.cases
-lemma ValnCases:
-"(\<And>v. x = LitV v \<Longrightarrow> P) \<Longrightarrow>
-(\<And>v. x = AbsV v \<Longrightarrow> P) \<Longrightarrow>
-(\<And>f tk tv. x = MapV (Inr (Inr (MapKey f (tk, tv)))) \<Longrightarrow> P) \<Longrightarrow>
-(\<And>f tk tv. x = MapV (Inr (Inr (MapVal f (tk, tv)))) \<Longrightarrow> P) \<Longrightarrow>
-(\<And>f tk tv. x = MapV (Inr (Inl (MapKey f (tk, tv)))) \<Longrightarrow> P) \<Longrightarrow>
-(\<And>f tk tv. x = MapV (Inr (Inl (MapVal f (tk, tv)))) \<Longrightarrow> P) \<Longrightarrow>
-(\<And>f tk tv. x = MapV (Inl (MapKey f (tk, tv))) \<Longrightarrow> P) \<Longrightarrow>
-(\<And>f tk tv. x = MapV (Inl (MapVal f (tk, tv))) \<Longrightarrow> P) \<Longrightarrow> P"
-  by (metis L.exhaust sumE surj_pair val.exhaust_sel)
-
-
 lemma ArrayAxUpdate:
   assumes "wf M"
   assumes "wf k"
@@ -596,58 +507,68 @@ next
   then show ?thesis using assms by force
 next
   case (3 f tk tv)  (* M = MapV (Inr (Inr (MapKey f (tk, tv))))  *)
-  then have T: "(tk, tv) = ((ty_of_val k), (ty_of_val v))" using assms by auto
-  have "count_level_map_ty (ty_of_val k) = 0" using assms wf_impl_wf_ty T "3" by fastforce
-  then obtain k' where K: "toVal3210 k = Inr (Inr (Inr k'))" using C0Inrrr by auto
-  have "count_level_map_ty (ty_of_val v) \<le> 0" using assms wf_impl_wf_ty T "3" by force
-  then obtain v' where V: "toVal3210 v = Inr (Inr (Inr v'))" using C0Inrrr by auto
-  show ?thesis using assms wf_impl_wf_ty K V "3"
-    by (cases v; force)
+  have C: "count_level_map_ty (ty_of_val k) = 0  \<and>  count_level_map_ty (ty_of_val v) \<le> 0"
+    using assms wf_impl_wf_ty "3" by fastforce
+  obtain k' where K: "toVal3210 k = Inr (Inr (Inr k'))"
+    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+    by (cases k; simp)
+  obtain v' where V: "toVal3210 v = Inr (Inr (Inr v'))"
+    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+    by (cases v; simp)
+  show ?thesis using assms wf_impl_wf_ty K V "3" by (simp add: toVal3210_inj valBij)
 next
   case (4 f tk tv)  (* M = MapV (Inr (Inr (MapVal f (tk, tv)))) *)
-  then have T: "(tk, tv) = ((ty_of_val k), (ty_of_val v))" using assms by auto
-  have "count_level_map_ty (ty_of_val k) \<le> 0" using assms wf_impl_wf_ty T "4" by fastforce
-  then obtain k' where K: "toVal3210 k = Inr (Inr (Inr k'))" using C0Inrrr by auto
-  have "count_level_map_ty (ty_of_val v) = 1" using assms wf_impl_wf_ty T "4" by force
-  then obtain v' where V: "toVal3210 v = Inr (Inr (Inl v'))" using assms wf_impl_wf_ty C1Inrrl by blast
-  show ?thesis using assms wf_impl_wf_ty K V "4" by (simp add: toVal3210_inj)
+  have C: "count_level_map_ty (ty_of_val k) \<le> 0  \<and>  count_level_map_ty (ty_of_val v) = 1"
+    using assms wf_impl_wf_ty "4" by fastforce
+  obtain k' where K: "toVal3210 k = Inr (Inr (Inr k'))"
+    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+    by (cases k; simp)
+  obtain v' where V: "toVal3210 v = Inr (Inr (Inl v'))"
+    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+    apply (cases v; simp) by fastforce
+  show ?thesis using assms wf_impl_wf_ty K V "4" by (simp add: toVal3210_inj valBij)
 next
   case (5 f tk tv)
-  then have T: "(tk, tv) = ((ty_of_val k), (ty_of_val v))" using assms by auto
-  have "count_level_map_ty (ty_of_val k) = 1" using assms wf_impl_wf_ty T "5" by fastforce
-  then obtain k' where K: "toVal3210 k = Inr (Inr (Inl k'))" using assms C1Inrrl wf_impl_wf_ty by blast
-  have "count_level_map_ty (ty_of_val v) \<le> 1" using assms wf_impl_wf_ty T "5" by force
-  then obtain v' where V: "toVal3210 v = Inr (Inr v')" using assms wf_impl_wf_ty C1Inrrl
-    by (cases v; fastforce)
+  have C: "count_level_map_ty (ty_of_val k) = 1  \<and>  count_level_map_ty (ty_of_val v) \<le> 1"
+    using assms wf_impl_wf_ty "5" by fastforce
+  obtain k' where K: "toVal3210 k = Inr (Inr (Inl k'))"
+    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+    apply (cases k; simp) by fastforce
+  obtain v' where V: "toVal3210 v = Inr (Inr v')"
+    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+    apply (cases v; simp) by fastforce
   show ?thesis using assms wf_impl_wf_ty K V "5" by (simp add: toVal3210_inj valBij)
 next
   case (6 f tk tv)
-  then have T: "(tk, tv) = ((ty_of_val k), (ty_of_val v))" using assms by auto
-  have "count_level_map_ty (ty_of_val k) \<le> 1" using assms wf_impl_wf_ty T "6" by fastforce
-  then obtain k' where K: "toVal3210 k = Inr (Inr k')" using assms wf_impl_wf_ty C1Inrrl
-    by (cases k; fastforce)
-  have "count_level_map_ty (ty_of_val v) = 2" using assms wf_impl_wf_ty T "6" by force
-  then obtain v' where V: "toVal3210 v = Inr (Inl v')" using assms wf_impl_wf_ty C2Inrl
-    by (cases v; fastforce)
+  have C: "count_level_map_ty (ty_of_val k) \<le> 1  \<and>  count_level_map_ty (ty_of_val v) = 2"
+    using assms wf_impl_wf_ty "6" by fastforce
+  obtain k' where K: "toVal3210 k = Inr (Inr k')"
+    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+    apply (cases k; simp) by fastforce
+  obtain v' where V: "toVal3210 v = Inr (Inl v')"
+    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+    apply (cases v; simp) by fastforce
   show ?thesis using assms wf_impl_wf_ty K V "6" by (simp add: toVal3210_inj valBij)
 next
   case (7 f tk tv)
-  then have T: "(tk, tv) = ((ty_of_val k), (ty_of_val v))" using assms by auto
-  have "count_level_map_ty (ty_of_val k) = 2" using assms wf_impl_wf_ty T "7" by fastforce
-  then obtain k' where K: "toVal3210 k = Inr (Inl k')" using assms wf_impl_wf_ty C2Inrl
-    by (cases k; fastforce)
-  have "count_level_map_ty (ty_of_val v) \<le> 2" using assms wf_impl_wf_ty T "7" by force
-  then obtain v' where V: "toVal3210 v = Inr v'" using assms wf_impl_wf_ty C2Inrl C1Inrrl
+  have C: "count_level_map_ty (ty_of_val k) = 2  \<and>  count_level_map_ty (ty_of_val v) \<le> 2"
+    using assms wf_impl_wf_ty "7" by fastforce
+  obtain k' where K: "toVal3210 k = Inr (Inl k')"
+    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+    apply (cases k; simp) by fastforce
+  obtain v' where V: "toVal3210 v = Inr v'"
+    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
     apply (cases v; simp) by fastforce
   show ?thesis using assms wf_impl_wf_ty K V "7" by (simp add: toVal3210_inj valBij)
 next
   case (8 f tk tv)
-  then have T: "(tk, tv) = ((ty_of_val k), (ty_of_val v))" using assms by auto
-  have "count_level_map_ty (ty_of_val k) \<le> 2" using assms wf_impl_wf_ty T "8" by fastforce
-  then obtain k' where K: "toVal3210 k = Inr k'" using assms wf_impl_wf_ty C2Inrl C1Inrrl
+  have C: "count_level_map_ty (ty_of_val k) \<le> 2  \<and>  count_level_map_ty (ty_of_val v) = 3"
+    using assms wf_impl_wf_ty "8" by fastforce
+  obtain k' where K: "toVal3210 k = Inr k'"
+    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
     apply (cases k; simp) by fastforce
-  have "count_level_map_ty (ty_of_val v) = 3" using assms wf_impl_wf_ty T "8" by force
-  then obtain v' where V: "toVal3210 v = Inl v'" using assms wf_impl_wf_ty C3Inl
+  obtain v' where V: "toVal3210 v = Inl v'"
+    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
     apply (cases v; simp) by fastforce
   show ?thesis using assms wf_impl_wf_ty K V "8" by (simp add: toVal3210_inj valBij)
 qed
@@ -657,38 +578,6 @@ subsection \<open>Array Axiom Stable\<close>
 text \<open>Property to prove:
   y \<noteq> x ==> (m[x] := v)[y] == m[y]
   y \<noteq> x ==> select (store m x v) y = select m y\<close>
-
-lemma ArrayAxStable1Val:
-  assumes "M = MapV (Inr (Inr (MapVal f t)))"
-  assumes "wf M"
-  assumes "wf x"
-  assumes "wf y"
-  assumes "wf v"
-  assumes "x \<noteq> y"
-  shows "selectImpl (storeImpl M x v) y = selectImpl M y"
-  apply (cases "(toVal3210 M, toVal3210 x, toVal3210 v)" rule: storeImplAux.cases; (simp add: assms))
-  apply (cases y rule: toVal3210.cases; simp)
-   apply (metis assms(6) toVal3210.simps(1) toVal3210_inj)
-  by (metis assms(6) toVal3210.simps(2) toVal3210_inj)
-
-lemma ArrayAxStable3Key:
-  assumes "M = MapV (Inl (MapVal f t))"
-  assumes "wf M"
-  assumes "wf x"
-  assumes "wf y"
-  assumes "wf v"
-  assumes "x \<noteq> y"
-  shows "selectImpl (storeImpl M x v) y = selectImpl M y"
-  apply (cases "(toVal3210 M, toVal3210 x, toVal3210 v)" rule: storeImplAux.cases; (simp add: assms))
-  apply (cases y rule: toVal3210.cases; simp)
-     apply (metis assms(6) toVal3210.simps(1) toVal3210_inj)
-     apply (metis assms(6) toVal3210.simps(2) toVal3210_inj)
-     apply (metis assms(6) toVal3210.simps(3) toVal3210_inj)
-     apply (metis assms(6) toVal3210.simps(4) toVal3210_inj)
-done
-
-lemma ArrayAxStableLitV: "selectImpl (storeImpl (LitV l) x v) y = selectImpl (LitV l) y"
-  by auto
 
 lemma ArrayAxStable:
   assumes "wf M"
