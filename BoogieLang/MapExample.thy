@@ -757,13 +757,19 @@ lemma storeClosedWf:
   shows "wf (storeImpl m k v)"
   using  storeClosedWf1 storeClosedWf2 storeClosedWf3 wfMapV assms by simp
 
+end  (* locale fixes A :: "'a absval_ty_fun" *)
+
 
 subsection \<open>Summary\<close>
+locale Summary =
+  fixes A :: "'a absval_ty_fun"
+begin
+
+interpretation AVTF A done
 
 abbreviation MI :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
   "MI \<equiv> \<lparr> map_select = selectImpl, map_store = storeImpl, map_type = ty321 \<rparr>"
 
-(* TODO: make summary, escpecially store & wf, outside of the locale? *)
 lemma Ax1:
   assumes "wf m \<and> wf k \<and> wf v"
   assumes "type_of_val A (map_type MI) m = TMap (type_of_val A (map_type MI) k) (type_of_val A (map_type MI) v)"
@@ -793,6 +799,6 @@ lemma StoreClosedUnderWF:
   shows "wf ((map_store MI) m k v)"
   using assms storeClosedWf by auto
 
-end  (* locale fixes A :: "'a absval_ty_fun" *)
+end
 
 end
