@@ -223,7 +223,7 @@ qed
 
 subsection \<open>Theory dependent on A::"'a absval_ty_fun"\<close>
 
-locale X =
+locale AVTF =
   fixes A :: "'a absval_ty_fun"
 begin
 abbreviation ty_of_val where "ty_of_val \<equiv> type_of_val A ty321"
@@ -388,7 +388,7 @@ lemma vAdd1wfSelect: "wf (selectImpl vAdd1 k)"
   done
 
 lemma "wf vAdd1" using VTAdd1 HH vAdd1wfSelect
-  using X.wf.simps[of A vAdd1] by auto
+  using AVTF.wf.simps[of A vAdd1] by auto
 
 
 subsubsection \<open>Well formdness of a higher order map\<close>
@@ -433,21 +433,21 @@ proof -
   then show ?thesis
     using
       \<open>selectImpl homV k = val3ToValn (Inr (Inr (hof (MapKey f (TT, TT)))))\<close>
-    by (smt (verit) X.hof.simps(1) select_convs(3) ty321.simps(1) tyL.simps(2) type_of_val.simps(3)
+    by (smt (verit) hof.simps(1) select_convs(3) ty321.simps(1) tyL.simps(2) type_of_val.simps(3)
         val3ToValn.simps(3))
 qed
 
 lemma vhomVwfSelect: "wf (selectImpl homV k)"
   apply (cases k rule: toVal3210.cases; simp add: wfundef)
       apply (case_tac m; auto)
-        using HH X.wf.simps[of A vAdd1] vAdd1wfSelect apply auto[1]
-        apply (smt (verit) X.HH X.vAdd1wfSelect
+        using HH AVTF.wf.simps[of A vAdd1] vAdd1wfSelect apply auto[1]
+        apply (smt (verit) AVTF.HH AVTF.vAdd1wfSelect
             \<open>local.wf vAdd1 = ((\<exists>v. vAdd1 = LitV v) \<or> (\<exists>v. vAdd1 = AbsV v) \<or> (\<exists>m. vAdd1 = m \<and> wf_ty m \<and> (\<forall>k. local.wf (selectImpl m k)) \<and> (\<forall>k. wf_ty k \<and> ty_of_val k = key_ty (ty_of_val m) \<longrightarrow> ty_of_val (selectImpl m k) = val_ty (ty_of_val m))))\<close>
             count_level_map_ty.simps(3) diff_is_0_eq le_numeral_extra(3,4) val3ToValn.simps(3) wf_L.simps(1)
             wf_ty.simps(3))
   done
 
-lemma "wf homV" using wff vhomVwfSelect X.wf.simps[of A homV] by simp
+lemma "wf homV" using wff vhomVwfSelect AVTF.wf.simps[of A homV] by simp
 
 lemma wf_impl_wf_ty: "wf k \<Longrightarrow> wf_ty k" using wf.cases by force
 
@@ -462,21 +462,12 @@ lemma
   shows "\<exists>k'. toVal3210 k = Inr (Inl k')"
 proof -
   have "count_level_map_ty (ty_of_val (MapV (Inl (MapKey f ty)))) = 3"
-    using InlC3 X.wf.simps assms(1) toVal3210.simps wf_impl_wf_ty by fast
+    using InlC3 wf.simps assms(1) toVal3210.simps wf_impl_wf_ty by fast
   then have "count_level_map_ty (key_ty (ty_of_val (MapV (Inl (MapKey f ty))))) = 2"
     using assms(1) wf_L.elims(2) wf_impl_wf_ty by fastforce
   then have "count_level_map_ty (ty_of_val k) = 2" using assms by auto
   then show ?thesis using C2Inrl using assms(2) wf_impl_wf_ty by auto
 qed
-
-
-subsection \<open>Select & Store is closed under wf\<close>
-lemma selectClosedWf:
-  assumes "wf m"
-  (* assumes "wf k" *)  (* not needed *)
-  shows "wf (selectImpl m k)"
-  by (metis X.wf.cases assms(1) selectImpl.elims selectImplAux.simps(1,2) toVal3210.simps(1,2)
-      wfundef)
 
 
 subsection \<open>Array Axiom Update\<close>
@@ -706,44 +697,18 @@ lemma extensionalityMapV:
   assumes "ty_of_val (MapV m) = ty_of_val (MapV n)"
   assumes "selectImpl (MapV m) = selectImpl (MapV n)"
   shows "m = n"
-  by (metis (no_types, lifting) ext X.extensionalityAux assms(1,2,3,4) selectImpl.simps
+  by (metis (no_types, lifting) ext extensionalityAux assms(1,2,3,4) selectImpl.simps
       valBij)
 
 
-subsection \<open>Summary\<close>
+subsection \<open>Select & Store is closed under wf\<close>
 
-abbreviation MI :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
-  "MI \<equiv> \<lparr> map_select = selectImpl, map_store = storeImpl, map_type = ty321 \<rparr>"
-
-(* TODO: make summary, escpecially store & wf, outside of the locale? *)
-lemma Ax1:
-  assumes "wf m \<and> wf k \<and> wf v"
-  assumes "type_of_val A (map_type MI) m = TMap (type_of_val A (map_type MI) k) (type_of_val A (map_type MI) v)"
-  shows "(map_select MI) ((map_store MI) m k v) k = v"
-  using assms ArrayAxUpdate by simp
-
-lemma Ax2:
-  assumes "wf m \<and> wf x \<and> wf y \<and> wf v"
-  shows "x = y \<or> (map_select MI) ((map_store MI) m x v) y = (map_select MI) m y"
-  using assms ArrayAxStable by fastforce
-
-lemma Ex:
-  assumes "wf m \<and> wf n"
-  assumes "m = MapV m' \<and> n = MapV n'"
-  assumes "type_of_val A (map_type MI) m = type_of_val A (map_type MI) n"
-  assumes "(map_select MI) m = (map_select MI) n"
-  shows "m = n"
-  using assms extensionalityMapV by auto
-
-lemma SelectClosedUnderWF:
-  assumes "wf m \<and> wf k"
-  shows "wf ((map_select MI) m k)"
-  using assms selectClosedWf by auto
-
-lemma StoreClosedUnderWF:
-  assumes "wf m \<and> wf k \<and> wf v"
-  shows "wf ((map_store MI) m k v)"
-  using assms oops
+lemma selectClosedWf:
+  assumes "wf m"
+  (* assumes "wf k" *)  (* not needed *)
+  shows "wf (selectImpl m k)"
+  by (metis wf.cases assms(1) selectImpl.elims selectImplAux.simps(1,2) toVal3210.simps(1,2)
+      wfundef)
 
 
 lemma storePreserveTy:
@@ -792,6 +757,41 @@ lemma storeClosedWf:
   shows "wf (storeImpl m k v)"
   using  storeClosedWf1 storeClosedWf2 storeClosedWf3 wfMapV assms by simp
 
+
+subsection \<open>Summary\<close>
+
+abbreviation MI :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
+  "MI \<equiv> \<lparr> map_select = selectImpl, map_store = storeImpl, map_type = ty321 \<rparr>"
+
+(* TODO: make summary, escpecially store & wf, outside of the locale? *)
+lemma Ax1:
+  assumes "wf m \<and> wf k \<and> wf v"
+  assumes "type_of_val A (map_type MI) m = TMap (type_of_val A (map_type MI) k) (type_of_val A (map_type MI) v)"
+  shows "(map_select MI) ((map_store MI) m k v) k = v"
+  using assms ArrayAxUpdate by simp
+
+lemma Ax2:
+  assumes "wf m \<and> wf x \<and> wf y \<and> wf v"
+  shows "x = y \<or> (map_select MI) ((map_store MI) m x v) y = (map_select MI) m y"
+  using assms ArrayAxStable by fastforce
+
+lemma Ex:
+  assumes "wf m \<and> wf n"
+  assumes "m = MapV m' \<and> n = MapV n'"
+  assumes "type_of_val A (map_type MI) m = type_of_val A (map_type MI) n"
+  assumes "(map_select MI) m = (map_select MI) n"
+  shows "m = n"
+  using assms extensionalityMapV by auto
+
+lemma SelectClosedUnderWF:
+  assumes "wf m \<and> wf k"
+  shows "wf ((map_select MI) m k)"
+  using assms selectClosedWf by auto
+
+lemma StoreClosedUnderWF:
+  assumes "wf m \<and> wf k \<and> wf v"
+  shows "wf ((map_store MI) m k v)"
+  using assms storeClosedWf by auto
 
 end  (* locale fixes A :: "'a absval_ty_fun" *)
 
