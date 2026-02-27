@@ -43,10 +43,10 @@ TODO: explain Map Values
 datatype ('a, 'm) val = LitV lit | AbsV (the_absv: 'a)
   | MapV 'm
 
-record ('a, 'k) map_interface =
-  map_select :: "('a, 'k) val \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) val"
-  map_store :: "('a, 'k) val \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) val"
-  map_type :: "'k \<Rightarrow> (ty \<times> ty)"
+record ('a, 'm) map_interface =
+  map_select :: "('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
+  map_store :: "('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
+  map_type :: "'m \<Rightarrow> (ty \<times> ty)"
 
 
 type_synonym 'a absval_ty_fun = "'a \<Rightarrow> (tcon_id \<times> ty list)"
@@ -223,10 +223,10 @@ qed
 
 subsection \<open>Theory dependent on A::"'a absval_ty_fun"\<close>
 
-locale AVTF =
-  fixes A :: "'a absval_ty_fun"
-begin
-abbreviation ty_of_val where "ty_of_val \<equiv> type_of_val A ty321"
+class absval =
+  fixes avtf :: "'a absval_ty_fun"
+
+abbreviation ty_of_val where "ty_of_val \<equiv> type_of_val avtf ty321"
 
 
 subsection \<open>Store\<close>
@@ -246,12 +246,12 @@ fun storeImplAux :: "'a val3210 \<Rightarrow> 'a val3210 \<Rightarrow> 'a val321
       = (Inl (MapKey (m(k := v)) t))"
   | "storeImplAux x _ _ = x"
 
-fun storeImpl :: "'a valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn" where
+fun storeImpl :: "'a::absval valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn" where
   "storeImpl m k v = (if ty_of_val m = TMap (ty_of_val k) (ty_of_val v)
     then val3ToValn (storeImplAux (toVal3210 m) (toVal3210 k) (toVal3210 v))
     else m)"
 
-abbreviation example_map2 :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
+abbreviation example_map2 :: "('a::absval, 'a val3 + 'a val2 + 'a val1) map_interface" where
   "example_map2 \<equiv> \<lparr> map_select = selectImpl, map_store = storeImpl, map_type = undefined \<rparr>"
 
 lemma "ty_of_val (LitV (LInt 42)) = TT" by simp
@@ -268,7 +268,20 @@ inductive wf where
       (\<forall>k. wf_ty k \<and> ty_of_val k = key_ty (ty_of_val m) \<longrightarrow> ty_of_val (selectImpl m k) = val_ty (ty_of_val m))
       \<rbrakk> \<Longrightarrow> wf m"
 
-lemma "(wf (LitV (LInt 2)))" using local.wf.wfLitV by simp
+(* 1. Ensure the set is defined using the class constraint *)
+definition wf_val_set :: "'a::absval valn set" where 
+  "wf_val_set = {v. wf v}"
+
+(* 2. Use the (overloaded) keyword to allow dependency on A_class *)
+typedef (overloaded) 'a::absval wf_val = "wf_val_set :: 'a::absval valn set"
+proof
+  (* Use LitV as the non-emptiness witness *)
+  show "LitV (LBool True) \<in> wf_val_set"
+    unfolding wf_val_set_def by (simp add: wf.wfLitV)
+qed
+
+
+lemma "(wf (LitV (LInt 2)))" using wf.wfLitV by blast
 lemma wfundef: "(wf (val3ToValn (Inr (Inr (Inr undefined)))))"
   by (metis wfAbsV wfLitV val0.exhaust val3ToValn.simps(1,2))
 
@@ -379,7 +392,7 @@ lemma H2:
 
 lemma HH: "(\<forall>k. (wf_ty k \<and> ty_of_val k = key_ty (ty_of_val vAdd1)
     \<longrightarrow> ty_of_val (selectImpl vAdd1 k) = val_ty (ty_of_val vAdd1)))"
-  using VTAdd1 KTAdd1 H2 by simp
+  using VTAdd1 KTAdd1 H2 by auto
 
 lemma vAdd1wfSelect: "wf (selectImpl vAdd1 k)"
   apply (cases k rule: toVal3210.cases; simp add: wfundef)
@@ -388,17 +401,17 @@ lemma vAdd1wfSelect: "wf (selectImpl vAdd1 k)"
   done
 
 lemma "wf vAdd1" using VTAdd1 HH vAdd1wfSelect
-  using AVTF.wf.simps[of A vAdd1] by auto
+  using wfMapV[of vAdd1] by force
 
 
 subsubsection \<open>Well formdness of a higher order map\<close>
 (* TODO: I actually want to only assume wf (MapV (Inr (Inr (MapKey (f) ty)))) *)
 fun hof where "hof (MapKey f ty) = (case wf (MapV (Inr (Inr (MapKey (fAdd1 \<circ> f) ty)))) of True \<Rightarrow> Inl (MapKey (fAdd1 \<circ> f) ty) | False \<Rightarrow> Inl mAdd1)" | "hof _ = Inl mAdd1"
 abbreviation TMII where "TMII \<equiv> TMap (TPrim TInt) (TPrim TInt)"
-abbreviation hom :: "'a val2" where "hom \<equiv> MapKey hof (TMII, TMII)"
-abbreviation homV :: "'a valn" where "homV \<equiv> MapV (Inr (Inl hom))"
+abbreviation hom :: "'a::absval val2" where "hom \<equiv> MapKey hof (TMII, TMII)"
+abbreviation homV :: "'a::absval valn" where "homV \<equiv> MapV (Inr (Inl hom))"
 
-lemma "wf_ty homV" by simp
+lemma "wf_ty homV" by auto
 
 lemma "(val_ty (ty_of_val homV) = TMII)" by simp
 
@@ -440,14 +453,13 @@ qed
 lemma vhomVwfSelect: "wf (selectImpl homV k)"
   apply (cases k rule: toVal3210.cases; simp add: wfundef)
       apply (case_tac m; auto)
-        using HH AVTF.wf.simps[of A vAdd1] vAdd1wfSelect apply auto[1]
-        apply (smt (verit) AVTF.HH AVTF.vAdd1wfSelect
-            \<open>local.wf vAdd1 = ((\<exists>v. vAdd1 = LitV v) \<or> (\<exists>v. vAdd1 = AbsV v) \<or> (\<exists>m. vAdd1 = m \<and> wf_ty m \<and> (\<forall>k. local.wf (selectImpl m k)) \<and> (\<forall>k. wf_ty k \<and> ty_of_val k = key_ty (ty_of_val m) \<longrightarrow> ty_of_val (selectImpl m k) = val_ty (ty_of_val m))))\<close>
-            count_level_map_ty.simps(3) diff_is_0_eq le_numeral_extra(3,4) val3ToValn.simps(3) wf_L.simps(1)
-            wf_ty.simps(3))
+  using H2 vAdd1wfSelect wf.simps apply force
+  apply (smt (z3) H2 KTAdd1 One_nat_def VTAdd1 add_diff_cancel_left'
+      count_level_map_ty.simps(3) le_numeral_extra(3) plus_1_eq_Suc vAdd1wfSelect
+      val3ToValn.simps(3) wfMapV wf_L.simps(1) wf_ty.simps(3))
   done
 
-lemma "wf homV" using wff vhomVwfSelect AVTF.wf.simps[of A homV] by simp
+lemma "wf homV" using wff vhomVwfSelect wf.simps[of homV] by auto
 
 lemma wf_impl_wf_ty: "wf k \<Longrightarrow> wf_ty k" using wf.cases by force
 
@@ -462,7 +474,7 @@ lemma
   shows "\<exists>k'. toVal3210 k = Inr (Inl k')"
 proof -
   have "count_level_map_ty (ty_of_val (MapV (Inl (MapKey f ty)))) = 3"
-    using InlC3 wf.simps assms(1) toVal3210.simps wf_impl_wf_ty by fast
+    using InlC3 wf.simps assms(1) toVal3210.simps wf_impl_wf_ty by force
   then have "count_level_map_ty (key_ty (ty_of_val (MapV (Inl (MapKey f ty))))) = 2"
     using assms(1) wf_L.elims(2) wf_impl_wf_ty by fastforce
   then have "count_level_map_ty (ty_of_val k) = 2" using assms by auto
@@ -589,9 +601,9 @@ lemma extensionalityAux:
     then show ?thesis
     proof -
       have "count_level_map_ty (ty_of_val (MapV m)) = 1"
-        using "1" InrrlC1 assms(1) toVal3210.simps(3) wf_impl_wf_ty by blast
+        using "1" InrrlC1 assms(1) toVal3210.simps(3) wf_impl_wf_ty by fastforce
       then have "count_level_map_ty (ty_of_val (MapV n)) = 1"
-        using assms(4) by argo
+        using assms(4) by simp
       then obtain n' where "n = Inr (Inr n')"
         using C1Inrrl assms(2) toVal3210_inj val.inject(3) val3ToValn.simps(3) valBij
             wf.simps wf_impl_wf_ty by metis
@@ -659,7 +671,7 @@ next
       using "2" InrlC2 assms(1) toVal3210.simps(4) wf_ty.simps(4) wf_impl_wf_ty
       by fastforce
     then have "count_level_map_ty (ty_of_val (MapV n)) = 2"
-      using assms(4) by argo
+      using assms(4) by simp
     then obtain n' where N: "n = Inr (Inl n')"
       using C2Inrl assms(2) toVal3210_inj val.inject(3) val3ToValn.simps(4) valBij
       by (metis wf_impl_wf_ty)
@@ -675,9 +687,9 @@ next
   then show ?thesis 
   proof -
     have "count_level_map_ty (ty_of_val (MapV m)) = 3"
-      using "3" InlC3 assms(1) toVal3210.simps(5) wf_ty.simps(5) wf_impl_wf_ty by blast
+      using "3" InlC3 assms(1) toVal3210.simps(5) wf_ty.simps(5) wf_impl_wf_ty by fastforce
     then have "count_level_map_ty (ty_of_val (MapV n)) = 3"
-      using assms(4) by argo
+      using assms(4) by simp
     then obtain n' where N: "n = Inl n'"
       using C3Inl assms toVal3210_inj val.inject(3) val3ToValn.simps(5) valBij
       by (metis wf_impl_wf_ty)
@@ -726,12 +738,16 @@ lemma storeClosedWf3:
   assumes "wf_ty x" "ty_of_val x  = key_ty (ty_of_val (storeImpl m k v))"
   shows "ty_of_val (selectImpl (storeImpl m k v) x) = val_ty (ty_of_val (storeImpl m k v))"
 proof -
-  have "ty_of_val x = key_ty (ty_of_val m)" using storePreserveTy assms by presburger
+  have "ty_of_val x = key_ty (ty_of_val m)" using storePreserveTy assms by metis
   then show "ty_of_val (selectImpl (storeImpl m k v) x) = val_ty (ty_of_val (storeImpl m k v))"
     apply (cases "x = k")
      apply (simp add: assms(4))
     using storePreserveTy ArrayAxUpdate assms apply simp
-    using ArrayAxStable[of k x m v] storePreserveTy \<open>wf_ty x\<close> assms wf.simps[of m] by auto
+    apply (smt (z3) ArrayAxUpdate selectImpl.simps storeImpl.simps storePreserveTy
+        val_ty.simps(1)) try
+    by (metis (no_types, opaque_lifting) ArrayAxStable InrrrC0 assms(1,2,3,4,5)
+        count_level_map_ty.simps(3) map_level_gt_0 not_one_le_zero storePreserveTy
+        toVal3210.simps(2) type_of_val.simps(1) wf.cases)
 qed
 
 lemma storeClosedWf2:
@@ -755,21 +771,18 @@ lemma storeClosedWf:
   assumes "wf k"
   assumes "wf v"
   shows "wf (storeImpl m k v)"
-  using  storeClosedWf1 storeClosedWf2 storeClosedWf3 wfMapV assms by simp
-
-end  (* locale fixes A :: "'a absval_ty_fun" *)
+  using  storeClosedWf1 storeClosedWf2 storeClosedWf3 wfMapV assms
+  by (smt (verit) storeImpl.simps)
 
 
 subsection \<open>Summary\<close>
-locale Summary =
-  fixes A :: "'a absval_ty_fun"
-begin
 
-interpretation AVTF A done
-
-abbreviation MI :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
+(* TODO: Cannot store wf_select in map interface *)
+abbreviation MI :: "('a::absval, 'a val3 + 'a val2 + 'a val1) map_interface" where
   "MI \<equiv> \<lparr> map_select = selectImpl, map_store = storeImpl, map_type = ty321 \<rparr>"
 
+
+(* TODO: it does work with avtf, but not with A; I think I want it to work with A as well? "*)
 lemma Ax1:
   assumes "wf m \<and> wf k \<and> wf v"
   assumes "type_of_val A (map_type MI) m = TMap (type_of_val A (map_type MI) k) (type_of_val A (map_type MI) v)"
@@ -797,8 +810,35 @@ lemma SelectClosedUnderWF:
 lemma StoreClosedUnderWF:
   assumes "wf m \<and> wf k \<and> wf v"
   shows "wf ((map_store MI) m k v)"
-  using assms storeClosedWf by auto
+  using assms storeClosedWf by fastforce
 
+
+setup_lifting type_definition_wf_val
+
+(* Now you can lift your existing selectImpl function *)
+lift_definition wf_select :: "'a::absval wf_val \<Rightarrow> 'a wf_val \<Rightarrow> 'a wf_val" is selectImpl
+  using selectClosedWf wf_val_set_def by auto
+
+lift_definition wf_store :: "'a::absval wf_val \<Rightarrow> 'a wf_val \<Rightarrow> 'a wf_val \<Rightarrow> 'a wf_val" is storeImpl
+  using storeClosedWf wf_val_set_def by blast
+
+lemma Ax2_wf_val:
+  shows "x = y \<or> wf_select (wf_store m x v) y = wf_select m y"
+  by (metis ArrayAxStable Rep_wf_val_inject wf_select.rep_eq wf_store.rep_eq)
+
+
+(* the absval_ty_fun using class seems to be fixed to the class *)
+instantiation unit :: absval
+begin
+  definition A_class_unit :: "unit absval_ty_fun" where
+    "A_class_unit x = (''int_con'', [])"
+  instance ..
 end
+
+lemma
+  fixes v::"unit wf_val"
+  shows "A_class_unit () = (''int_con'', [])"
+  using A_class_unit_def by blast
+
 
 end
