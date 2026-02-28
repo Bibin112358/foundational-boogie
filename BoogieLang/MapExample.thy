@@ -268,18 +268,6 @@ inductive wf where
       (\<forall>k. wf_ty k \<and> ty_of_val k = key_ty (ty_of_val m) \<longrightarrow> ty_of_val (selectImpl m k) = val_ty (ty_of_val m))
       \<rbrakk> \<Longrightarrow> wf m"
 
-(* 1. Ensure the set is defined using the class constraint *)
-definition wf_val_set :: "'a::absval valn set" where 
-  "wf_val_set = {v. wf v}"
-
-(* 2. Use the (overloaded) keyword to allow dependency on A_class *)
-typedef (overloaded) 'a::absval wf_val = "wf_val_set :: 'a::absval valn set"
-proof
-  (* Use LitV as the non-emptiness witness *)
-  show "LitV (LBool True) \<in> wf_val_set"
-    unfolding wf_val_set_def by (simp add: wf.wfLitV)
-qed
-
 
 lemma "(wf (LitV (LInt 2)))" using wf.wfLitV by blast
 lemma wfundef: "(wf (val3ToValn (Inr (Inr (Inr undefined)))))"
@@ -400,7 +388,7 @@ lemma vAdd1wfSelect: "wf (selectImpl vAdd1 k)"
         apply (simp add: wfLitV)
   done
 
-lemma "wf vAdd1" using VTAdd1 HH vAdd1wfSelect
+lemma wf_vAdd1: "wf vAdd1" using VTAdd1 HH vAdd1wfSelect
   using wfMapV[of vAdd1] by force
 
 
@@ -777,7 +765,6 @@ lemma storeClosedWf:
 
 subsection \<open>Summary\<close>
 
-(* TODO: Cannot store wf_select in map interface *)
 abbreviation MI :: "('a::absval, 'a val3 + 'a val2 + 'a val1) map_interface" where
   "MI \<equiv> \<lparr> map_select = selectImpl, map_store = storeImpl, map_type = ty321 \<rparr>"
 
@@ -813,19 +800,98 @@ lemma StoreClosedUnderWF:
   using assms storeClosedWf by fastforce
 
 
-setup_lifting type_definition_wf_val
+subsection \<open>Try defining wf type\<close>
 
-(* Now you can lift your existing selectImpl function *)
+type_synonym 'a val321 = "'a val3 + 'a val2 + 'a val1"
+fun val321ToValn :: "'a val321 \<Rightarrow> 'a valn" where
+    "val321ToValn (Inr (Inr m)) = (MapV (Inr (Inr m)))"
+  | "val321ToValn (Inr (Inl m)) = (MapV (Inr (Inl m)))"
+  | "val321ToValn (Inl m) = (MapV (Inl m))"
+
+(* typdef for well formed inner map values *)
+definition wf_map_set :: "'a::absval val321 set" where
+  "wf_map_set = {m. wf (val321ToValn m)}"
+
+(* useful bijection lemma between inner and outer wf *)
+lemma wf_map_bij: "wf v \<longleftrightarrow> (\<exists>v'. v = LitV v') \<or> (\<exists>v'. v = AbsV v')
+  \<or> (\<exists>m'. v = MapV m' \<and> m' \<in> wf_map_set)"
+  apply (case_tac v)
+  apply (simp add: wfLitV)
+   apply (simp add: wfAbsV)
+proof -
+  fix x3 :: "((('a val0, 'a val0) L, ('a val0, 'a val0) L + 'a val0) L, (('a val0, 'a val0) L, ('a val0, 'a val0) L + 'a val0) L + ('a val0, 'a val0) L + 'a val0) L + (('a val0, 'a val0) L, ('a val0, 'a val0) L + 'a val0) L + ('a val0, 'a val0) L"
+  assume a1: "v = MapV x3"
+  have "\<forall>s. MapV (s::((('a val0, _ val0) L, (_ val0, _ val0) L + _ val0) L, ((_ val0, _ val0) L, (_ val0, _ val0) L + _ val0) L + (_ val0, _ val0) L + _ val0) L + ((_ val0, _ val0) L, (_ val0, _ val0) L + _ val0) L + (_ val0, _ val0) L) = val321ToValn s"
+    by (metis (full_types) val321ToValn.elims)
+  then show ?thesis
+    using a1 by (metis mem_Collect_eq wfAbsV wfLitV wf_map_set_def)
+qed
+
+(* (overloaded) keyword to allow dependency on avtf *)
+typedef (overloaded) 'a::absval wf_maps = "wf_map_set :: 'a::absval val321 set"
+proof
+  (* vAdd1, from earlier, as non-emptiness witness *)
+  show "(Inr (Inr mAdd1)) \<in> wf_map_set"
+    unfolding wf_map_set_def using wf_vAdd1 by simp
+qed
+
+(* type for well formed values *)
+type_synonym 'a wf_val = "('a, 'a wf_maps) val"
+
+
+fun Rep_wf_val :: "'a::absval wf_val \<Rightarrow> 'a valn"  where
+  "Rep_wf_val (LitV v) = LitV v" | "Rep_wf_val (AbsV v) = (AbsV v)" |
+  "Rep_wf_val (MapV m) = MapV (Rep_wf_maps m)"
+
+lemma all_val_wf:
+  fixes v::"'a::absval wf_val"
+  shows "wf (Rep_wf_val v)"
+  apply (cases v)
+  apply (simp add: wfLitV)
+   apply (simp add: wfAbsV)
+  by (smt (verit) Rep_wf_maps Rep_wf_val.simps(3) mem_Collect_eq val.sel(3)
+      val321ToValn.simps(1,2,3) wf.simps wf_map_set_def
+      wf_ty.elims(1))
+
+typedef (overloaded) 'a::absval wf_val' = "{v. wf v} :: 'a::absval valn set"
+proof
+  (* Use LitV as the non-emptiness witness *)
+  show "LitV (LBool True) \<in> {v. wf v}" by (simp add: wfLitV)
+qed
+
+
+setup_lifting type_definition_wf_maps
+
+(* lift selectImpl *)
 lift_definition wf_select :: "'a::absval wf_val \<Rightarrow> 'a wf_val \<Rightarrow> 'a wf_val" is selectImpl
-  using selectClosedWf wf_val_set_def by auto
+  using selectClosedWf wf_map_bij
+  by (metis top1I val.exhaust
+      val.pred_inject(2)[of top "\<lambda>uu. uu \<in> wf_map_set"]
+      val.pred_inject(3)[of top "\<lambda>uu. uu \<in> wf_map_set"]
+      val.pred_rel[of top "\<lambda>uu. uu \<in> wf_map_set" "LitV _"]
+      val.rel_inject(1)[of "eq_onp top"
+        "eq_onp (\<lambda>uu. uu \<in> wf_map_set)"])
 
 lift_definition wf_store :: "'a::absval wf_val \<Rightarrow> 'a wf_val \<Rightarrow> 'a wf_val \<Rightarrow> 'a wf_val" is storeImpl
-  using storeClosedWf wf_val_set_def by blast
+  using storeClosedWf wf_map_bij
+  by (metis top1I val.exhaust
+      val.pred_inject(2)[of top "\<lambda>uu. uu \<in> wf_map_set"]
+      val.pred_inject(3)[of top "\<lambda>uu. uu \<in> wf_map_set"]
+      val.pred_rel[of top "\<lambda>uu. uu \<in> wf_map_set" "LitV _"]
+      val.rel_inject(1)[of "eq_onp top"
+        "eq_onp (\<lambda>uu. uu \<in> wf_map_set)"])
 
 lemma Ax2_wf_val:
   shows "x = y \<or> wf_select (wf_store m x v) y = wf_select m y"
-  by (metis ArrayAxStable Rep_wf_val_inject wf_select.rep_eq wf_store.rep_eq)
+  by (smt (verit, del_insts) ArrayAxStable Rep_wf_maps_inject id_apply
+      map_fun_apply val.inj_map_strong wf_select_def wf_store.rep_eq)
 
+(* DONE: Now we can store wf_select in map interface *)
+abbreviation MIWF :: "('a::absval, 'a wf_maps) map_interface" where
+  "MIWF \<equiv> \<lparr> map_select = wf_select, map_store = wf_store, map_type = undefined \<rparr>"
+
+
+subsection \<open>Using wf type\<close>
 
 (* the absval_ty_fun using class seems to be fixed to the class *)
 instantiation unit :: absval
