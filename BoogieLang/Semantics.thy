@@ -15,15 +15,10 @@ TODO: explain Map Values
 \<close>
 datatype ('a, 'm) val = LitV lit | AbsV (the_absv: 'a)
   | MapV 'm
-
+  
 abbreviation IntV where "IntV i \<equiv> LitV (LInt i)"
 abbreviation BoolV where "BoolV b \<equiv> LitV (LBool b)"
 abbreviation RealV where "RealV r \<equiv> LitV (LReal r)"
-
-record ('a, 'm) map_interface =
-  map_select :: "('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
-  map_store :: "('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
-  map_type :: "'m \<Rightarrow> (ty \<times> ty)"
 
 
 primrec is_lit_val :: "('a, 'k) val \<Rightarrow> bool"
@@ -405,16 +400,20 @@ text\<open>Function interpretation:
 type_synonym ('a, 'k) fun_repr = "ty list \<Rightarrow> ('a, 'k) val list \<rightharpoonup> ('a, 'k) val"
 type_synonym ('a, 'k) fun_interp = "fname \<rightharpoonup> ('a, 'k) fun_repr"
 
-text\<open>Type interpretation: 
+text\<open>Type interpretation:
 Each value of the abstract carrier type must be mapped to a corresponding type (constructed via a
 type constructor).\<close>
-type_synonym 'a absval_ty_fun = "'a \<Rightarrow> (tcon_id \<times> ty list)"
+class absval =
+  fixes absval_ty :: "'a \<Rightarrow> (tcon_id \<times> ty list)"
 
-fun type_of_val :: "'a absval_ty_fun \<Rightarrow> ('m \<Rightarrow> (ty \<times> ty)) \<Rightarrow> ('a, 'm) val \<Rightarrow> ty"
+class mapval =
+  fixes mapval_ty :: "'a \<Rightarrow> (ty \<times> ty)"
+
+fun type_of_val :: "('a::absval, 'm::mapval) val \<Rightarrow> ty"
   where
-   "type_of_val A _ (LitV v) = TPrim (type_of_lit v)"
- | "type_of_val A _ (AbsV v) = TCon (fst (A v)) (snd (A v))"
- | "type_of_val _ M (MapV v) = TMap (fst (M v)) (snd (M v))"
+   "type_of_val (LitV v) = TPrim (type_of_lit v)"
+ | "type_of_val (AbsV v) = TCon (fst (absval_ty v)) (snd (absval_ty v))"
+ | "type_of_val (MapV v) = TMap (fst (mapval_ty v)) (snd (mapval_ty v))"
 
 type_synonym rtype_env = "ty list"
 
@@ -431,255 +430,260 @@ lemma instantiate_nil [simp]: "instantiate [] \<tau> = \<tau>"
 
 type_synonym 'struct_ty proc_context = "'struct_ty pdecl list"
 
+type_synonym ('a, 'k) cfg_config = "(node+unit) \<times> ('a, 'k) state"
+
 subsection \<open>Expression reduction (big-step semantics)\<close>
 
-inductive red_expr :: "'a absval_ty_fun \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> ('a, 'k) map_interface \<Rightarrow> expr \<Rightarrow> ('a, 'k) nstate \<Rightarrow> ('a, 'k) val \<Rightarrow> bool"
-  ("_,_,_,_,_ \<turnstile> ((\<langle>_,_\<rangle>) \<Down> _)" [51,0,0,0,0,0] 81)
-  and red_exprs :: "'a absval_ty_fun \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> ('a, 'k) map_interface \<Rightarrow> expr list \<Rightarrow> ('a, 'k) nstate \<Rightarrow> ('a, 'k) val list \<Rightarrow> bool"
-  ("_,_,_,_,_ \<turnstile> ((\<langle>_,_\<rangle>) [\<Down>] _)" [51,0,0,0,0,0] 81)
-  for A :: "'a absval_ty_fun" and \<Lambda> :: "var_context" and \<Gamma> :: "('a, 'k) fun_interp"
+locale semantics =
+  fixes map_select :: "('a::absval, 'k::mapval) val \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) val"
+  fixes map_store  :: "('a, 'k) val \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) val"
+begin
+
+inductive red_expr :: "var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> expr \<Rightarrow> ('a, 'k) nstate \<Rightarrow> ('a, 'k) val \<Rightarrow> bool"
+  ("_,_,_ \<turnstile> ((\<langle>_,_\<rangle>) \<Down> _)" [0,0,0,0] 81)
+  and red_exprs :: "var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> expr list \<Rightarrow> ('a, 'k) nstate \<Rightarrow> ('a, 'k) val list \<Rightarrow> bool"
+  ("_,_,_ \<turnstile> ((\<langle>_,_\<rangle>) [\<Down>] _)" [0,0,0,0] 81)
+  for \<Lambda> :: "var_context" and \<Gamma> :: "('a, 'k) fun_interp"
   where 
-    RedVar: "\<lbrakk> lookup_var \<Lambda> n_s x = Some v \<rbrakk> \<Longrightarrow> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>(Var x), n_s\<rangle> \<Down> v"
-  | RedBVar: "\<lbrakk> binder_state n_s i = Some v \<rbrakk> \<Longrightarrow> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>BVar i, n_s\<rangle> \<Down> v"
-  | RedLit: "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>(Lit v), n_s\<rangle> \<Down> LitV v" 
-  | RedBinOp: "\<lbrakk>A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e1, n_s\<rangle> \<Down> v1; A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e2, n_s\<rangle> \<Down> v2;
+    RedVar: "\<lbrakk> lookup_var \<Lambda> n_s x = Some v \<rbrakk> \<Longrightarrow> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>(Var x), n_s\<rangle> \<Down> v"
+  | RedBVar: "\<lbrakk> binder_state n_s i = Some v \<rbrakk> \<Longrightarrow> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>BVar i, n_s\<rangle> \<Down> v"
+  | RedLit: "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>(Lit v), n_s\<rangle> \<Down> LitV v" 
+  | RedBinOp: "\<lbrakk>\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e1, n_s\<rangle> \<Down> v1; \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e2, n_s\<rangle> \<Down> v2;
                  binop_eval_val bop v1 v2 = (Some v) \<rbrakk> \<Longrightarrow> 
-             A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>(e1 \<guillemotleft>bop\<guillemotright> e2), n_s\<rangle> \<Down> v"
-  | RedUnOp: " \<lbrakk> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e, n_s\<rangle> \<Down> v; unop_eval_val uop v = Some v' \<rbrakk> \<Longrightarrow> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>UnOp uop e, n_s\<rangle> \<Down> v'"
+             \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>(e1 \<guillemotleft>bop\<guillemotright> e2), n_s\<rangle> \<Down> v"
+  | RedUnOp: " \<lbrakk> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, n_s\<rangle> \<Down> v; unop_eval_val uop v = Some v' \<rbrakk> \<Longrightarrow> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>UnOp uop e, n_s\<rangle> \<Down> v'"
   | RedFunOp: "\<lbrakk> \<Gamma> f = Some f_interp;
-                A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>args, n_s\<rangle> [\<Down>] v_args;
+                \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>args, n_s\<rangle> [\<Down>] v_args;
                 f_interp (map (instantiate \<Omega>) ty_args) v_args = Some v \<rbrakk> \<Longrightarrow>
-             A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle> FunExp f ty_args args, n_s \<rangle> \<Down> v"
-  | RedMapSelect: "\<lbrakk> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e1, n_s\<rangle> \<Down> v1;
-                A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e2, n_s\<rangle> \<Down> v2;
-                (map_select MI) v1 v2 = v\<rbrakk> \<Longrightarrow>
-             A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle> MapSelect e1 e2, n_s \<rangle> \<Down> v"
-  | RedMapStore: "\<lbrakk> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e1, n_s\<rangle> \<Down> v1;
-                A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e2, n_s\<rangle> \<Down> v2;
-                A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e3, n_s\<rangle> \<Down> v3;
-                (map_store MI) v1 v2 v3 = v\<rbrakk> \<Longrightarrow>
-             A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle> MapStore e1 e2 e3, n_s \<rangle> \<Down> v"
+             \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle> FunExp f ty_args args, n_s \<rangle> \<Down> v"
+  | RedMapSelect: "\<lbrakk> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e1, n_s\<rangle> \<Down> v1;
+                \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e2, n_s\<rangle> \<Down> v2;
+                map_select v1 v2 = v\<rbrakk> \<Longrightarrow>
+             \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle> MapSelect e1 e2, n_s \<rangle> \<Down> v"
+  | RedMapStore: "\<lbrakk> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e1, n_s\<rangle> \<Down> v1;
+                \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e2, n_s\<rangle> \<Down> v2;
+                \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e3, n_s\<rangle> \<Down> v3;
+                map_store v1 v2 v3 = v\<rbrakk> \<Longrightarrow>
+             \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle> MapStore e1 e2 e3, n_s \<rangle> \<Down> v"
   | RedCondExpTrue: 
-               "\<lbrakk> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>cond, n_s\<rangle> \<Down> (BoolV True); 
-                  A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>thn, n_s\<rangle> \<Down> v \<rbrakk> \<Longrightarrow>
-            A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle> CondExp cond thn els, n_s \<rangle> \<Down> v"
+               "\<lbrakk> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cond, n_s\<rangle> \<Down> (BoolV True); 
+                  \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>thn, n_s\<rangle> \<Down> v \<rbrakk> \<Longrightarrow>
+            \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle> CondExp cond thn els, n_s \<rangle> \<Down> v"
   | RedCondExpFalse: 
-               "\<lbrakk> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>cond, n_s\<rangle> \<Down> (BoolV False); 
-                  A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>els, n_s\<rangle> \<Down> v \<rbrakk> \<Longrightarrow>
-            A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle> CondExp cond thn els, n_s \<rangle> \<Down> v"
-  | RedOld: "\<lbrakk> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle> e, n_s\<lparr>global_state := old_global_state n_s \<rparr> \<rangle> \<Down> v\<rbrakk> \<Longrightarrow> 
-            A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle> Old e, n_s \<rangle> \<Down> v"
+               "\<lbrakk> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cond, n_s\<rangle> \<Down> (BoolV False); 
+                  \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>els, n_s\<rangle> \<Down> v \<rbrakk> \<Longrightarrow>
+            \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle> CondExp cond thn els, n_s \<rangle> \<Down> v"
+  | RedOld: "\<lbrakk> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle> e, n_s\<lparr>global_state := old_global_state n_s \<rparr> \<rangle> \<Down> v\<rbrakk> \<Longrightarrow> 
+            \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle> Old e, n_s \<rangle> \<Down> v"
   | RedExpListNil:
-    "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>[], n_s\<rangle> [\<Down>] []"
+    "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>[], n_s\<rangle> [\<Down>] []"
   | RedExpListCons:
-    "\<lbrakk>A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e, n_s\<rangle> \<Down> v; A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>es, n_s\<rangle> [\<Down>] vs \<rbrakk> \<Longrightarrow>
-      A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>(e # es), n_s\<rangle> [\<Down>] (v # vs)"
+    "\<lbrakk>\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, n_s\<rangle> \<Down> v; \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>es, n_s\<rangle> [\<Down>] vs \<rbrakk> \<Longrightarrow>
+      \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>(e # es), n_s\<rangle> [\<Down>] (v # vs)"
 (* value quantification rules *)
   | RedForAllTrue:
-    "\<lbrakk>\<And>v. type_of_val A (map_type MI) v = (instantiate \<Omega> ty) \<Longrightarrow> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e, full_ext_env n_s v\<rangle> \<Down> LitV (LBool True) \<rbrakk> \<Longrightarrow> 
-     A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Forall ty e, n_s\<rangle> \<Down> LitV (LBool True)"
+    "\<lbrakk>\<And>v. type_of_val v = (instantiate \<Omega> ty) \<Longrightarrow> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, full_ext_env n_s v\<rangle> \<Down> LitV (LBool True) \<rbrakk> \<Longrightarrow> 
+     \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Forall ty e, n_s\<rangle> \<Down> LitV (LBool True)"
   | RedForAllFalse:
-    "\<lbrakk>type_of_val A (map_type MI) v = instantiate \<Omega> ty; A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e, full_ext_env n_s v\<rangle> \<Down> LitV (LBool False) \<rbrakk> \<Longrightarrow> 
-     A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Forall ty e, n_s\<rangle> \<Down> LitV (LBool False)"
+    "\<lbrakk>type_of_val v = instantiate \<Omega> ty; \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, full_ext_env n_s v\<rangle> \<Down> LitV (LBool False) \<rbrakk> \<Longrightarrow> 
+     \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Forall ty e, n_s\<rangle> \<Down> LitV (LBool False)"
   | RedExistsTrue:
-    "\<lbrakk>type_of_val A (map_type MI) v = instantiate \<Omega> ty; A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e, full_ext_env n_s v\<rangle> \<Down> LitV (LBool True) \<rbrakk> \<Longrightarrow>
-     A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Exists ty e, n_s\<rangle> \<Down> LitV (LBool True)"
+    "\<lbrakk>type_of_val v = instantiate \<Omega> ty; \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, full_ext_env n_s v\<rangle> \<Down> LitV (LBool True) \<rbrakk> \<Longrightarrow>
+     \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Exists ty e, n_s\<rangle> \<Down> LitV (LBool True)"
   | RedExistsFalse:
-    "\<lbrakk>\<And>v. type_of_val A (map_type MI) v = instantiate \<Omega> ty \<Longrightarrow> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e, full_ext_env n_s v\<rangle> \<Down> LitV (LBool False) \<rbrakk> \<Longrightarrow>
-     A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Exists ty e, n_s\<rangle> \<Down> LitV (LBool False)"
+    "\<lbrakk>\<And>v. type_of_val v = instantiate \<Omega> ty \<Longrightarrow> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, full_ext_env n_s v\<rangle> \<Down> LitV (LBool False) \<rbrakk> \<Longrightarrow>
+     \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Exists ty e, n_s\<rangle> \<Down> LitV (LBool False)"
 (* type quantification rules *)
   | RedForallT_True:
-    "\<lbrakk>\<And>\<tau>. closed \<tau> \<Longrightarrow> A,\<Lambda>,\<Gamma>,(\<tau>#\<Omega>),MI \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool True) \<rbrakk> \<Longrightarrow> 
-     A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>ForallT e, n_s\<rangle> \<Down> LitV (LBool True)"
+    "\<lbrakk>\<And>\<tau>. closed \<tau> \<Longrightarrow> \<Lambda>,\<Gamma>,(\<tau>#\<Omega>) \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool True) \<rbrakk> \<Longrightarrow> 
+     \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>ForallT e, n_s\<rangle> \<Down> LitV (LBool True)"
   | RedForallT_False:
-    "\<lbrakk>closed \<tau>; A,\<Lambda>,\<Gamma>,(\<tau>#\<Omega>),MI \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool False) \<rbrakk> \<Longrightarrow>
-     A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>ForallT e, n_s\<rangle> \<Down> LitV (LBool False)"
+    "\<lbrakk>closed \<tau>; \<Lambda>,\<Gamma>,(\<tau>#\<Omega>) \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool False) \<rbrakk> \<Longrightarrow>
+     \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>ForallT e, n_s\<rangle> \<Down> LitV (LBool False)"
   | RedExistsT_True:
-    "\<lbrakk>closed \<tau>; A,\<Lambda>,\<Gamma>,(\<tau>#\<Omega>),MI \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool True) \<rbrakk> \<Longrightarrow>
-     A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>ExistsT e, n_s\<rangle> \<Down> LitV (LBool True)"
+    "\<lbrakk>closed \<tau>; \<Lambda>,\<Gamma>,(\<tau>#\<Omega>) \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool True) \<rbrakk> \<Longrightarrow>
+     \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>ExistsT e, n_s\<rangle> \<Down> LitV (LBool True)"
   | RedExistsT_False:
-    "\<lbrakk>\<And>\<tau>. closed \<tau> \<Longrightarrow> A,\<Lambda>,\<Gamma>,(\<tau>#\<Omega>),MI \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool False) \<rbrakk> \<Longrightarrow>
-     A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>ExistsT e, n_s\<rangle> \<Down> LitV (LBool False)"
+    "\<lbrakk>\<And>\<tau>. closed \<tau> \<Longrightarrow> \<Lambda>,\<Gamma>,(\<tau>#\<Omega>) \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool False) \<rbrakk> \<Longrightarrow>
+     \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>ExistsT e, n_s\<rangle> \<Down> LitV (LBool False)"
 
-inductive_cases RedBinOp_case[elim!]: "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>(e1 \<guillemotleft>bop\<guillemotright> e2), n_s\<rangle> \<Down> v"
-inductive_cases RedUnOp_case[elim!]: "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>UnOp uop e1, n_s\<rangle> \<Down> v"
-inductive_cases RedFunOp_case[elim!]: "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle> FunExp f ty_args args, n_s \<rangle> \<Down> v"
-inductive_cases RedMapSelect_case[elim!]: "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle> MapSelect e1 e2, n_s \<rangle> \<Down> v"
-inductive_cases RedMapStore_case[elim!]: "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle> MapStore e1 e2 e3, n_s \<rangle> \<Down> v"
-inductive_cases RedCondExp_case[elim!]: "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle> CondExp cond thn els, n_s \<rangle> \<Down> v"
-inductive_cases RedOld_case[elim!]: "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Old  e, n_s\<rangle> \<Down> v"
-inductive_cases RedLit_case[elim!]: "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>(Lit l), n_s\<rangle> \<Down> LitV l"
-inductive_cases RedVar_case[elim!]: "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>(Var x), n_s\<rangle> \<Down> v"
-inductive_cases RedBVar_case[elim!]: "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>(BVar i), n_s\<rangle> \<Down> v"
-inductive_cases RedForallTrue_case: "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Forall ty e, n_s\<rangle> \<Down> LitV (LBool True)"
-inductive_cases RedForallFalse_case: "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Forall ty e, n_s\<rangle> \<Down> LitV (LBool False)"
+inductive_cases RedBinOp_case[elim!]: "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>(e1 \<guillemotleft>bop\<guillemotright> e2), n_s\<rangle> \<Down> v"
+inductive_cases RedUnOp_case[elim!]: "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>UnOp uop e1, n_s\<rangle> \<Down> v"
+inductive_cases RedFunOp_case[elim!]: "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle> FunExp f ty_args args, n_s \<rangle> \<Down> v"
+inductive_cases RedMapSelect_case[elim!]: "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle> MapSelect e1 e2, n_s \<rangle> \<Down> v"
+inductive_cases RedMapStore_case[elim!]: "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle> MapStore e1 e2 e3, n_s \<rangle> \<Down> v"
+inductive_cases RedCondExp_case[elim!]: "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle> CondExp cond thn els, n_s \<rangle> \<Down> v"
+inductive_cases RedOld_case[elim!]: "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Old  e, n_s\<rangle> \<Down> v"
+inductive_cases RedLit_case[elim!]: "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>(Lit l), n_s\<rangle> \<Down> LitV l"
+inductive_cases RedVar_case[elim!]: "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>(Var x), n_s\<rangle> \<Down> v"
+inductive_cases RedBVar_case[elim!]: "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>(BVar i), n_s\<rangle> \<Down> v"
+inductive_cases RedForallTrue_case: "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Forall ty e, n_s\<rangle> \<Down> LitV (LBool True)"
+inductive_cases RedForallFalse_case: "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Forall ty e, n_s\<rangle> \<Down> LitV (LBool False)"
 
 lemma red_cond_exp_cases:
-  assumes "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>CondExp cond thn els, n_s \<rangle> \<Down> v"
+  assumes "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>CondExp cond thn els, n_s \<rangle> \<Down> v"
   obtains b
-  where "(A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>cond, n_s\<rangle> \<Down> BoolV b) \<and> (A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>if b then thn else els, n_s\<rangle> \<Down> v)"
+  where "(\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cond, n_s\<rangle> \<Down> BoolV b) \<and> (\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>if b then thn else els, n_s\<rangle> \<Down> v)"
   using assms
   apply cases
    apply fastforce
   apply fastforce
   done
 
-definition expr_sat :: "'a absval_ty_fun \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> ('a, 'k) map_interface => ('a, 'k) nstate \<Rightarrow> expr \<Rightarrow> bool"
-  where "expr_sat A \<Lambda> \<Gamma> \<Omega> MI n_s e = (A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool True))"
+definition expr_sat :: "var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env => ('a, 'k) nstate \<Rightarrow> expr \<Rightarrow> bool"
+  where "expr_sat \<Lambda> \<Gamma> \<Omega> n_s e = (\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool True))"
 
-definition expr_all_sat :: "'a absval_ty_fun \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> ('a, 'k) map_interface => ('a, 'k) nstate \<Rightarrow> expr list \<Rightarrow> bool"
-  where "expr_all_sat A \<Lambda> \<Gamma> \<Omega> MI n_s es = list_all (expr_sat A \<Lambda> \<Gamma> \<Omega> MI n_s) es"
+definition expr_all_sat :: "var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env => ('a, 'k) nstate \<Rightarrow> expr list \<Rightarrow> bool"
+  where "expr_all_sat \<Lambda> \<Gamma> \<Omega> n_s es = list_all (expr_sat \<Lambda> \<Gamma> \<Omega> n_s) es"
 
-definition expr_exists_fail :: "'a absval_ty_fun \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> ('a, 'k) map_interface => ('a, 'k) nstate \<Rightarrow> expr list \<Rightarrow> bool"
-  where "expr_exists_fail A \<Lambda> \<Gamma> \<Omega> MI n_s es = list_ex (expr_sat A \<Lambda> \<Gamma> \<Omega> MI n_s) es"
+definition expr_exists_fail :: "var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env => ('a, 'k) nstate \<Rightarrow> expr list \<Rightarrow> bool"
+  where "expr_exists_fail \<Lambda> \<Gamma> \<Omega> n_s es = list_ex (expr_sat \<Lambda> \<Gamma> \<Omega> n_s) es"
 
-definition where_clause_sat :: "'a absval_ty_fun \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> ('a, 'k) map_interface => ('a, 'k) nstate \<Rightarrow> vdecl \<Rightarrow> bool"
-  where "where_clause_sat A \<Lambda> \<Gamma> \<Omega> MI n_s vd = (\<forall>x ty w. vd = (x,ty,Some w) \<longrightarrow> expr_sat A \<Lambda> \<Gamma> \<Omega> MI n_s w)"
+definition where_clause_sat :: "var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env => ('a, 'k) nstate \<Rightarrow> vdecl \<Rightarrow> bool"
+  where "where_clause_sat \<Lambda> \<Gamma> \<Omega> n_s vd = (\<forall>x ty w. vd = (x,ty,Some w) \<longrightarrow> expr_sat \<Lambda> \<Gamma> \<Omega> n_s w)"
 
-definition where_clauses_all_sat :: "'a absval_ty_fun \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> ('a, 'k) map_interface => ('a, 'k) nstate \<Rightarrow> vdecls \<Rightarrow> bool"
-  where "where_clauses_all_sat A \<Lambda> \<Gamma> \<Omega> MI n_s vs = list_all (where_clause_sat A \<Lambda> \<Gamma> \<Omega> MI n_s) vs"
+definition where_clauses_all_sat :: "var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env => ('a, 'k) nstate \<Rightarrow> vdecls \<Rightarrow> bool"
+  where "where_clauses_all_sat \<Lambda> \<Gamma> \<Omega> n_s vs = list_all (where_clause_sat \<Lambda> \<Gamma> \<Omega> n_s) vs"
 
 (* where-clauses of global variables should be assumed without taking local variables into account, due to shadowing. *)
-definition where_clauses_all_sat_context :: "'a absval_ty_fun \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> ('a, 'k) map_interface => ('a, 'k) nstate \<Rightarrow> bool"
-  where "where_clauses_all_sat_context A \<Lambda> \<Gamma> \<Omega> MI ns \<equiv> 
-           where_clauses_all_sat A (fst \<Lambda>, []) \<Gamma> \<Omega> MI ns (fst \<Lambda>) \<and> where_clauses_all_sat A \<Lambda> \<Gamma> \<Omega> MI ns (snd \<Lambda>)"
+definition where_clauses_all_sat_context :: "var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env => ('a, 'k) nstate \<Rightarrow> bool"
+  where "where_clauses_all_sat_context \<Lambda> \<Gamma> \<Omega> ns \<equiv> 
+           where_clauses_all_sat(fst \<Lambda>, []) \<Gamma> \<Omega> ns (fst \<Lambda>) \<and> where_clauses_all_sat \<Lambda> \<Gamma> \<Omega> ns (snd \<Lambda>)"
 
 subsection \<open>Command reduction (big-step semantics)\<close>
 
-inductive red_cmd :: "'a absval_ty_fun \<Rightarrow> 'm proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> ('a, 'k) map_interface \<Rightarrow> cmd \<Rightarrow> ('a, 'k) state \<Rightarrow> ('a, 'k) state \<Rightarrow> bool"
-  ("_,_,_,_,_,_ \<turnstile> ((\<langle>_,_\<rangle>) \<rightarrow>/ _)" [51,51,0,0,0] 81)
-  for A :: "'a absval_ty_fun" and M :: "'m proc_context" and \<Lambda> :: var_context and  \<Gamma> :: "('a, 'k) fun_interp" and \<Omega> :: rtype_env
+inductive red_cmd :: "'m proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> cmd \<Rightarrow> ('a, 'k) state \<Rightarrow> ('a, 'k) state \<Rightarrow> bool"
+  ("_,_,_,_ \<turnstile> ((\<langle>_,_\<rangle>) \<rightarrow>/ _)" [51,0,0] 81)
+  for M :: "'m proc_context" and \<Lambda> :: var_context and  \<Gamma> :: "('a, 'k) fun_interp" and \<Omega> :: rtype_env
   where
-    RedAssertOk: "\<lbrakk> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool True) \<rbrakk> \<Longrightarrow> 
-                 A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Assert e, Normal n_s\<rangle> \<rightarrow> Normal n_s"
-  | RedAssertFail: "\<lbrakk> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool False) \<rbrakk> \<Longrightarrow> 
-                  A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Assert e, Normal n_s\<rangle> \<rightarrow> Failure"
-  | RedAssumeOk: "\<lbrakk> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool True) \<rbrakk> \<Longrightarrow> 
-                A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Assume e, Normal n_s\<rangle> \<rightarrow> Normal n_s"
-  | RedAssumeMagic: "\<lbrakk> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool False) \<rbrakk> \<Longrightarrow> 
-                A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Assume e, Normal n_s\<rangle> \<rightarrow> Magic"
-  | RedAssign: "\<lbrakk> lookup_var_ty \<Lambda> x = Some ty; type_of_val A (map_type MI) v = instantiate \<Omega> ty; 
-                  A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e, n_s\<rangle> \<Down> v \<rbrakk> \<Longrightarrow>
-               A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Assign x e, Normal n_s\<rangle> \<rightarrow>  Normal (update_var \<Lambda> n_s x v)"
+    RedAssertOk: "\<lbrakk> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool True) \<rbrakk> \<Longrightarrow> 
+                 M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Assert e, Normal n_s\<rangle> \<rightarrow> Normal n_s"
+  | RedAssertFail: "\<lbrakk> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool False) \<rbrakk> \<Longrightarrow> 
+                  M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Assert e, Normal n_s\<rangle> \<rightarrow> Failure"
+  | RedAssumeOk: "\<lbrakk> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool True) \<rbrakk> \<Longrightarrow> 
+                M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Assume e, Normal n_s\<rangle> \<rightarrow> Normal n_s"
+  | RedAssumeMagic: "\<lbrakk> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool False) \<rbrakk> \<Longrightarrow> 
+                M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Assume e, Normal n_s\<rangle> \<rightarrow> Magic"
+  | RedAssign: "\<lbrakk> lookup_var_ty \<Lambda> x = Some ty; type_of_val v = instantiate \<Omega> ty; 
+                  \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, n_s\<rangle> \<Down> v \<rbrakk> \<Longrightarrow>
+               M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Assign x e, Normal n_s\<rangle> \<rightarrow>  Normal (update_var \<Lambda> n_s x v)"
   | RedHavocNormal: "\<lbrakk> lookup_var_decl \<Lambda> x = Some (ty,w); 
-                 type_of_val A (map_type MI) v = instantiate \<Omega> ty;
-                 \<And>cond. w = Some cond \<Longrightarrow> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>cond, (update_var \<Lambda> n_s x v)\<rangle> \<Down> BoolV True \<rbrakk> \<Longrightarrow>
-                 A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Havoc x, Normal n_s\<rangle> \<rightarrow> Normal (update_var \<Lambda> n_s x v)"
+                 type_of_val v = instantiate \<Omega> ty;
+                 \<And>cond. w = Some cond \<Longrightarrow> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cond, (update_var \<Lambda> n_s x v)\<rangle> \<Down> BoolV True \<rbrakk> \<Longrightarrow>
+                 M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Havoc x, Normal n_s\<rangle> \<rightarrow> Normal (update_var \<Lambda> n_s x v)"
   | RedHavocMagic: "\<lbrakk> lookup_var_decl \<Lambda> x = Some (ty,Some(cond)); 
-                 type_of_val A (map_type MI) v = instantiate \<Omega> ty;
-                 A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>cond, (update_var \<Lambda> n_s x v)\<rangle> \<Down> BoolV False \<rbrakk> \<Longrightarrow>
-                 A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Havoc x, Normal n_s\<rangle> \<rightarrow> Magic"
+                 type_of_val v = instantiate \<Omega> ty;
+                 \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cond, (update_var \<Lambda> n_s x v)\<rangle> \<Down> BoolV False \<rbrakk> \<Longrightarrow>
+                 M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Havoc x, Normal n_s\<rangle> \<rightarrow> Magic"
 (* TODO: where clauses for return variables *)
   | RedProcCallOkAndMagic: "\<lbrakk> map_of M m = Some msig; 
-      A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>args, n_s\<rangle> [\<Down>] v_args;
+      \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>args, n_s\<rangle> [\<Down>] v_args;
       pre_ls = Map.empty( (map fst (proc_args msig )) [\<mapsto>] v_args  ) ;
-      expr_all_sat A (fst \<Lambda>, proc_args msig) \<Gamma> \<Omega> MI (n_s\<lparr>local_state := new_ls\<rparr>) (proc_checked_pres msig);
+      expr_all_sat (fst \<Lambda>, proc_args msig) \<Gamma> \<Omega> (n_s\<lparr>local_state := new_ls\<rparr>) (proc_checked_pres msig);
       map (lookup_vdecls_ty (fst \<Lambda>)) (proc_modifs msig) = map Some ty_modifs;  
-      map (type_of_val A (map_type MI)) vs_modifs = map (instantiate \<Omega>) ty_modifs;
-      map (type_of_val A (map_type MI)) vs_ret = map (fst \<circ> snd) (proc_rets msig);      
+      map (type_of_val) vs_modifs = map (instantiate \<Omega>) ty_modifs;
+      map (type_of_val) vs_ret = map (fst \<circ> snd) (proc_rets msig);      
       post_ls = pre_ls((map fst (proc_rets msig)) [\<mapsto>] vs_ret);
       post_gs = (global_state n_s)((proc_modifs msig) [\<mapsto>] vs_modifs);
       post_state = \<lparr>old_global_state = global_state n_s, global_state = post_gs, local_state = post_ls, binder_state = Map.empty\<rparr>;
-      post_success = expr_all_sat A (fst \<Lambda>, (proc_args msig)@(proc_rets msig)) \<Gamma> \<Omega> MI post_state (proc_all_posts msig);
-      post_fail = expr_exists_fail A (fst \<Lambda>, (proc_args msig)@(proc_rets msig)) \<Gamma> \<Omega> MI post_state (proc_all_posts msig);
+      post_success = expr_all_sat (fst \<Lambda>, (proc_args msig)@(proc_rets msig)) \<Gamma> \<Omega> post_state (proc_all_posts msig);
+      post_fail = expr_exists_fail (fst \<Lambda>, (proc_args msig)@(proc_rets msig)) \<Gamma> \<Omega> post_state (proc_all_posts msig);
       post_success \<or> post_fail;
       n_s' = n_s\<lparr>global_state := post_gs\<rparr>\<lparr>local_state := (local_state n_s)(rets [\<mapsto>] vs_ret)\<rparr> \<rbrakk> \<Longrightarrow>
-               A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>ProcCall m args rets, Normal n_s\<rangle> \<rightarrow> (if post_success then Normal n_s' else Magic)"
+               M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>ProcCall m args rets, Normal n_s\<rangle> \<rightarrow> (if post_success then Normal n_s' else Magic)"
   | RedProcCallFail: "\<lbrakk> map_of M m = Some msig;
-      A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>args, n_s\<rangle> [\<Down>] v_args;
+      \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>args, n_s\<rangle> [\<Down>] v_args;
       pre_ls = Map.empty( (map fst (proc_args msig )) [\<mapsto>] v_args  ) ;
-      expr_exists_fail A (fst \<Lambda>, proc_args msig) \<Gamma> \<Omega> MI (n_s\<lparr>local_state := new_ls\<rparr>) (proc_checked_pres msig) \<rbrakk> \<Longrightarrow>
-               A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>ProcCall m args rets, Normal n_s\<rangle> \<rightarrow> Failure"
-  | RedPropagateMagic: "A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>s, Magic\<rangle> \<rightarrow> Magic"
-  | RedPropagateFailure: "A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>s, Failure\<rangle> \<rightarrow> Failure"
+      expr_exists_fail(fst \<Lambda>, proc_args msig) \<Gamma> \<Omega>(n_s\<lparr>local_state := new_ls\<rparr>) (proc_checked_pres msig) \<rbrakk> \<Longrightarrow>
+               M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>ProcCall m args rets, Normal n_s\<rangle> \<rightarrow> Failure"
+  | RedPropagateMagic: "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>s, Magic\<rangle> \<rightarrow> Magic"
+  | RedPropagateFailure: "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>s, Failure\<rangle> \<rightarrow> Failure"
 
-inductive_cases RedAssertOk_case [elim]: "A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Assert e, Normal n_s\<rangle> \<rightarrow> Normal n_s"
-inductive_cases RedAssumeOk_case [elim]: "A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Assume e, Normal n_s\<rangle> \<rightarrow> Normal n_s"
-inductive_cases RedAssign_case: "A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Assign x e, Normal n_s\<rangle> \<rightarrow> Normal (update_var \<Lambda> n_s x v)"
-inductive_cases RedHavoc_case: "A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Havoc x, Normal n_s\<rangle> \<rightarrow> Normal (update_var \<Lambda> n_s x v)"
+inductive_cases RedAssertOk_case [elim]: "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Assert e, Normal n_s\<rangle> \<rightarrow> Normal n_s"
+inductive_cases RedAssumeOk_case [elim]: "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Assume e, Normal n_s\<rangle> \<rightarrow> Normal n_s"
+inductive_cases RedAssign_case: "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Assign x e, Normal n_s\<rangle> \<rightarrow> Normal (update_var \<Lambda> n_s x v)"
+inductive_cases RedHavoc_case: "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Havoc x, Normal n_s\<rangle> \<rightarrow> Normal (update_var \<Lambda> n_s x v)"
 
 text \<open>Command list reduction (big-step semantics)\<close>
 
-inductive red_cmd_list :: "'a absval_ty_fun \<Rightarrow> 'm proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> ('a, 'k) map_interface \<Rightarrow> cmd list \<Rightarrow> ('a, 'k) state \<Rightarrow> ('a, 'k) state \<Rightarrow> bool"
-  ("_,_,_,_,_,_ \<turnstile> ((\<langle>_,_\<rangle>) [\<rightarrow>]/ _)" [51,0,0,0] 81)
-  for A :: "'a absval_ty_fun" and M :: "'m proc_context" and \<Lambda> :: var_context and \<Gamma> :: "('a, 'k) fun_interp" and \<Omega> :: rtype_env
+inductive red_cmd_list :: "'m proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> cmd list \<Rightarrow> ('a, 'k) state \<Rightarrow> ('a, 'k) state \<Rightarrow> bool"
+  ("_,_,_,_ \<turnstile> ((\<langle>_,_\<rangle>) [\<rightarrow>]/ _)" [0,0,0] 81)
+  for M :: "'m proc_context" and \<Lambda> :: var_context and \<Gamma> :: "('a, 'k) fun_interp" and \<Omega> :: rtype_env
   where
-    RedCmdListNil: "A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>[],s\<rangle> [\<rightarrow>] s"
-  | RedCmdListCons: "\<lbrakk> A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>c,s\<rangle> \<rightarrow> s''; A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>cs,s''\<rangle> [\<rightarrow>] s' \<rbrakk> \<Longrightarrow> 
-                   A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>(c # cs), s\<rangle> [\<rightarrow>] s'"
+    RedCmdListNil: "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>[],s\<rangle> [\<rightarrow>] s"
+  | RedCmdListCons: "\<lbrakk> M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>c,s\<rangle> \<rightarrow> s''; M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs,s''\<rangle> [\<rightarrow>] s' \<rbrakk> \<Longrightarrow> 
+                   M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>(c # cs), s\<rangle> [\<rightarrow>] s'"
 
-inductive_cases RedCmdListNil_case [elim]: "A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>[],s\<rangle> [\<rightarrow>] s"
-inductive_cases RedCmdListCons_case [elim]: "A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>(c # cs), s\<rangle> [\<rightarrow>] s''"
+inductive_cases RedCmdListNil_case [elim]: "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>[],s\<rangle> [\<rightarrow>] s"
+inductive_cases RedCmdListCons_case [elim]: "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>(c # cs), s\<rangle> [\<rightarrow>] s''"
 
 subsection \<open>CFG reduction (small-step semantics)\<close>
 
-type_synonym ('a, 'k) cfg_config = "(node+unit) \<times> ('a, 'k) state"
-
-inductive red_cfg :: "'a absval_ty_fun \<Rightarrow> mbodyCFG proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> mbodyCFG \<Rightarrow> ('a, 'k) cfg_config \<Rightarrow> ('a, 'k) cfg_config \<Rightarrow> bool"
-  ("_,_,_,_,_,_ \<turnstile> (_ -n\<rightarrow>/ _)" [51,0,0,0] 81)
-  for A :: "'a absval_ty_fun" and M :: "mbodyCFG proc_context" and \<Lambda> :: var_context and \<Gamma> :: "('a, 'k) fun_interp" and \<Omega> :: rtype_env and G :: mbodyCFG
+inductive red_cfg :: "mbodyCFG proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> mbodyCFG \<Rightarrow> ('a, 'k) cfg_config \<Rightarrow> ('a, 'k) cfg_config \<Rightarrow> bool"
+  ("_,_,_,_,_ \<turnstile> (_ -n\<rightarrow>/ _)" [51,0,0,0] 81)
+  for M :: "mbodyCFG proc_context" and \<Lambda> :: var_context and \<Gamma> :: "('a, 'k) fun_interp" and \<Omega> :: rtype_env and G :: mbodyCFG
   where
-    RedNormalSucc: "\<lbrakk>node_to_block(G) ! n = cs; A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>cs,Normal ns\<rangle> [\<rightarrow>] Normal ns'; List.member (out_edges(G) ! n) n'  \<rbrakk> \<Longrightarrow> 
-              A,M,\<Lambda>,\<Gamma>,\<Omega>,G  \<turnstile> (Inl n, Normal ns) -n\<rightarrow> (Inl n', Normal ns')"
-  | RedNormalReturn: "\<lbrakk>node_to_block(G)! n = cs; A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>cs,Normal ns\<rangle> [\<rightarrow>] Normal ns'; (out_edges(G) ! n) = [] \<rbrakk> \<Longrightarrow> 
-               A,M,\<Lambda>,\<Gamma>,\<Omega>,G  \<turnstile> (Inl n, Normal ns) -n\<rightarrow> (Inr (), Normal ns')"
-  | RedFailure: "\<lbrakk>node_to_block(G) ! n = cs; A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>cs,Normal ns\<rangle> [\<rightarrow>] Failure \<rbrakk> \<Longrightarrow>
-              A,M,\<Lambda>,\<Gamma>,\<Omega>,G  \<turnstile> (Inl n, Normal ns) -n\<rightarrow> (Inr (), Failure)"
-  | RedMagic: "\<lbrakk>node_to_block(G) ! n = cs; A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>cs,Normal ns\<rangle> [\<rightarrow>] Magic \<rbrakk> \<Longrightarrow>
-              A,M,\<Lambda>,\<Gamma>,\<Omega>,G  \<turnstile> (Inl n, Normal ns) -n\<rightarrow> (Inr (), Magic)"
+    RedNormalSucc: "\<lbrakk>node_to_block(G) ! n = cs; M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs,Normal ns\<rangle> [\<rightarrow>] Normal ns'; List.member (out_edges(G) ! n) n'  \<rbrakk> \<Longrightarrow> 
+              M,\<Lambda>,\<Gamma>,\<Omega>,G  \<turnstile> (Inl n, Normal ns) -n\<rightarrow> (Inl n', Normal ns')"
+  | RedNormalReturn: "\<lbrakk>node_to_block(G)! n = cs; M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs,Normal ns\<rangle> [\<rightarrow>] Normal ns'; (out_edges(G) ! n) = [] \<rbrakk> \<Longrightarrow> 
+               M,\<Lambda>,\<Gamma>,\<Omega>,G  \<turnstile> (Inl n, Normal ns) -n\<rightarrow> (Inr (), Normal ns')"
+  | RedFailure: "\<lbrakk>node_to_block(G) ! n = cs; M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs,Normal ns\<rangle> [\<rightarrow>] Failure \<rbrakk> \<Longrightarrow>
+              M,\<Lambda>,\<Gamma>,\<Omega>,G  \<turnstile> (Inl n, Normal ns) -n\<rightarrow> (Inr (), Failure)"
+  | RedMagic: "\<lbrakk>node_to_block(G) ! n = cs; M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs,Normal ns\<rangle> [\<rightarrow>] Magic \<rbrakk> \<Longrightarrow>
+              M,\<Lambda>,\<Gamma>,\<Omega>,G  \<turnstile> (Inl n, Normal ns) -n\<rightarrow> (Inr (), Magic)"
 
 fun is_final_config :: "('a, 'k) cfg_config \<Rightarrow> bool"
   where
     "is_final_config (Inl n,_) = False"
   | "is_final_config (Inr n,_) = True"
 
-inductive_cases RedNormalSucc_case: "A,M,\<Lambda>,\<Gamma>,G,\<Omega>  \<turnstile> (Inl n,s) -n\<rightarrow> (Inl n',s')"
+inductive_cases RedNormalSucc_case: "M,\<Lambda>,\<Gamma>,G,\<Omega>  \<turnstile> (Inl n,s) -n\<rightarrow> (Inl n',s')"
 
 text \<open>Reflexive and transitive closure of CFG reduction\<close>
 
-abbreviation red_cfg_multi :: "'a absval_ty_fun \<Rightarrow> mbodyCFG proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> mbodyCFG \<Rightarrow> ('a, 'k) cfg_config \<Rightarrow> ('a, 'k) cfg_config \<Rightarrow> bool"
-  ("_,_,_,_,_,_ \<turnstile>_ -n\<rightarrow>*/ _" [51,0,0,0] 81)
-  where "red_cfg_multi A M \<Lambda> \<Gamma> \<Omega> G \<equiv> rtranclp (red_cfg A M \<Lambda> \<Gamma> \<Omega> G)"
-
+abbreviation red_cfg_multi :: "mbodyCFG proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> mbodyCFG \<Rightarrow> ('a, 'k) cfg_config \<Rightarrow> ('a, 'k) cfg_config \<Rightarrow> bool"
+  ("_,_,_,_,_ \<turnstile>_ -n\<rightarrow>*/ _" [0,0,0] 81)
+  where "red_cfg_multi M \<Lambda> \<Gamma> \<Omega> G \<equiv> rtranclp (red_cfg M \<Lambda> \<Gamma> \<Omega> G)"
+                                                 
 text \<open>N-step CFG reduction\<close>
 
-abbreviation red_cfg_k_step :: "'a absval_ty_fun \<Rightarrow> mbodyCFG proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> mbodyCFG \<Rightarrow> ('a, 'k) cfg_config \<Rightarrow> nat \<Rightarrow> ('a, 'k) cfg_config \<Rightarrow> bool"
-  ("_,_,_,_,_,_ \<turnstile>_ -n\<rightarrow>^_/ _" [51,0,0,0,0] 81)
-where "red_cfg_k_step A M \<Lambda> \<Gamma> \<Omega> G c1 n c2 \<equiv> ((red_cfg A M \<Lambda> \<Gamma> \<Omega> G)^^n) c1 c2"
+abbreviation red_cfg_k_step :: "mbodyCFG proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> mbodyCFG \<Rightarrow> ('a, 'k) cfg_config \<Rightarrow> nat \<Rightarrow> ('a, 'k) cfg_config \<Rightarrow> bool"
+  ("_,_,_,_,_ \<turnstile>_ -n\<rightarrow>^_/ _" [0,0,0,0] 81)
+where "red_cfg_k_step M \<Lambda> \<Gamma> \<Omega> G c1 n c2 \<equiv> ((red_cfg M \<Lambda> \<Gamma> \<Omega> G)^^n) c1 c2"
 
 (* if inputs types are correct, then function reduces to a value of correct output type *)
-fun fun_interp_single_wf :: "'a absval_ty_fun \<Rightarrow> nat \<times> ty list \<times> ty \<Rightarrow> (ty list \<Rightarrow> ('a, 'k) val list \<rightharpoonup> ('a, 'k) val) \<Rightarrow> bool"
-  where "fun_interp_single_wf A (n_ty_params, args_ty, ret_ty) f =
+fun fun_interp_single_wf :: "nat \<times> ty list \<times> ty \<Rightarrow> (ty list \<Rightarrow> ('a, 'k) val list \<rightharpoonup> ('a, 'k) val) \<Rightarrow> bool"
+  where "fun_interp_single_wf(n_ty_params, args_ty, ret_ty) f =
          (\<forall> ts. (length ts = n_ty_params \<and> list_all closed ts) \<longrightarrow>  
                (\<forall> vs. length vs = length args_ty \<and>
-                      map (type_of_val A (map_type MI)) vs = (map (instantiate ts) args_ty) \<longrightarrow> 
-                        ((\<exists>v. f ts vs = Some v \<and> type_of_val A v = (instantiate ts ret_ty)))))
+                      map (type_of_val) vs = (map (instantiate ts) args_ty) \<longrightarrow> 
+                        ((\<exists>v. f ts vs = Some v \<and> type_of_val v = (instantiate ts ret_ty)))))
  "
 
 (* if function reduces, then input types must have been correct *)
-fun fun_interp_single_wf_2 :: "'a absval_ty_fun \<Rightarrow> nat \<times> ty list \<times> ty \<Rightarrow> (ty list \<Rightarrow> ('a, 'k) val list \<rightharpoonup> ('a, 'k) val) \<Rightarrow> bool"
-  where "fun_interp_single_wf_2 A (n_ty_params, args_ty, ret_ty) f =
+fun fun_interp_single_wf_2 :: "nat \<times> ty list \<times> ty \<Rightarrow> (ty list \<Rightarrow> ('a, 'k) val list \<rightharpoonup> ('a, 'k) val) \<Rightarrow> bool"
+  where "fun_interp_single_wf_2(n_ty_params, args_ty, ret_ty) f =
          (\<forall>ts vs v. (f ts vs = Some v \<longrightarrow> 
-                       (type_of_val A v = instantiate ts ret_ty \<and>
+                       (type_of_val v = instantiate ts ret_ty \<and>
                         length ts = n_ty_params \<and> list_all closed ts \<and> 
-                        map (type_of_val A) vs = map (instantiate ts) args_ty))  )"
+                        map type_of_val vs = map (instantiate ts) args_ty))  )"
          
 
-definition fun_interp_wf :: "'a absval_ty_fun \<Rightarrow> fdecls \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> bool"
-  where "fun_interp_wf A fds \<gamma>_interp = 
+definition fun_interp_wf :: "fdecls \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> bool"
+  where "fun_interp_wf fds \<gamma>_interp = 
             (\<forall>fn fd. map_of fds fn = Some fd \<longrightarrow> 
-                  (\<exists>f. \<gamma>_interp fn = Some f \<and> fun_interp_single_wf A fd f \<and> fun_interp_single_wf_2 A fd f))"
+                  (\<exists>f. \<gamma>_interp fn = Some f \<and> fun_interp_single_wf fd f \<and> fun_interp_single_wf_2 fd f))"
 
-definition state_typ_wf :: "'a absval_ty_fun \<Rightarrow> rtype_env \<Rightarrow> ('a, 'k) named_state \<Rightarrow> vdecls \<Rightarrow> bool"
-  where "state_typ_wf A \<Omega> ns vs = 
+definition state_typ_wf :: "rtype_env \<Rightarrow> ('a, 'k) named_state \<Rightarrow> vdecls \<Rightarrow> bool"
+  where "state_typ_wf \<Omega> ns vs = 
            (\<forall> v t. lookup_vdecls_ty vs v = Some t  \<longrightarrow> 
-                          Option.map_option (\<lambda>v. type_of_val A v) (ns(v)) = (Some (instantiate \<Omega> t)))"
+                          Option.map_option (\<lambda>v. type_of_val v) (ns(v)) = (Some (instantiate \<Omega> t)))"
 
 lemma state_typ_wf_lookup:
-  assumes S1: "state_typ_wf A \<Omega> (local_state ns) (snd \<Lambda>)" and 
-          S2: "state_typ_wf A \<Omega> (global_state ns) (fst \<Lambda>)" and
+  assumes S1: "state_typ_wf \<Omega> (local_state ns) (snd \<Lambda>)" and 
+          S2: "state_typ_wf \<Omega> (global_state ns) (fst \<Lambda>)" and
           Lookup: "lookup_var_ty \<Lambda> x = Some \<tau>"
-        shows "\<exists>v. lookup_var \<Lambda> ns x = Some v \<and> type_of_val A v = instantiate \<Omega> \<tau>"
+        shows "\<exists>v. lookup_var \<Lambda> ns x = Some v \<and> type_of_val v = instantiate \<Omega> \<tau>"
 proof -
   from Lookup have "lookup_vdecls_ty (snd \<Lambda>) x = Some \<tau> \<or> (map_of (snd \<Lambda>) x = None \<and> lookup_vdecls_ty (fst \<Lambda>) x = Some \<tau>)"
     unfolding lookup_var_ty_def lookup_vdecls_ty_def
@@ -687,14 +691,14 @@ proof -
   thus ?thesis
   proof (rule disjE)
     assume A1:"lookup_vdecls_ty (snd \<Lambda>) x = Some \<tau>"
-    with S1 obtain v where "(local_state ns) x = Some v" and "type_of_val A v = instantiate \<Omega> \<tau>"      
+    with S1 obtain v where "(local_state ns) x = Some v" and "type_of_val v = instantiate \<Omega> \<tau>"      
       using state_typ_wf_def 
-      by blast      
+      by blast
     thus ?thesis using Lookup lookup_var_local
       by (metis (no_types, lifting) A1 lookup_vdecls_ty_def map_option_eq_Some prod.collapse) 
   next
     assume A2:"map_of (snd \<Lambda>) x = None \<and> lookup_vdecls_ty (fst \<Lambda>) x = Some \<tau>"
-    with S2 obtain v where "(global_state ns) x = Some v" and "type_of_val A v = instantiate \<Omega> \<tau>"
+    with S2 obtain v where "(global_state ns) x = Some v" and "type_of_val v = instantiate \<Omega> \<tau>"
       using state_typ_wf_def by blast
     thus ?thesis using Lookup A2 lookup_var_global
       by (metis A2 prod.exhaust_sel)
@@ -704,23 +708,23 @@ qed
 subsection \<open>Procedure Correctness\<close>
 
 definition valid_configuration 
-  where "valid_configuration A \<Lambda> \<Gamma> \<Omega> MI posts m' s' \<equiv> 
+  where "valid_configuration \<Lambda> \<Gamma> \<Omega> posts m' s' \<equiv> 
          s' \<noteq> Failure \<and> 
-         (is_final_config (m',s') \<longrightarrow> (\<forall>ns'. s' = Normal ns' \<longrightarrow> expr_all_sat A \<Lambda> \<Gamma> \<Omega> MI ns' posts))"
+         (is_final_config (m',s') \<longrightarrow> (\<forall>ns'. s' = Normal ns' \<longrightarrow> expr_all_sat \<Lambda> \<Gamma> \<Omega> ns' posts))"
 
-definition proc_body_satisfies_spec :: "'a absval_ty_fun \<Rightarrow> mbodyCFG proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> ('a, 'k) map_interface \<Rightarrow> expr list \<Rightarrow> expr list \<Rightarrow> mbodyCFG \<Rightarrow> ('a, 'k) nstate \<Rightarrow> bool"
-  where "proc_body_satisfies_spec A M \<Lambda> \<Gamma> \<Omega> MI pres posts mbody ns \<equiv>
-         expr_all_sat A \<Lambda> \<Gamma> \<Omega> MI ns pres \<longrightarrow> 
-          (\<forall> m' s'. (A, M, \<Lambda>, \<Gamma>, \<Omega>, mbody \<turnstile> (Inl (entry(mbody)), Normal ns) -n\<rightarrow>* (m',s')) \<longrightarrow> 
-                    valid_configuration A \<Lambda> \<Gamma> \<Omega> MI posts m' s')
+definition proc_body_satisfies_spec :: "mbodyCFG proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> expr list \<Rightarrow> expr list \<Rightarrow> mbodyCFG \<Rightarrow> ('a, 'k) nstate \<Rightarrow> bool"
+  where "proc_body_satisfies_spec M \<Lambda> \<Gamma> \<Omega> pres posts mbody ns \<equiv>
+         expr_all_sat \<Lambda> \<Gamma> \<Omega> ns pres \<longrightarrow> 
+          (\<forall> m' s'. ( M, \<Lambda>, \<Gamma>, \<Omega>, mbody \<turnstile> (Inl (entry(mbody)), Normal ns) -n\<rightarrow>* (m',s')) \<longrightarrow> 
+                    valid_configuration \<Lambda> \<Gamma> \<Omega> posts m' s')
       "
 
 text \<open>\<^term>\<open>proc_body_satisfies_spec\<close> states when a procedure's CFG is correct w.r.t. postconditions \<^term>\<open>posts\<close> 
 under the assumption of preconditions \<^term>\<open>pres\<close>. To add support for where-clauses, one would need to 
 add an additional assumption here (proof generation does not support where-clauses currently).\<close>
 
-definition axioms_sat :: "'a absval_ty_fun \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> ('a, 'k) map_interface \<Rightarrow> ('a, 'k) nstate \<Rightarrow> axiom list \<Rightarrow> bool"
-  where "axioms_sat A \<Lambda> \<Gamma> MI n_s as = list_all (expr_sat A \<Lambda> \<Gamma> [] MI n_s) as"
+definition axioms_sat :: "var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> ('a, 'k) nstate \<Rightarrow> axiom list \<Rightarrow> bool"
+  where "axioms_sat \<Lambda> \<Gamma> n_s as = list_all (expr_sat \<Lambda> \<Gamma> [] n_s) as"
 
 definition state_restriction :: "('a, 'k) named_state \<Rightarrow> vdecls \<Rightarrow> ('a, 'k) named_state"
   where "state_restriction ns_orig vs x = 
@@ -730,8 +734,8 @@ definition nstate_global_restriction :: "('a, 'k) nstate \<Rightarrow> vdecls \<
   where "nstate_global_restriction ns vs = global_to_nstate (state_restriction (global_state ns) vs)"
 
 abbreviation axiom_assm
-  where "axiom_assm A \<Gamma> MI consts ns axioms \<equiv> 
-     (axioms_sat A (consts, []) \<Gamma> MI (nstate_global_restriction ns consts) axioms)"
+  where "axiom_assm \<Gamma> consts ns axioms \<equiv> 
+     (axioms_sat(consts, []) \<Gamma>(nstate_global_restriction ns consts) axioms)"
 
 text \<open>The following condition specifies what must hold for the list of constants with a unique modifier.
       The condition states that all corresponding values in the state must be distinct. Note that constants
@@ -745,23 +749,23 @@ text \<open>The following condition specifies what must hold for the list of con
 definition unique_constants_distinct :: "('a, 'k) named_state \<Rightarrow> vname list \<Rightarrow> bool"
   where "unique_constants_distinct ns xs \<longleftrightarrow> distinct (map (\<lambda>x. the (ns x)) xs)"
 
-fun proc_is_correct :: "'a absval_ty_fun \<Rightarrow> fdecls \<Rightarrow> vdecls \<Rightarrow> vname list \<Rightarrow> vdecls \<Rightarrow> axiom list \<Rightarrow> 'struct_ty2 procedure \<Rightarrow> ('a, 'k) map_interface \<Rightarrow>
-                       ('a absval_ty_fun \<Rightarrow> 'struct_ty proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> ('a, 'k) map_interface \<Rightarrow> expr list \<Rightarrow> expr list \<Rightarrow> 'struct_ty2 \<Rightarrow> ('a, 'k) nstate \<Rightarrow> bool) \<Rightarrow>
+fun proc_is_correct :: "fdecls \<Rightarrow> vdecls \<Rightarrow> vname list \<Rightarrow> vdecls \<Rightarrow> axiom list \<Rightarrow> 'struct_ty2 procedure \<Rightarrow>
+                       ('struct_ty proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> expr list \<Rightarrow> expr list \<Rightarrow> 'struct_ty2 \<Rightarrow> ('a, 'k) nstate \<Rightarrow> bool) \<Rightarrow>
                          bool"
   where 
-    "proc_is_correct A fun_decls constants unique_consts global_vars axioms proc MI proc_body_satisfies_spec_general =  
+    "proc_is_correct fun_decls constants unique_consts global_vars axioms proc proc_body_satisfies_spec_general =  
       (case proc_body(proc) of
         Some (locals, struct) \<Rightarrow> 
-          ( ( (\<forall>t. closed t \<longrightarrow> (\<exists>v. type_of_val A (v :: ('a, 'k) val) = t)) \<and> (\<forall>v. closed ((type_of_val A)  (v :: ('a, 'k) val))) ) \<longrightarrow>
-          (\<forall> \<Gamma>. fun_interp_wf A fun_decls \<Gamma> \<longrightarrow>
+          ( ( (\<forall>t. closed t \<longrightarrow> (\<exists>v. type_of_val (v :: ('a, 'k) val) = t)) \<and> (\<forall>v. closed (type_of_val (v :: ('a, 'k) val))) ) \<longrightarrow>
+          (\<forall> \<Gamma>. fun_interp_wf fun_decls \<Gamma> \<longrightarrow>
           (
              (\<forall>\<Omega> gs ls. (list_all closed \<Omega> \<and> length \<Omega> = proc_ty_args proc) \<longrightarrow>        
-             (state_typ_wf A \<Omega> gs (constants @ global_vars) \<longrightarrow>
-              state_typ_wf A \<Omega> ls ((proc_args proc)@ (locals @ proc_rets proc)) \<longrightarrow>
+             (state_typ_wf \<Omega> gs (constants @ global_vars) \<longrightarrow>
+              state_typ_wf \<Omega> ls ((proc_args proc)@ (locals @ proc_rets proc)) \<longrightarrow>
               unique_constants_distinct gs unique_consts \<longrightarrow>
-              (axioms_sat A (constants, []) \<Gamma> MI (global_to_nstate (state_restriction gs constants)) axioms) \<longrightarrow>            
+              (axioms_sat (constants, []) \<Gamma> (global_to_nstate (state_restriction gs constants)) axioms) \<longrightarrow>            
               (proc_body_satisfies_spec_general 
-                                        A [] (constants@global_vars, (proc_args proc)@(locals@(proc_rets proc))) \<Gamma> \<Omega> MI
+                                       [] (constants@global_vars, (proc_args proc)@(locals@(proc_rets proc))) \<Gamma> \<Omega>
                                        (proc_all_pres proc) (proc_checked_posts proc) struct
                                        \<lparr>old_global_state = gs, global_state = gs, local_state = ls, binder_state = Map.empty\<rparr> ) )
             )
@@ -769,19 +773,19 @@ fun proc_is_correct :: "'a absval_ty_fun \<Rightarrow> fdecls \<Rightarrow> vdec
       | None \<Rightarrow> True)"
 
 (*
-fun proc_is_correct :: "'a absval_ty_fun \<Rightarrow> fdecls \<Rightarrow> vdecls \<Rightarrow> vdecls \<Rightarrow> axiom list \<Rightarrow> procedure \<Rightarrow> bool"
+fun proc_is_correct :: "fdecls \<Rightarrow> vdecls \<Rightarrow> vdecls \<Rightarrow> axiom list \<Rightarrow> procedure \<Rightarrow> bool"
   where 
-    "proc_is_correct A fun_decls constants global_vars axioms proc =
+    "proc_is_correctfun_decls constants global_vars axioms proc =
       (case proc_body(proc) of
         Some (locals, mCFG) \<Rightarrow>
-          ( ( (\<forall>t. closed t \<longrightarrow> (\<exists>v. type_of_val A (v :: ('a, 'k) val) = t)) \<and> (\<forall>v. closed ((type_of_val A) v)) ) \<longrightarrow>
-          (\<forall> \<Gamma>. fun_interp_wf A fun_decls \<Gamma> \<longrightarrow>
+          ( ( (\<forall>t. closed t \<longrightarrow> (\<exists>v. type_of_val(v :: ('a, 'k) val) = t)) \<and> (\<forall>v. closed ((type_of_val A) v)) ) \<longrightarrow>
+          (\<forall> \<Gamma>. fun_interp_wffun_decls \<Gamma> \<longrightarrow>
           (
              (\<forall>\<Omega> gs ls. (list_all closed \<Omega> \<and> length \<Omega> = proc_ty_args proc) \<longrightarrow>        
-             (state_typ_wf A \<Omega> gs (constants @ global_vars) \<longrightarrow>
-              state_typ_wf A \<Omega> ls ((proc_args proc)@ (locals @ proc_rets proc)) \<longrightarrow>
-              (axioms_sat A (constants, []) \<Gamma> (global_to_nstate (state_restriction gs constants)) axioms) \<longrightarrow>            
-              proc_body_satisfies_spec A [] (constants@global_vars, (proc_args proc)@(locals@(proc_rets proc))) \<Gamma> \<Omega> 
+             (state_typ_wf\<Omega> gs (constants @ global_vars) \<longrightarrow>
+              state_typ_wf\<Omega> ls ((proc_args proc)@ (locals @ proc_rets proc)) \<longrightarrow>
+              (axioms_sat(constants, []) \<Gamma> (global_to_nstate (state_restriction gs constants)) axioms) \<longrightarrow>            
+              proc_body_satisfies_spec[] (constants@global_vars, (proc_args proc)@(locals@(proc_rets proc))) \<Gamma> \<Omega> 
                                        (proc_all_pres proc) (proc_checked_posts proc) mCFG 
                                        \<lparr>old_global_state = gs, global_state = gs, local_state = ls, binder_state = Map.empty\<rparr> )
             )
@@ -789,7 +793,7 @@ fun proc_is_correct :: "'a absval_ty_fun \<Rightarrow> fdecls \<Rightarrow> vdec
       | None \<Rightarrow> True)"
 *)
 
-text \<open>\<^term>\<open>proc_is_correct A fun_decls constants unique_consts global_vars axioms proc MI proc_body_satisfies_spec_general\<close> gives the definition
+text \<open>\<^term>\<open>proc_is_correctfun_decls constants unique_consts global_vars axioms procproc_body_satisfies_spec_general\<close> gives the definition
 that a procedure \<^term>\<open>proc\<close> is correct w.r.t. the type interpretation \<^term>\<open>A\<close> the function declarations \<open>fun_decls\<close>, 
 constants \<^term>\<open>constants\<close>, global variables \<^term>\<open>global_vars\<close> and Boogie axioms \<^term>\<open>axioms\<close>. 
 \<^term>\<open>unique_consts\<close> denotes the list of constants with a unique modifier.
@@ -798,7 +802,7 @@ Since the current proof generation does not support procedure calls yet, we just
 procedure context to the empty list here. 
 
 In our certificates, we prove 
-\<^prop>\<open>\<And>A. proc_is_correct A fun_decls constants unique_consts global_vars axioms proc MI proc_body_satisfies_spec_general\<close>.
+\<^prop>\<open>\<And>A. proc_is_correctfun_decls constants unique_consts global_vars axioms procproc_body_satisfies_spec_general\<close>.
 That is, we prove procedure correctness for every type interpretation (\<And> is a universal quantifier at 
 the meta level). Note that for certain type interpretations procedure correctness is trivial (see
 the definition of \<^const>\<open>proc_is_correct\<close>).
@@ -809,82 +813,82 @@ subsection \<open>Properties of the semantics\<close>
 text \<open>Expression evaluation is deterministic\<close>
 
 lemma expr_eval_determ: 
-shows "((A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e1, s\<rangle> \<Down> v) \<Longrightarrow> ((A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e1, s\<rangle> \<Down> v') \<Longrightarrow> v = v'))"  
-    and "(A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>es, s\<rangle> [\<Down>] vs) \<Longrightarrow> (A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>es, s\<rangle> [\<Down>] vs') \<Longrightarrow> vs = vs' "
+shows "((\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e1, s\<rangle> \<Down> v) \<Longrightarrow> ((\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e1, s\<rangle> \<Down> v') \<Longrightarrow> v = v'))"  
+    and "(\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>es, s\<rangle> [\<Down>] vs) \<Longrightarrow> (\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>es, s\<rangle> [\<Down>] vs') \<Longrightarrow> vs = vs' "
 proof (induction arbitrary: v' and vs' rule: red_expr_red_exprs.inducts)
-  case (RedVar n_s x v \<Omega> MI)
-  assume "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Var x,n_s\<rangle> \<Down> v'"
+  case (RedVar n_s x v \<Omega>)
+  assume "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Var x,n_s\<rangle> \<Down> v'"
   then show ?case using \<open>lookup_var \<Lambda> n_s x = Some v\<close> by (cases; simp)
 next
-  case (RedBVar n_s i v \<Omega> MI)
+  case (RedBVar n_s i v \<Omega>)
   assume "binder_state n_s i = Some v"
-  assume "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>BVar i,n_s\<rangle> \<Down> v'"
+  assume "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>BVar i,n_s\<rangle> \<Down> v'"
   then show ?case using \<open>binder_state n_s i = Some v\<close> by (cases; simp)
 next
-  case (RedLit \<Omega> MI l n_s)
-  assume "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Lit l,n_s\<rangle> \<Down> v'"
+  case (RedLit \<Omega> l n_s)
+  assume "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Lit l,n_s\<rangle> \<Down> v'"
   then show ?case by (cases; simp)
 next
-  case (RedBinOp \<Omega> MI e1 n_s v1 e2 v2 bop v)
+  case (RedBinOp \<Omega> e1 n_s v1 e2 v2 bop v)
   from RedBinOp.prems show ?case
   proof (cases)
     fix v1' v2'
-    assume "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e1,n_s\<rangle> \<Down> v1'" hence "v1 = v1'" using RedBinOp.IH by simp
-    assume "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e2,n_s\<rangle> \<Down> v2'" hence "v2 = v2'" using RedBinOp.IH by simp
+    assume "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e1,n_s\<rangle> \<Down> v1'" hence "v1 = v1'" using RedBinOp.IH by simp
+    assume "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e2,n_s\<rangle> \<Down> v2'" hence "v2 = v2'" using RedBinOp.IH by simp
     assume "binop_eval_val bop v1' v2' = Some v'"
     with \<open>v1 = v1'\<close> \<open>v2 = v2'\<close> show ?thesis using RedBinOp.hyps by simp
   qed
 next
-  case (RedUnOp \<Omega> MI e n_s v uop v' veval)
+  case (RedUnOp \<Omega> e n_s v uop v' veval)
   from RedUnOp.prems show ?case
   proof (cases)
     fix v2
-    assume "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e,n_s\<rangle> \<Down> v2" hence "v2 = v" using RedUnOp.IH by simp
+    assume "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e,n_s\<rangle> \<Down> v2" hence "v2 = v" using RedUnOp.IH by simp
     assume "unop_eval_val uop v2 = Some veval"
     with \<open>v2 = v\<close> show ?thesis using RedUnOp.hyps by simp
   qed
 next
-  case (RedFunOp f f_interp \<Omega> MI args n_s v_args ty_args v v')
+  case (RedFunOp f f_interp \<Omega> args n_s v_args ty_args v v')
   from RedFunOp.prems show ?case
   proof (cases)
     fix v_args' f_interp'
-    assume "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>args,n_s\<rangle> [\<Down>] v_args'" hence "v_args = v_args'" using RedFunOp.IH by simp
+    assume "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>args,n_s\<rangle> [\<Down>] v_args'" hence "v_args = v_args'" using RedFunOp.IH by simp
     assume "\<Gamma> f = Some f_interp'" hence "f_interp = f_interp'" using RedFunOp.IH by simp
     assume "f_interp' (map (instantiate \<Omega>) ty_args) v_args' = Some v'"
     thus ?case using \<open>v_args = v_args'\<close> \<open>f_interp = f_interp'\<close> using RedFunOp.hyps by simp
   qed
-next
-  case (RedMapSelect \<Omega> MI e1 n_s v1 e2 v2 v)
+next          
+  case (RedMapSelect \<Omega> e1 n_s v1 e2 v2 v)
   from RedMapSelect.prems show ?case
   proof (cases)
     fix v1' v2'
-    assume "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e1,n_s\<rangle> \<Down> v1'" hence "v1 = v1'" using RedMapSelect.IH by simp
-    assume "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e2,n_s\<rangle> \<Down> v2'" hence "v2 = v2'" using RedMapSelect.IH by simp
-    assume "(map_select MI) v1' v2' = v'"
-    with \<open>v1 = v1'\<close> \<open>v2 = v2'\<close> show ?thesis using RedMapSelect.hyps by simp
+    assume "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e1,n_s\<rangle> \<Down> v1'" hence "v1 = v1'" using RedMapSelect.IH by blast
+    assume "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e2,n_s\<rangle> \<Down> v2'" hence "v2 = v2'" using RedMapSelect.IH by blast
+    assume "map_select v1' v2' = v'"
+    with \<open>v1 = v1'\<close> \<open>v2 = v2'\<close> show ?thesis using RedMapSelect.IH by blast
   qed
 next
-  case (RedMapStore \<Omega> MI e1 n_s v1 e2 v2 e3 v3 v)
+  case (RedMapStore \<Omega> e1 n_s v1 e2 v2 e3 v3 v)
   from RedMapStore.prems show ?case
   proof (cases)
     fix v1' v2' v3'
-    assume "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e1,n_s\<rangle> \<Down> v1'" hence "v1 = v1'" using RedMapStore.IH by simp
-    assume "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e2,n_s\<rangle> \<Down> v2'" hence "v2 = v2'" using RedMapStore.IH by simp
-    assume "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e3,n_s\<rangle> \<Down> v3'" hence "v3 = v3'" using RedMapStore.IH by simp
-    assume "(map_store MI) v1' v2' v3'= v'"
-    with \<open>v1 = v1'\<close> \<open>v2 = v2'\<close> \<open>v3 = v3'\<close> show ?thesis using RedMapStore.hyps by simp
+    assume "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e1,n_s\<rangle> \<Down> v1'" hence "v1 = v1'" using RedMapStore.IH by blast
+    assume "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e2,n_s\<rangle> \<Down> v2'" hence "v2 = v2'" using RedMapStore.IH by blast
+    assume "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e3,n_s\<rangle> \<Down> v3'" hence "v3 = v3'" using RedMapStore.IH by blast
+    assume "map_store v1' v2' v3'= v'"
+    with \<open>v1 = v1'\<close> \<open>v2 = v2'\<close> \<open>v3 = v3'\<close> show ?thesis using RedMapStore.IH by blast
   qed
 next
   case (RedExpListNil n_s vs')
   thus ?case by (cases; simp)
 next
-  case (RedExpListCons \<Omega> MI e n_s v es vs' vs'')
-  assume "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e # es,n_s\<rangle> [\<Down>] vs''"
+  case (RedExpListCons \<Omega> e n_s v es vs' vs'')
+  assume "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e # es,n_s\<rangle> [\<Down>] vs''"
   thus ?case 
   proof cases
     fix w ws      
-    assume "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e,n_s\<rangle> \<Down> w" hence "v = w" using RedExpListCons.IH by simp
-    assume "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>es,n_s\<rangle> [\<Down>] ws" hence "ws = vs'" using RedExpListCons.IH by simp  
+    assume "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e,n_s\<rangle> \<Down> w" hence "v = w" using RedExpListCons.IH by simp
+    assume "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>es,n_s\<rangle> [\<Down>] ws" hence "ws = vs'" using RedExpListCons.IH by simp  
     moreover assume "vs'' = w # ws"
     ultimately show ?thesis using \<open>v = w\<close>  by simp
   qed
@@ -927,11 +931,11 @@ next
   thus ?case by (blast elim: red_expr.cases)    
 qed
 
-lemma red_exprs_length: "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>es, n_s\<rangle> [\<Down>] vs \<Longrightarrow> length es = length vs"
+lemma red_exprs_length: "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>es, n_s\<rangle> [\<Down>] vs \<Longrightarrow> length es = length vs"
   by (induction vs arbitrary: es; erule red_exprs.cases; simp)
    
 lemma step_nil_same:
-  assumes A1: "A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>[], s\<rangle> [\<rightarrow>] s''"
+  assumes A1: "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>[], s\<rangle> [\<rightarrow>] s''"
   shows "s = s''"
 proof -
   from A1 show ?thesis by (cases; auto)
@@ -939,20 +943,20 @@ qed
 
 lemma no_out_edges_return:
   assumes 
-    A1: "A,M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile> (Inl n,s) -n\<rightarrow> (Inl n', s')" and 
+    A1: "M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile> (Inl n,s) -n\<rightarrow> (Inl n', s')" and 
     A2: "(out_edges(G) ! n) = []"
   shows False
   using A1 A2 
   by (simp add: red_cfg.simps member_rec(2)) 
 
 lemma magic_stays_cmd:
-  assumes "A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>c, Magic\<rangle> \<rightarrow> s'"
+  assumes "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>c, Magic\<rangle> \<rightarrow> s'"
   shows "s' = Magic"
   using assms
   by (cases rule: red_cmd.cases)
 
 lemma magic_stays_cmd_list_aux:
-  assumes "A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>cs, s\<rangle> [\<rightarrow>] s'" and "s = Magic"
+  assumes "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs, s\<rangle> [\<rightarrow>] s'" and "s = Magic"
   shows   "s' = Magic"
   using assms
 proof (induct rule: red_cmd_list.induct)
@@ -964,22 +968,22 @@ next
 qed
 
 lemma magic_stays_cmd_list:
-  assumes "A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>cs, Magic\<rangle> [\<rightarrow>] s'"
+  assumes "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs, Magic\<rangle> [\<rightarrow>] s'"
   shows "s' = Magic"
   using assms
   by (simp add: magic_stays_cmd_list_aux)
 
-lemma magic_red_cmd_list: "A,M,\<Lambda>',\<Gamma>,\<Omega>,MI \<turnstile> \<langle>cs,Magic\<rangle> [\<rightarrow>] Magic"
+lemma magic_red_cmd_list: "M,\<Lambda>',\<Gamma>,\<Omega> \<turnstile> \<langle>cs,Magic\<rangle> [\<rightarrow>] Magic"
   by (induction cs) (auto intro: red_cmd_list.intros RedPropagateMagic)
 
 lemma failure_stays_cmd:
-  assumes "A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>c, Failure\<rangle> \<rightarrow> s'"
+  assumes "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>c, Failure\<rangle> \<rightarrow> s'"
   shows "s' = Failure"
   using assms
   by (cases rule: red_cmd.cases)
 
 lemma failure_stays_cmd_list_aux:
-  assumes "A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>cs, s\<rangle> [\<rightarrow>] s'" and "s = Failure"
+  assumes "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs, s\<rangle> [\<rightarrow>] s'" and "s = Failure"
   shows   "s' = Failure"
   using assms
 proof (induct rule: red_cmd_list.induct)
@@ -991,16 +995,16 @@ next
 qed
 
 lemma failure_stays_cmd_list:
-  assumes "A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>cs, Failure\<rangle> [\<rightarrow>] s'"
+  assumes "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs, Failure\<rangle> [\<rightarrow>] s'"
   shows "s' = Failure"
   using assms
   by (simp add: failure_stays_cmd_list_aux)
 
-lemma failure_red_cmd_list: "A,M,\<Lambda>',\<Gamma>,\<Omega>,MI \<turnstile> \<langle>cs,Failure\<rangle> [\<rightarrow>] Failure"
+lemma failure_red_cmd_list: "M,\<Lambda>',\<Gamma>,\<Omega> \<turnstile> \<langle>cs,Failure\<rangle> [\<rightarrow>] Failure"
   by (induction cs) (auto intro: red_cmd_list.intros RedPropagateFailure)
 
 lemma finished_remains: 
-  assumes "A,M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile> (Inr (), s) -n\<rightarrow>* (m',n')"
+  assumes "M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile> (Inr (), s) -n\<rightarrow>* (m',n')"
   shows "(m',n') = (Inr(), s)"
   using assms
 proof (induction rule: rtranclp_induct2)
@@ -1013,8 +1017,8 @@ next
 qed
 
 lemma forall_red:
-  assumes "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Forall ty e, n_s\<rangle> \<Down> v"
-  shows "\<exists>b. (v = LitV (LBool b)) \<and> (b = (\<forall>v'. type_of_val A (map_type MI) v' = (instantiate \<Omega> ty) \<longrightarrow> A, \<Lambda>, \<Gamma>, \<Omega>, MI \<turnstile> \<langle>e, full_ext_env n_s v'\<rangle> \<Down> LitV (LBool True)))"
+  assumes "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Forall ty e, n_s\<rangle> \<Down> v"
+  shows "\<exists>b. (v = LitV (LBool b)) \<and> (b = (\<forall>v'. type_of_val v' = (instantiate \<Omega> ty) \<longrightarrow>  \<Lambda>, \<Gamma>, \<Omega> \<turnstile> \<langle>e, full_ext_env n_s v'\<rangle> \<Down> LitV (LBool True)))"
   using assms
 proof (cases)
   case RedForAllTrue
@@ -1026,8 +1030,8 @@ next
 qed
 
 lemma exists_red:
-  assumes "A, \<Lambda>, \<Gamma>, \<Omega>, MI \<turnstile> \<langle>Exists ty e, n_s\<rangle> \<Down> v"
-  shows "\<exists>b. (v = LitV (LBool b)) \<and> (b = (\<exists>v'. (type_of_val A (map_type MI) v' = (instantiate \<Omega> ty)) \<and> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e, full_ext_env n_s v'\<rangle> \<Down> LitV (LBool True)))"
+  assumes " \<Lambda>, \<Gamma>, \<Omega> \<turnstile> \<langle>Exists ty e, n_s\<rangle> \<Down> v"
+  shows "\<exists>b. (v = LitV (LBool b)) \<and> (b = (\<exists>v'. (type_of_val v' = (instantiate \<Omega> ty)) \<and> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, full_ext_env n_s v'\<rangle> \<Down> LitV (LBool True)))"
   using assms
 proof (cases)
   case RedExistsTrue
@@ -1040,16 +1044,18 @@ qed
 
 (* TODO: make more precise *)
 lemma forallt_red_bool:
-  assumes "A, \<Lambda>, \<Gamma>, \<Omega>, MI \<turnstile> \<langle>ForallT e, n_s\<rangle> \<Down> v"
+  assumes " \<Lambda>, \<Gamma>, \<Omega> \<turnstile> \<langle>ForallT e, n_s\<rangle> \<Down> v"
   shows "\<exists>b. (v = LitV (LBool b))"
   using assms
   by (cases; auto)
 
 (* TODO: make more precise *)
 lemma existst_red_bool:
-  assumes "A, \<Lambda>, \<Gamma>, \<Omega>, MI \<turnstile> \<langle>ExistsT e, n_s\<rangle> \<Down> v"
+  assumes " \<Lambda>, \<Gamma>, \<Omega> \<turnstile> \<langle>ExistsT e, n_s\<rangle> \<Down> v"
   shows "\<exists>b. (v = LitV (LBool b))"
   using assms
   by (cases; auto)
+
+end  (* locale semantics = fixes map_select, map_store *)
 
 end
