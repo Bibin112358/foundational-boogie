@@ -14,37 +14,27 @@ abstract values (values that have a type constructed via type constructors)
 TODO: explain Map Values
 \<close>
 datatype ('a, 'm) val = LitV lit | AbsV (the_absv: 'a)
-  | MapV 'm | NoneV
+  | MapV 'm
 
 abbreviation IntV where "IntV i \<equiv> LitV (LInt i)"
 abbreviation BoolV where "BoolV b \<equiv> LitV (LBool b)"
 abbreviation RealV where "RealV r \<equiv> LitV (LReal r)"
 
-primrec down :: "('a, _) val \<rightharpoonup> ('a, _) val" where
-    "down (MapV _ _ m) = (case m of Inr k \<Rightarrow> Some k | _ \<Rightarrow> None)"
-  | "down (LitV v) = Some (LitV v)"
-  | "down (AbsV v) = Some (AbsV v)"
-
-primrec up :: "('a, _) val \<Rightarrow> ('a, _) val" where
-    "up (MapV tk tv m) = (MapV tk tv (Inr (MapV tk tv m)))"
-  | "up (LitV v) = LitV v"
-  | "up (AbsV v) = AbsV v"
-
-record ('a, 'k) map_interface =
-  map_select :: "('a, 'k) val \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) val"
-  map_store :: "('a, 'k) val \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) val"
-  map_type :: "'k \<Rightarrow> ty"
+record ('a, 'm) map_interface =
+  map_select :: "('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
+  map_store :: "('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
+  map_type :: "'m \<Rightarrow> (ty \<times> ty)"
 
 
 primrec is_lit_val :: "('a, 'k) val \<Rightarrow> bool"
   where 
     "is_lit_val (LitV _) = True"
   | "is_lit_val (AbsV _) = False"
-  | "is_lit_val (MapV _ _ _ _) = False"
+  | "is_lit_val (MapV _) = False"
 
 lemma lit_val_elim:
  "\<lbrakk> \<And>b. v = BoolV b \<Longrightarrow> P; \<And>i. v = IntV i \<Longrightarrow> P; \<And>r. v = RealV r \<Longrightarrow> P; \<And> a. v = AbsV a \<Longrightarrow> P;
-    \<And>kt vt mv kv. v = MapV kt vt mv kv \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+    \<And>m. v = MapV m \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
   by (metis lit.exhaust val.exhaust)
 
 text \<open>We differentiate between DeBruijn variables (used for bound variales) and named variables. When we open 
@@ -420,12 +410,11 @@ Each value of the abstract carrier type must be mapped to a corresponding type (
 type constructor).\<close>
 type_synonym 'a absval_ty_fun = "'a \<Rightarrow> (tcon_id \<times> ty list)"
 
-fun type_of_val :: "'a absval_ty_fun \<Rightarrow> ('a, 'k) map_interface \<Rightarrow> ('a, 'k) val \<Rightarrow> ty"
+fun type_of_val :: "'a absval_ty_fun \<Rightarrow> ('m \<Rightarrow> (ty \<times> ty)) \<Rightarrow> ('a, 'm) val \<Rightarrow> ty"
   where
    "type_of_val A _ (LitV v) = TPrim (type_of_lit v)"
  | "type_of_val A _ (AbsV v) = TCon (fst (A v)) (snd (A v))"
- | "type_of_val _ _ NoneV = TNone"
- | "type_of_val _ MI (MapV v) = (map_type MI) v"
+ | "type_of_val _ M (MapV v) = TMap (fst (M v)) (snd (M v))"
 
 type_synonym rtype_env = "ty list"
 
@@ -435,8 +424,7 @@ fun instantiate :: "rtype_env \<Rightarrow> ty \<Rightarrow> ty"
     "instantiate \<Omega> (TVar i) = (if i < length \<Omega> then \<Omega> ! i else TVar i)"
   | "instantiate \<Omega> (TPrim p) = (TPrim p)"
   | "instantiate \<Omega> (TCon tcon_id ty_args) = (TCon tcon_id (map (instantiate \<Omega>) ty_args))"
-  (*| "instantiate \<Omega> (TMap ty_keys ty_val) = (TMap ty_keys ty_val)"*)
-  | "instantiate \<Omega> (TMap ty_keys ty_val) = (TMap (map (instantiate \<Omega>) ty_keys) (instantiate \<Omega> ty_val))"
+  | "instantiate \<Omega> (TMap ty_key ty_val) = (TMap (instantiate \<Omega> ty_key) (instantiate \<Omega> ty_val))"
 
 lemma instantiate_nil [simp]: "instantiate [] \<tau> = \<tau>"
   by (induction \<tau>) (simp_all add: map_idI)
@@ -464,12 +452,12 @@ inductive red_expr :: "'a absval_ty_fun \<Rightarrow> var_context \<Rightarrow> 
              A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle> FunExp f ty_args args, n_s \<rangle> \<Down> v"
   | RedMapSelect: "\<lbrakk> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e1, n_s\<rangle> \<Down> v1;
                 A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e2, n_s\<rangle> \<Down> v2;
-                (map_select MI) v1 v2 = Some v\<rbrakk> \<Longrightarrow>
+                (map_select MI) v1 v2 = v\<rbrakk> \<Longrightarrow>
              A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle> MapSelect e1 e2, n_s \<rangle> \<Down> v"
   | RedMapStore: "\<lbrakk> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e1, n_s\<rangle> \<Down> v1;
                 A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e2, n_s\<rangle> \<Down> v2;
                 A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e3, n_s\<rangle> \<Down> v3;
-                (map_store MI) v1 v2 v3 = Some v\<rbrakk> \<Longrightarrow>
+                (map_store MI) v1 v2 v3 = v\<rbrakk> \<Longrightarrow>
              A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle> MapStore e1 e2 e3, n_s \<rangle> \<Down> v"
   | RedCondExpTrue: 
                "\<lbrakk> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>cond, n_s\<rangle> \<Down> (BoolV True); 
@@ -488,16 +476,16 @@ inductive red_expr :: "'a absval_ty_fun \<Rightarrow> var_context \<Rightarrow> 
       A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>(e # es), n_s\<rangle> [\<Down>] (v # vs)"
 (* value quantification rules *)
   | RedForAllTrue:
-    "\<lbrakk>\<And>v. type_of_val A v = (instantiate \<Omega> ty) \<Longrightarrow> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e, full_ext_env n_s v\<rangle> \<Down> LitV (LBool True) \<rbrakk> \<Longrightarrow> 
+    "\<lbrakk>\<And>v. type_of_val A (map_type MI) v = (instantiate \<Omega> ty) \<Longrightarrow> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e, full_ext_env n_s v\<rangle> \<Down> LitV (LBool True) \<rbrakk> \<Longrightarrow> 
      A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Forall ty e, n_s\<rangle> \<Down> LitV (LBool True)"
   | RedForAllFalse:
-    "\<lbrakk>type_of_val A v = instantiate \<Omega> ty; A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e, full_ext_env n_s v\<rangle> \<Down> LitV (LBool False) \<rbrakk> \<Longrightarrow> 
+    "\<lbrakk>type_of_val A (map_type MI) v = instantiate \<Omega> ty; A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e, full_ext_env n_s v\<rangle> \<Down> LitV (LBool False) \<rbrakk> \<Longrightarrow> 
      A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Forall ty e, n_s\<rangle> \<Down> LitV (LBool False)"
   | RedExistsTrue:
-    "\<lbrakk>type_of_val A v = instantiate \<Omega> ty; A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e, full_ext_env n_s v\<rangle> \<Down> LitV (LBool True) \<rbrakk> \<Longrightarrow>
+    "\<lbrakk>type_of_val A (map_type MI) v = instantiate \<Omega> ty; A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e, full_ext_env n_s v\<rangle> \<Down> LitV (LBool True) \<rbrakk> \<Longrightarrow>
      A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Exists ty e, n_s\<rangle> \<Down> LitV (LBool True)"
   | RedExistsFalse:
-    "\<lbrakk>\<And>v. type_of_val A v = instantiate \<Omega> ty \<Longrightarrow> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e, full_ext_env n_s v\<rangle> \<Down> LitV (LBool False) \<rbrakk> \<Longrightarrow>
+    "\<lbrakk>\<And>v. type_of_val A (map_type MI) v = instantiate \<Omega> ty \<Longrightarrow> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e, full_ext_env n_s v\<rangle> \<Down> LitV (LBool False) \<rbrakk> \<Longrightarrow>
      A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Exists ty e, n_s\<rangle> \<Down> LitV (LBool False)"
 (* type quantification rules *)
   | RedForallT_True:
@@ -570,15 +558,15 @@ inductive red_cmd :: "'a absval_ty_fun \<Rightarrow> 'm proc_context \<Rightarro
                 A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Assume e, Normal n_s\<rangle> \<rightarrow> Normal n_s"
   | RedAssumeMagic: "\<lbrakk> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool False) \<rbrakk> \<Longrightarrow> 
                 A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Assume e, Normal n_s\<rangle> \<rightarrow> Magic"
-  | RedAssign: "\<lbrakk> lookup_var_ty \<Lambda> x = Some ty; type_of_val A v = instantiate \<Omega> ty; 
+  | RedAssign: "\<lbrakk> lookup_var_ty \<Lambda> x = Some ty; type_of_val A (map_type MI) v = instantiate \<Omega> ty; 
                   A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e, n_s\<rangle> \<Down> v \<rbrakk> \<Longrightarrow>
                A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Assign x e, Normal n_s\<rangle> \<rightarrow>  Normal (update_var \<Lambda> n_s x v)"
   | RedHavocNormal: "\<lbrakk> lookup_var_decl \<Lambda> x = Some (ty,w); 
-                 type_of_val A v = instantiate \<Omega> ty;
+                 type_of_val A (map_type MI) v = instantiate \<Omega> ty;
                  \<And>cond. w = Some cond \<Longrightarrow> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>cond, (update_var \<Lambda> n_s x v)\<rangle> \<Down> BoolV True \<rbrakk> \<Longrightarrow>
                  A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Havoc x, Normal n_s\<rangle> \<rightarrow> Normal (update_var \<Lambda> n_s x v)"
   | RedHavocMagic: "\<lbrakk> lookup_var_decl \<Lambda> x = Some (ty,Some(cond)); 
-                 type_of_val A v = instantiate \<Omega> ty;
+                 type_of_val A (map_type MI) v = instantiate \<Omega> ty;
                  A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>cond, (update_var \<Lambda> n_s x v)\<rangle> \<Down> BoolV False \<rbrakk> \<Longrightarrow>
                  A,M,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Havoc x, Normal n_s\<rangle> \<rightarrow> Magic"
 (* TODO: where clauses for return variables *)
@@ -587,8 +575,8 @@ inductive red_cmd :: "'a absval_ty_fun \<Rightarrow> 'm proc_context \<Rightarro
       pre_ls = Map.empty( (map fst (proc_args msig )) [\<mapsto>] v_args  ) ;
       expr_all_sat A (fst \<Lambda>, proc_args msig) \<Gamma> \<Omega> MI (n_s\<lparr>local_state := new_ls\<rparr>) (proc_checked_pres msig);
       map (lookup_vdecls_ty (fst \<Lambda>)) (proc_modifs msig) = map Some ty_modifs;  
-      map (type_of_val A) vs_modifs = map (instantiate \<Omega>) ty_modifs;
-      map (type_of_val A) vs_ret = map (fst \<circ> snd) (proc_rets msig);      
+      map (type_of_val A (map_type MI)) vs_modifs = map (instantiate \<Omega>) ty_modifs;
+      map (type_of_val A (map_type MI)) vs_ret = map (fst \<circ> snd) (proc_rets msig);      
       post_ls = pre_ls((map fst (proc_rets msig)) [\<mapsto>] vs_ret);
       post_gs = (global_state n_s)((proc_modifs msig) [\<mapsto>] vs_modifs);
       post_state = \<lparr>old_global_state = global_state n_s, global_state = post_gs, local_state = post_ls, binder_state = Map.empty\<rparr>;
@@ -664,7 +652,7 @@ fun fun_interp_single_wf :: "'a absval_ty_fun \<Rightarrow> nat \<times> ty list
   where "fun_interp_single_wf A (n_ty_params, args_ty, ret_ty) f =
          (\<forall> ts. (length ts = n_ty_params \<and> list_all closed ts) \<longrightarrow>  
                (\<forall> vs. length vs = length args_ty \<and>
-                      map (type_of_val A) vs = (map (instantiate ts) args_ty) \<longrightarrow> 
+                      map (type_of_val A (map_type MI)) vs = (map (instantiate ts) args_ty) \<longrightarrow> 
                         ((\<exists>v. f ts vs = Some v \<and> type_of_val A v = (instantiate ts ret_ty)))))
  "
 
@@ -872,7 +860,7 @@ next
     fix v1' v2'
     assume "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e1,n_s\<rangle> \<Down> v1'" hence "v1 = v1'" using RedMapSelect.IH by simp
     assume "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e2,n_s\<rangle> \<Down> v2'" hence "v2 = v2'" using RedMapSelect.IH by simp
-    assume "(map_select MI) v1' v2' = Some v'"
+    assume "(map_select MI) v1' v2' = v'"
     with \<open>v1 = v1'\<close> \<open>v2 = v2'\<close> show ?thesis using RedMapSelect.hyps by simp
   qed
 next
@@ -883,7 +871,7 @@ next
     assume "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e1,n_s\<rangle> \<Down> v1'" hence "v1 = v1'" using RedMapStore.IH by simp
     assume "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e2,n_s\<rangle> \<Down> v2'" hence "v2 = v2'" using RedMapStore.IH by simp
     assume "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e3,n_s\<rangle> \<Down> v3'" hence "v3 = v3'" using RedMapStore.IH by simp
-    assume "(map_store MI) v1' v2' v3'= Some v'"
+    assume "(map_store MI) v1' v2' v3'= v'"
     with \<open>v1 = v1'\<close> \<open>v2 = v2'\<close> \<open>v3 = v3'\<close> show ?thesis using RedMapStore.hyps by simp
   qed
 next
@@ -1026,7 +1014,7 @@ qed
 
 lemma forall_red:
   assumes "A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>Forall ty e, n_s\<rangle> \<Down> v"
-  shows "\<exists>b. (v = LitV (LBool b)) \<and> (b = (\<forall>v'. type_of_val A v' = (instantiate \<Omega> ty) \<longrightarrow> A, \<Lambda>, \<Gamma>, \<Omega>, MI \<turnstile> \<langle>e, full_ext_env n_s v'\<rangle> \<Down> LitV (LBool True)))"
+  shows "\<exists>b. (v = LitV (LBool b)) \<and> (b = (\<forall>v'. type_of_val A (map_type MI) v' = (instantiate \<Omega> ty) \<longrightarrow> A, \<Lambda>, \<Gamma>, \<Omega>, MI \<turnstile> \<langle>e, full_ext_env n_s v'\<rangle> \<Down> LitV (LBool True)))"
   using assms
 proof (cases)
   case RedForAllTrue
@@ -1039,7 +1027,7 @@ qed
 
 lemma exists_red:
   assumes "A, \<Lambda>, \<Gamma>, \<Omega>, MI \<turnstile> \<langle>Exists ty e, n_s\<rangle> \<Down> v"
-  shows "\<exists>b. (v = LitV (LBool b)) \<and> (b = (\<exists>v'. (type_of_val A v' = (instantiate \<Omega> ty)) \<and> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e, full_ext_env n_s v'\<rangle> \<Down> LitV (LBool True)))"
+  shows "\<exists>b. (v = LitV (LBool b)) \<and> (b = (\<exists>v'. (type_of_val A (map_type MI) v' = (instantiate \<Omega> ty)) \<and> A,\<Lambda>,\<Gamma>,\<Omega>,MI \<turnstile> \<langle>e, full_ext_env n_s v'\<rangle> \<Down> LitV (LBool True)))"
   using assms
 proof (cases)
   case RedExistsTrue

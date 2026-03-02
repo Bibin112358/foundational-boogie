@@ -1,19 +1,13 @@
 section \<open>Instantiation Example for MapV\<close>
 
 theory MapExample
-  imports (* Semantics *) Main HOL.Real
+  imports Semantics (* Main HOL.Real *)
 begin
 
+(*
 subsection \<open>Definitions from other files\<close>
 
-type_synonym fname = string (* function name *)
-type_synonym vname = nat (* variable name, de-bruijn index *)
-type_synonym pname = string (* procedure name *)
-
 datatype lit =  LBool bool  | LInt int | LReal real
-
-datatype binop = Eq | Neq | Add | Sub | Mul | Div | RealDiv | Mod | Lt | Le | Gt | Ge | And | Or | Imp | Iff
-datatype unop = Not | UMinus | IntToReal
 
 datatype prim_ty
  = TBool | TInt | TReal
@@ -56,7 +50,7 @@ fun type_of_val :: "'a absval_ty_fun \<Rightarrow> ('m \<Rightarrow> (ty \<times
    "type_of_val A _ (LitV v) = TPrim (type_of_lit v)"
  | "type_of_val A _ (AbsV v) = TCon (fst (A v)) (snd (A v))"
  | "type_of_val _ M (MapV v) = TMap (fst (M v)) (snd (M v))"
-
+*)
 
 subsection \<open>Type Definition\<close>
 (* user needs to instantiate how many nesting levels to support *)
@@ -732,7 +726,7 @@ proof -
      apply (simp add: assms(4))
     using storePreserveTy ArrayAxUpdate assms apply simp
     apply (smt (z3) ArrayAxUpdate selectImpl.simps storeImpl.simps storePreserveTy
-        val_ty.simps(1)) try
+        val_ty.simps(1))
     by (metis (no_types, opaque_lifting) ArrayAxStable InrrrC0 assms(1,2,3,4,5)
         count_level_map_ty.simps(3) map_level_gt_0 not_one_le_zero storePreserveTy
         toVal3210.simps(2) type_of_val.simps(1) wf.cases)

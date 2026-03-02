@@ -22,8 +22,7 @@ datatype ty
   = TVar nat | (* type variables as de-bruijn indices *)
     TPrim prim_ty | (* primitive types *)
     TCon tcon_id "ty list" (* type constructor *) |
-    TMap ty ty (* maps *) |
-    TNone
+    TMap ty ty (* maps *)
 
 primrec type_of_lit :: "lit \<Rightarrow> prim_ty"
   where 
@@ -161,6 +160,6 @@ primrec closed :: "ty \<Rightarrow> bool"
     "closed (TVar i) = False"
   | "closed (TPrim prim_ty) = True"
   | "closed (TCon tcon_id ty_args) = list_all closed ty_args"
-  | "closed (TMap ty_keys ty_val) = ((closed ty_val) \<and> (list_all closed ty_keys))"
+  | "closed (TMap ty_key ty_val) = ((closed ty_val) \<and> (closed ty_key))"
 
 end
