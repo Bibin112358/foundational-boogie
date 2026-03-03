@@ -1,7 +1,7 @@
 section \<open>Instantiation Example for MapV\<close>
 
 theory MapExample
-  imports Semantics (* Main HOL.Real *)
+  imports Semantics
 begin
 
 (*
@@ -27,9 +27,6 @@ primrec type_of_lit :: "lit \<Rightarrow> prim_ty"
   | "type_of_lit (LReal _) = TReal"
 
 
-datatype ('k, 'p) L =
-  MapVal "'p \<Rightarrow> ('k, 'p) L" "ty \<times> ty" |  MapKey "'k \<Rightarrow> 'p" "ty \<times> ty"
-
 text \<open>The values (and as a result the semantics) are parametrized by the carrier type 'a for the
 abstract values (values that have a type constructed via type constructors)
 TODO: explain Map Values
@@ -53,6 +50,10 @@ fun type_of_val :: "'a absval_ty_fun \<Rightarrow> ('m \<Rightarrow> (ty \<times
 *)
 
 subsection \<open>Type Definition\<close>
+
+datatype ('k, 'p) L =
+  MapVal "'p \<Rightarrow> ('k, 'p) L" "ty \<times> ty" |  MapKey "'k \<Rightarrow> 'p" "ty \<times> ty"
+
 (* user needs to instantiate how many nesting levels to support *)
 
 (* (type::((('a)val) => (closed_ty))) *)
@@ -120,10 +121,7 @@ fun selectImplAux :: "'a val3210 \<Rightarrow> 'a val3210 \<Rightarrow> 'a val32
 fun selectImpl :: "'a valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn" where
   "selectImpl m k = val3ToValn (selectImplAux (toVal3210 m) (toVal3210 k))"
 
-abbreviation example_map :: "('a, 'a val3 + 'a val2 + 'a val1) map_interface" where
-  "example_map \<equiv> \<lparr> map_select = selectImpl, map_store = undefined, map_type = undefined \<rparr>"
-
-lemma "(map_select example_map) mg4 m24 = (MapV (Inr (Inr (MapKey (undefined(IntV 3 := IntV 2)) (TT, TT)))))" by simp
+lemma "selectImpl mg4 m24 = (MapV (Inr (Inr (MapKey (undefined(IntV 3 := IntV 2)) (TT, TT)))))" by simp
 
 
 subsection \<open>Helper Case Distinction\<close>
@@ -148,6 +146,22 @@ fun ty321 :: "'a val3 + 'a val2 + 'a val1 \<Rightarrow> ty \<times> ty" where
     "ty321 (Inr (Inr m)) = tyL m"
   | "ty321 (Inr (Inl m)) = tyL m"
   | "ty321 (Inl m) = tyL m"
+
+type_synonym 'a val321 = "'a val3 + 'a val2 + 'a val1"
+
+instantiation L :: (type, type) mapval begin
+  fun mapval_ty_L where "mapval_ty_L x = tyL x"
+  instance .. end
+
+instantiation sum :: (mapval, mapval) mapval begin
+  primrec mapval_ty_sum :: "'a + 'b \<Rightarrow> ty \<times> ty" where
+      "mapval_ty_sum (Inl x) = mapval_ty x"
+    | "mapval_ty_sum (Inr x) = mapval_ty x"
+  instance .. end
+
+lemma mapval_ty_eq_ty321: "mapval_ty = ty321"
+  apply (rule, rename_tac x)
+  by (case_tac x rule: ty321.cases; simp)
 
 fun key_ty where "key_ty (TMap tk _) = tk" | "key_ty _ = undefined"
 fun val_ty where "val_ty (TMap _ tv) = tv" | "val_ty _ = undefined"
@@ -217,10 +231,8 @@ qed
 
 subsection \<open>Theory dependent on A::"'a absval_ty_fun"\<close>
 
-class absval =
-  fixes avtf :: "'a absval_ty_fun"
 
-abbreviation ty_of_val where "ty_of_val \<equiv> type_of_val avtf ty321"
+abbreviation ty_of_val where "ty_of_val \<equiv> type_of_val"
 
 
 subsection \<open>Store\<close>
@@ -245,12 +257,9 @@ fun storeImpl :: "'a::absval valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn \<
     then val3ToValn (storeImplAux (toVal3210 m) (toVal3210 k) (toVal3210 v))
     else m)"
 
-abbreviation example_map2 :: "('a::absval, 'a val3 + 'a val2 + 'a val1) map_interface" where
-  "example_map2 \<equiv> \<lparr> map_select = selectImpl, map_store = storeImpl, map_type = undefined \<rparr>"
-
 lemma "ty_of_val (LitV (LInt 42)) = TT" by simp
 lemma "val_ty (ty_of_val mg4) = TT" by simp
-lemma "(map_select example_map2) ((map_store example_map2) mg4 m24 (LitV (LInt 42))) m24
+lemma "selectImpl (storeImpl mg4 m24 (LitV (LInt 42))) m24
   = (LitV (LInt 42))" by simp
 
 
@@ -421,15 +430,14 @@ lemma wff:
 proof -
   obtain f where K: "k = MapV (Inr (Inr (MapKey f (TT, TT))))"
     using assms kTMII by auto
-  then have "selectImpl homV k = val3ToValn (Inr (Inr (hof (MapKey f (TT, TT)))))"
+  then have S: "selectImpl homV k = val3ToValn (Inr (Inr (hof (MapKey f (TT, TT)))))"
     by auto
   have "wf_L 1 (MapKey f (TT, TT))" using assms K by simp
   moreover have "ty_of_val (MapV (Inr (Inr (MapKey f (TT, TT))))) = TMII" using assms K by simp
   then show ?thesis
-    using
-      \<open>selectImpl homV k = val3ToValn (Inr (Inr (hof (MapKey f (TT, TT)))))\<close>
-    by (smt (verit) hof.simps(1) select_convs(3) ty321.simps(1) tyL.simps(2) type_of_val.simps(3)
-        val3ToValn.simps(3))
+    using S
+    apply (cases "wf (MapV (Inr (Inr (MapKey (fAdd1 \<circ> f) (TT, TT)))))")
+    by auto
 qed
 
 lemma vhomVwfSelect: "wf (selectImpl homV k)"
@@ -597,7 +605,7 @@ lemma extensionalityAux:
           case (MapVal n'' tn)
           have "tm = tn" using assms(4) 1 MapVal \<open>m' = MapVal m'' tm\<close>
             by (metis \<open>n = Inr (Inr n')\<close> prod.collapse ty.inject(4) ty321.simps(1) tyL.simps(1)
-                type_of_val.simps(3))
+                type_of_val.simps(3) mapval_ty_eq_ty321)
           moreover have "m'' = n''"
           proof (rule ext)
             fix k show "m'' k = n'' k"
@@ -624,7 +632,7 @@ lemma extensionalityAux:
         proof (cases n')
           case (MapKey n'' tn)
           have "tm = tn" using assms(4) 1 MapKey \<open>m' = MapKey m'' tm\<close> ty321.simps(1)
-            by (metis \<open>n = Inr (Inr n')\<close> prod.collapse ty.inject(4) tyL.simps(2) type_of_val.simps(3))
+            by (metis \<open>n = Inr (Inr n')\<close> prod.collapse ty.inject(4) tyL.simps(2) type_of_val.simps(3) mapval_ty_eq_ty321)
           moreover have "m'' = n''"
           proof (rule ext)
             fix k show "m'' k = n'' k"
@@ -796,8 +804,6 @@ lemma StoreClosedUnderWF:
 
 subsection \<open>Try defining wf type\<close>
 
-type_synonym 'a val321 = "'a val3 + 'a val2 + 'a val1"
-
 text \<open>set for well formed inner map values\<close>
 definition wf_map_set :: "'a::absval val321 set" where
   "wf_map_set = {m. wf (MapV m)}"
@@ -817,6 +823,15 @@ proof
   show "(Inr (Inr mAdd1)) \<in> wf_map_set"  (* vAdd1, from earlier, as non-emptiness witness *)
     unfolding wf_map_set_def using wf_vAdd1 by simp
 qed
+
+text \<open>wf maps are mapval\<close>
+instantiation wf_maps :: (type) mapval begin
+  fun mapval_ty_wf_maps where "mapval_ty_wf_maps x = mapval_ty (Rep_wf_maps x)"
+  instance .. end
+
+(* see if it works *)
+lemma "mapval_ty (Abs_wf_maps (Inr (Inr mAdd1))) = (TT, TT)"
+  by (simp add: Abs_wf_maps_inverse wf_map_set_def wf_vAdd1)
 
 text \<open>type for well formed values\<close>
 type_synonym 'a wf_val = "('a, 'a wf_maps) val"
@@ -850,25 +865,19 @@ lemma Ax2_wf_val:
   by (smt (verit, del_insts) ArrayAxStable Rep_wf_maps_inject id_apply
       map_fun_apply val.inj_map_strong wf_select_def wf_store.rep_eq)
 
-text \<open>We can store wf_select in map interface\<close>
-abbreviation MIWF :: "('a::absval, 'a wf_maps) map_interface" where
-  "MIWF \<equiv> \<lparr> map_select = wf_select, map_store = wf_store, map_type = undefined \<rparr>"
-
 
 subsection \<open>Using wf type\<close>
 
 (* the absval_ty_fun using class seems to be fixed to the class *)
-instantiation unit :: absval
-begin
-  definition A_class_unit :: "unit absval_ty_fun" where
-    "A_class_unit x = (''int_con'', [])"
-  instance ..
-end
+instantiation unit :: absval begin
+  fun absval_ty_unit :: "unit \<Rightarrow> (tcon_id \<times> ty list)" where
+    "absval_ty_unit x = (''int_con'', [])"
+  instance .. end
 
-lemma
-  fixes v::"unit wf_val"
-  shows "A_class_unit () = (''int_con'', [])"
-  using A_class_unit_def by blast
+lemma "absval_ty () = (''int_con'', [])" by simp
 
+term red_expr
+interpretation semantics wf_select wf_store .
+term red_expr
 
 end
