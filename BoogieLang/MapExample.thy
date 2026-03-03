@@ -702,6 +702,13 @@ lemma extensionalityMapV:
   by (metis (no_types, lifting) ext extensionalityAux assms(1,2,3,4) selectImpl.simps
       valBij)
 
+lemma extensionalityMapV:
+  assumes "wf (MapV m)"
+  assumes "wf (MapV n)"
+  assumes "ty_of_val (MapV m) = ty_of_val (MapV n)"
+  assumes "\<forall>k. (wf k \<longrightarrow> selectImpl (MapV m) k = selectImpl (MapV n) k)"
+  shows "m = n" oops  (* actually what we want, but not true *)
+
 
 subsection \<open>Select & Store is closed under wf\<close>
 
@@ -765,44 +772,7 @@ lemma storeClosedWf:
   by (smt (verit) storeImpl.simps)
 
 
-subsection \<open>Summary\<close>
-
-abbreviation MI :: "('a::absval, 'a val3 + 'a val2 + 'a val1) map_interface" where
-  "MI \<equiv> \<lparr> map_select = selectImpl, map_store = storeImpl, map_type = ty321 \<rparr>"
-
-
-(* TODO: it does work with avtf, but not with A; I think I want it to work with A as well? "*)
-lemma Ax1:
-  assumes "wf m \<and> wf k \<and> wf v"
-  assumes "type_of_val A (map_type MI) m = TMap (type_of_val A (map_type MI) k) (type_of_val A (map_type MI) v)"
-  shows "(map_select MI) ((map_store MI) m k v) k = v"
-  using assms ArrayAxUpdate by simp
-
-lemma Ax2:
-  assumes "wf m \<and> wf x \<and> wf y \<and> wf v"
-  shows "x = y \<or> (map_select MI) ((map_store MI) m x v) y = (map_select MI) m y"
-  using assms ArrayAxStable by fastforce
-
-lemma Ex:
-  assumes "wf m \<and> wf n"
-  assumes "m = MapV m' \<and> n = MapV n'"
-  assumes "type_of_val A (map_type MI) m = type_of_val A (map_type MI) n"
-  assumes "(map_select MI) m = (map_select MI) n"
-  shows "m = n"
-  using assms extensionalityMapV by auto
-
-lemma SelectClosedUnderWF:
-  assumes "wf m \<and> wf k"
-  shows "wf ((map_select MI) m k)"
-  using assms selectClosedWf by auto
-
-lemma StoreClosedUnderWF:
-  assumes "wf m \<and> wf k \<and> wf v"
-  shows "wf ((map_store MI) m k v)"
-  using assms storeClosedWf by fastforce
-
-
-subsection \<open>Try defining wf type\<close>
+subsection \<open>Defining well formed type\<close>
 
 text \<open>set for well formed inner map values\<close>
 definition wf_map_set :: "'a::absval val321 set" where
@@ -859,7 +829,74 @@ lift_definition wf_store :: "'a::absval wf_val \<Rightarrow> 'a wf_val \<Rightar
       val.rel_inject(1)[of "eq_onp top"
         "eq_onp (\<lambda>uu. uu \<in> wf_map_set)"])
 
-text \<open>Leammas hold for the new select & store\<close>
+lift_definition wf_wf :: "'a::absval wf_val \<Rightarrow> bool"
+  is wf .
+
+lift_definition type_of_wf_val :: "'a::absval wf_val \<Rightarrow> ty"
+  is type_of_val .
+
+
+subsection \<open>Leammas hold for the new select & store\<close>
+
+fun Rep_wf_val :: "'a::absval wf_val \<Rightarrow> 'a valn" where
+    "Rep_wf_val (LitV v) = LitV v"
+  | "Rep_wf_val (AbsV v) = AbsV v"
+  | "Rep_wf_val (MapV v) = MapV (Rep_wf_maps v)"
+
+lemma wf_Rep_wf_val: "wf (Rep_wf_val x)"
+  by (metis Rep_wf_maps Rep_wf_val.cases Rep_wf_val.simps(1,2,3) wf_map_bij)
+
+lemma wf_wf_val: "wf_wf x"
+  apply (cases x)
+  apply (simp add: wfLitV wf_wf.rep_eq)
+  apply (simp add: wfAbsV wf_wf.rep_eq)
+  by (simp add: Rep_wf_maps wf_map_bij wf_wf.rep_eq)
+
+
+(* Gemini Magic *)
+unbundle lifting_syntax
+
+(* 1. Use the .simps fact since you used 'fun' in your instantiation *)
+lemma mapval_ty_wf_maps_transfer [transfer_rule]:
+  "rel_fun cr_wf_maps (=) mapval_ty mapval_ty"
+  unfolding rel_fun_def cr_wf_maps_def
+  by (auto simp: mapval_ty_wf_maps.simps)
+
+(* 2. This bridges type_of_val across the lift *)
+lemma type_of_val_transfer [transfer_rule]:
+  "rel_fun (rel_val (=) cr_wf_maps) (=) type_of_val type_of_val"
+  unfolding rel_fun_def cr_wf_maps_def
+  apply (rule, rename_tac v_raw, rule, rename_tac v_lift)
+  by (case_tac v_raw; case_tac v_lift; auto)
+
+(* 3. THE MISSING LINK: Tell Isabelle that the relation guarantees well-formedness *)
+lemma rel_val_cr_wf_implies_wf:
+  assumes "rel_val (=) cr_wf_maps raw lift"
+  shows "wf raw"
+  using assms unfolding cr_wf_maps_def
+  by (smt (verit, ccfv_threshold) Rep_wf_val.simps(3) val.rel_cases wfAbsV wfLitV wf_Rep_wf_val)
+
+(* 4. The Final Proofs *)
+lemma Ax1:
+  fixes m::"'a::absval wf_val"
+  assumes "ty_of_val m = TMap (ty_of_val k) (ty_of_val v)"
+  shows "wf_select (wf_store m k v) k = v"
+  using assms
+  apply transfer
+  using ArrayAxUpdate wf_wf_val
+  by (metis eq_onp_top_eq_eq val.pred_rel wf_wf.abs_eq)
+
+lemma Ex:
+  assumes "m = MapV m' \<and> n = MapV n'"
+  assumes "type_of_val m = type_of_val n"
+  assumes "wf_select m = wf_select n"
+  shows "m = n"
+  using assms
+  apply transfer
+  apply auto[1]
+  using rel_val_cr_wf_implies_wf extensionalityMapV wf_wf_val wf_Rep_wf_val
+  oops (* not true *)
+
 lemma Ax2_wf_val:
   shows "x = y \<or> wf_select (wf_store m x v) y = wf_select m y"
   by (smt (verit, del_insts) ArrayAxStable Rep_wf_maps_inject id_apply
