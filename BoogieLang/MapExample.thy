@@ -265,6 +265,8 @@ lemma "selectImpl (storeImpl mg4 m24 (LitV (LInt 42))) m24
 
 subsection \<open>Well Formedness\<close>
 
+(* TODO: default_value:
+(\<forall>k. wf k \<or> (selectImpl m k) = default_of_ty (val_ty (ty_of_val m))); *)
 inductive wf where
     wfLitV: "wf (LitV v)" | wfAbsV: "wf (AbsV v)" |
     wfMapV: "\<lbrakk> wf_ty m;  (\<forall>k. wf (selectImpl m k));
