@@ -2,6 +2,15 @@ theory VCPhaseML
   imports Semantics Util VCHints VCExprHelper HelperML
 begin
 
+locale vcphaseML =
+  fixes map_select :: "('a::absval, 'm::mapval) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
+  fixes map_store  :: "('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
+begin
+
+interpretation util map_select map_store .
+interpretation vcExprHelper map_select map_store .
+interpretation semantics map_select map_store .
+
 ML \<open>
 (** tactics for end-to-endproof**)
 
@@ -270,5 +279,7 @@ fun boogie_vc_tac ctxt _ _ ([]: (VcHint * (ExprHint option)) list) =
   ) THEN
    boogie_vc_tac ctxt global_assms forall_and_exists_thm_tuple xs
 \<close>
+
+end
 
 end

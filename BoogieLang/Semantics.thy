@@ -460,9 +460,9 @@ locale semantics =
 begin
 
 inductive red_expr :: "var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> expr \<Rightarrow> ('a, 'k) nstate \<Rightarrow> ('a, 'k) val \<Rightarrow> bool"
-  ("_,_,_ \<turnstile> ((\<langle>_,_\<rangle>) \<Down> _)" [0,0,0,0] 81)
+  ("_,_,_ \<turnstile> ((\<langle>_,_\<rangle>) \<Down> _)" [51,0,0,0,0] 81)
   and red_exprs :: "var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> expr list \<Rightarrow> ('a, 'k) nstate \<Rightarrow> ('a, 'k) val list \<Rightarrow> bool"
-  ("_,_,_ \<turnstile> ((\<langle>_,_\<rangle>) [\<Down>] _)" [0,0,0,0] 81)
+  ("_,_,_ \<turnstile> ((\<langle>_,_\<rangle>) [\<Down>] _)" [51,0,0,0,0] 81)
   for \<Lambda> :: "var_context" and \<Gamma> :: "('a, 'k) fun_interp"
   where 
     RedVar: "\<lbrakk> lookup_var \<Lambda> n_s x = Some v \<rbrakk> \<Longrightarrow> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>(Var x), n_s\<rangle> \<Down> v"
@@ -627,7 +627,7 @@ inductive_cases RedHavoc_case: "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<lan
 text \<open>Command list reduction (big-step semantics)\<close>
 
 inductive red_cmd_list :: "'m proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> cmd list \<Rightarrow> ('a, 'k) state \<Rightarrow> ('a, 'k) state \<Rightarrow> bool"
-  ("_,_,_,_ \<turnstile> ((\<langle>_,_\<rangle>) [\<rightarrow>]/ _)" [0,0,0] 81)
+  ("_,_,_,_ \<turnstile> ((\<langle>_,_\<rangle>) [\<rightarrow>]/ _)" [51,0,0,0] 81)
   for M :: "'m proc_context" and \<Lambda> :: var_context and \<Gamma> :: "('a, 'k) fun_interp" and \<Omega> :: rtype_env
   where
     RedCmdListNil: "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>[],s\<rangle> [\<rightarrow>] s"

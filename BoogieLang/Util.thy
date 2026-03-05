@@ -4,36 +4,43 @@ theory Util
 imports Semantics "HOL-Eisbach.Eisbach" "HOL-Eisbach.Eisbach_Tools"
 begin
 
-lemma finterp_extract_1: "fun_interp_wf A fds \<Gamma> \<Longrightarrow> map_of fds fn = Some fd \<Longrightarrow> \<Gamma> fn = Some f \<Longrightarrow> 
-  fun_interp_single_wf A fd f"
+locale util =
+  fixes map_select :: "('a::absval, 'm::mapval) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
+  fixes map_store  :: "('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
+begin
+
+interpretation semantics map_select map_store .
+
+lemma finterp_extract_1: "fun_interp_wf fds \<Gamma> \<Longrightarrow> map_of fds fn = Some fd \<Longrightarrow> \<Gamma> fn = Some f \<Longrightarrow> 
+  fun_interp_single_wf fd f"
   by (metis fun_interp_wf_def option.sel)
 
-lemma finterp_extract_2: "fun_interp_wf A fds \<Gamma> \<Longrightarrow> map_of fds fn = Some fd \<Longrightarrow> \<Gamma> fn = Some f \<Longrightarrow>
-   fun_interp_single_wf_2 A fd f"
+lemma finterp_extract_2: "fun_interp_wf fds \<Gamma> \<Longrightarrow> map_of fds fn = Some fd \<Longrightarrow> \<Gamma> fn = Some f \<Longrightarrow>
+   fun_interp_single_wf_2 fd f"
   by (metis fun_interp_wf_def option.sel)
 
-lemma finterp_member: "fun_interp_wf A fds \<Gamma> \<Longrightarrow> map_of fds f = Some fd \<Longrightarrow> \<Gamma> f = Some (the (\<Gamma> f))"
+lemma finterp_member: "fun_interp_wf fds \<Gamma> \<Longrightarrow> map_of fds f = Some fd \<Longrightarrow> \<Gamma> f = Some (the (\<Gamma> f))"
   by (metis fun_interp_wf_def option.distinct(1) option.exhaust_sel)
 
 lemma assert_correct:
-  "\<lbrakk>A,M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>Assert e, Normal n_s\<rangle> \<rightarrow> s; A,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool True) \<rbrakk> \<Longrightarrow> s = Normal n_s"
+  "\<lbrakk>M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>Assert e, Normal n_s\<rangle> \<rightarrow> s; \<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool True) \<rbrakk> \<Longrightarrow> s = Normal n_s"
   by (erule red_cmd.cases; simp; blast dest: expr_eval_determ(1))
 
 (*TODO, rewrite this as an elimination rule to be consistent with other rules *)
 lemma assert_correct_2:
-  "\<lbrakk>A,M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>Assert e, s\<rangle> \<rightarrow> s'; s = Normal n_s; A,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool True)\<rbrakk> \<Longrightarrow> s' = Normal n_s"
+  "\<lbrakk>M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>Assert e, s\<rangle> \<rightarrow> s'; s = Normal n_s; \<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool True)\<rbrakk> \<Longrightarrow> s' = Normal n_s"
   by (erule red_cmd.cases; simp; blast dest: expr_eval_determ(1))
 
 lemma assert_ml: 
-"\<lbrakk> A,M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>(Assert e) # cs, Normal ns\<rangle> [\<rightarrow>] s';
-  A,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e, ns\<rangle> \<Down> LitV (LBool True);
-  A,M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>cs, Normal ns\<rangle> [\<rightarrow>] s' \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
+"\<lbrakk> M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>(Assert e) # cs, Normal ns\<rangle> [\<rightarrow>] s';
+  \<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e, ns\<rangle> \<Down> LitV (LBool True);
+  M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>cs, Normal ns\<rangle> [\<rightarrow>] s' \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
   apply (erule RedCmdListCons_case)
   by (blast dest: assert_correct)
 
 lemma assert_true_cmds: 
-"\<lbrakk> A,M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>(Assert (Lit (LBool True))) # cs, Normal ns\<rangle> [\<rightarrow>] s';
-  A,M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>cs, Normal ns\<rangle> [\<rightarrow>] s' \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
+"\<lbrakk> M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>(Assert (Lit (LBool True))) # cs, Normal ns\<rangle> [\<rightarrow>] s';
+  M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>cs, Normal ns\<rangle> [\<rightarrow>] s' \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
   by (auto intro: RedLit elim: assert_ml)
 
 lemma imp_conj_assoc: "(A \<and> B) \<and> C \<longrightarrow> D \<Longrightarrow> A \<and> (B \<and> C) \<longrightarrow> D"
@@ -61,42 +68,42 @@ lead to non-terminating tactics most likely due to \<Gamma> ''f'' appearing on b
 definition opaque_comp 
   where "opaque_comp f g x = f (g x)"
 
-lemma axioms_sat_mem: "a \<in> set(as) \<Longrightarrow> axioms_sat A \<Lambda> \<Gamma> ns as \<Longrightarrow> A,\<Lambda>,\<Gamma>,[] \<turnstile> \<langle>a, ns\<rangle> \<Down> LitV (LBool (True))"
+lemma axioms_sat_mem: "a \<in> set(as) \<Longrightarrow> axioms_sat \<Lambda> \<Gamma> ns as \<Longrightarrow> \<Lambda>,\<Gamma>,[] \<turnstile> \<langle>a, ns\<rangle> \<Down> LitV (LBool (True))"
   by (simp add: axioms_sat_def expr_sat_def list_all_iff)
 
 lemma assume_red_bool:
-"A,M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>Assume e, Normal n_s\<rangle> \<rightarrow> s \<Longrightarrow>
-    \<exists>b. A,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e, n_s\<rangle> \<Down> BoolV b"
+"M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>Assume e, Normal n_s\<rangle> \<rightarrow> s \<Longrightarrow>
+    \<exists>b. \<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e, n_s\<rangle> \<Down> BoolV b"
 by (erule red_cmd.cases) auto
 
 lemma assume_cases_2: 
-  "\<lbrakk>A,M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>Assume e, Normal n_s\<rangle> \<rightarrow> s; 
+  "\<lbrakk>M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>Assume e, Normal n_s\<rangle> \<rightarrow> s; 
     s = Magic \<Longrightarrow> P; 
     s = Normal n_s \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
   by (erule red_cmd.cases; simp)
 
 lemma assume_cases_ext: 
-  "\<lbrakk>A,M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>Assume e, Normal n_s\<rangle> \<rightarrow> s; 
+  "\<lbrakk>M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>Assume e, Normal n_s\<rangle> \<rightarrow> s; 
     s = Magic \<Longrightarrow> P; 
-    s = Normal n_s \<Longrightarrow> A,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool True) \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
+    s = Normal n_s \<Longrightarrow> \<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool True) \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
   by (erule red_cmd.cases; simp)
 
 lemma assume_cases_ext_2: 
-  "\<lbrakk>A,M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>Assume e, s\<rangle> \<rightarrow> s'; 
+  "\<lbrakk>M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>Assume e, s\<rangle> \<rightarrow> s'; 
     s = Normal n_s;
     s' = Magic \<Longrightarrow> P; 
-    s' = Normal n_s \<Longrightarrow> A,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool True) \<Longrightarrow>  P \<rbrakk> \<Longrightarrow> P"
+    s' = Normal n_s \<Longrightarrow> \<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool True) \<Longrightarrow>  P \<rbrakk> \<Longrightarrow> P"
   by (erule red_cmd.cases; simp)
 
 lemma assume_ml: 
-  "\<lbrakk>A,M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>(Assume e) # cs, Normal ns\<rangle> [\<rightarrow>] s';
+  "\<lbrakk>M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>(Assume e) # cs, Normal ns\<rangle> [\<rightarrow>] s';
        s' = Magic \<Longrightarrow> P;
-        A,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e, ns\<rangle> \<Down> LitV (LBool True) \<Longrightarrow> A,M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>cs, Normal ns\<rangle> [\<rightarrow>] s' \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+        \<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e, ns\<rangle> \<Down> LitV (LBool True) \<Longrightarrow> M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>cs, Normal ns\<rangle> [\<rightarrow>] s' \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
   apply (erule RedCmdListCons_case)
   by (metis assume_cases_ext magic_stays_cmd_list)
 
 lemma assume_false_cmds:
-  "\<lbrakk>A,M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>(Assume (Lit (LBool False))) # cs, Normal ns\<rangle> [\<rightarrow>] s';
+  "\<lbrakk>M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>(Assume (Lit (LBool False))) # cs, Normal ns\<rangle> [\<rightarrow>] s';
        s' = Magic \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
   apply (erule RedCmdListCons_case)
   by (metis RedAssertFail RedLit assert_correct assume_cases_ext magic_stays_cmd_list state.distinct(1))
@@ -104,33 +111,33 @@ lemma assume_false_cmds:
   (*by (metis RedLit assume_cases_ext expr_eval_determ(1) magic_stays_cmd_list val.inject(1))*)
 
 lemma assume_true_cmds: 
-  "\<lbrakk>A,M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>(Assume e) # cs, Normal ns\<rangle> [\<rightarrow>] s';
+  "\<lbrakk>M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>(Assume e) # cs, Normal ns\<rangle> [\<rightarrow>] s';
        s' = Magic \<Longrightarrow> P;
-       A,M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>cs, Normal ns\<rangle> [\<rightarrow>] s' \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+       M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>cs, Normal ns\<rangle> [\<rightarrow>] s' \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
   by (rule assume_ml)
 
 lemma assume_red_true:
-  assumes "A,M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Assume e, Normal ns\<rangle> \<rightarrow> s2" and "A,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, ns\<rangle> \<Down> BoolV True"
+  assumes "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Assume e, Normal ns\<rangle> \<rightarrow> s2" and "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, ns\<rangle> \<Down> BoolV True"
   shows "s2 = Normal ns"
   using assms
   apply cases
   by (auto dest: expr_eval_determ(1))
 
 lemma assume_red_false:
-  assumes "A,M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Assume e, Normal ns\<rangle> \<rightarrow> s2" and "A,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, ns\<rangle> \<Down> BoolV False"
+  assumes "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Assume e, Normal ns\<rangle> \<rightarrow> s2" and "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, ns\<rangle> \<Down> BoolV False"
   shows "s2 = Magic"
   using assms
   apply cases
   by (auto dest: expr_eval_determ(1))
 
 lemma assume_determ:
-  assumes "A,M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Assume e, s1\<rangle> \<rightarrow> s2" and "A,M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Assume e, s1\<rangle> \<rightarrow> s3"
+  assumes "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Assume e, s1\<rangle> \<rightarrow> s2" and "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Assume e, s1\<rangle> \<rightarrow> s3"
   shows "s2 = s3"
   using assms
 proof (cases s1)
   case (Normal ns)
   then show ?thesis 
-  proof (cases "A,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, ns\<rangle> \<Down> BoolV True")
+  proof (cases "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, ns\<rangle> \<Down> BoolV True")
     case True
     then show ?thesis using assms Normal 
       using assume_red_true by blast
@@ -142,105 +149,105 @@ proof (cases s1)
 qed (auto dest: failure_stays_cmd magic_stays_cmd)
 
 lemma single_assign_cases:
-  "\<lbrakk>A,M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>Assign x e, s\<rangle> \<rightarrow> s'; 
+  "\<lbrakk>M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>Assign x e, s\<rangle> \<rightarrow> s'; 
    s = Normal n_s;
-   \<And>v. A,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e, n_s\<rangle> \<Down> v \<Longrightarrow> s' = Normal (update_var \<Lambda> n_s x v) \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
+   \<And>v. \<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e, n_s\<rangle> \<Down> v \<Longrightarrow> s' = Normal (update_var \<Lambda> n_s x v) \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
   by (erule red_cmd.cases; simp)
 
 lemma assign_intro_alt:
   "\<lbrakk> lookup_var_ty \<Lambda> x = Some ty; 
-     A,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, n_s\<rangle> \<Down> v;
-     type_of_val A v = instantiate \<Omega> ty  \<rbrakk> \<Longrightarrow>
-   A,M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Assign x e, Normal n_s\<rangle> \<rightarrow>  Normal (update_var \<Lambda> n_s x v)"
+     \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, n_s\<rangle> \<Down> v;
+     type_of_val v = instantiate \<Omega> ty  \<rbrakk> \<Longrightarrow>
+   M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Assign x e, Normal n_s\<rangle> \<rightarrow>  Normal (update_var \<Lambda> n_s x v)"
   by (auto intro: RedAssign)
 
 
 lemma havoc_cases_no_cond:
-  "\<lbrakk>A,M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Havoc x, s\<rangle> \<rightarrow> s';
+  "\<lbrakk>M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Havoc x, s\<rangle> \<rightarrow> s';
     s = Normal n_s;
     lookup_var_decl \<Lambda> x = Some (ty,None);
-    \<And>v. type_of_val A v = instantiate \<Omega> ty \<Longrightarrow> s' = Normal (update_var \<Lambda> n_s x v) \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+    \<And>v. type_of_val v = instantiate \<Omega> ty \<Longrightarrow> s' = Normal (update_var \<Lambda> n_s x v) \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
   by (erule red_cmd.cases; simp)
 
 lemma havoc_cases_general:
-  "\<lbrakk>A,M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Havoc x, s\<rangle> \<rightarrow> s';
+  "\<lbrakk>M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Havoc x, s\<rangle> \<rightarrow> s';
     s = Normal n_s;
-    \<And>v ty c w. lookup_var_decl \<Lambda> x = Some (ty,w) \<Longrightarrow> type_of_val A v = instantiate \<Omega> ty \<Longrightarrow> (w = Some c \<Longrightarrow> A,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>c,(update_var \<Lambda> n_s x v)\<rangle> \<Down> BoolV True) \<Longrightarrow> s' = Normal (update_var \<Lambda> n_s x v) \<Longrightarrow> P;
-    \<And>v ty c. lookup_var_decl \<Lambda> x = Some (ty, Some c) \<Longrightarrow> type_of_val A v = instantiate \<Omega> ty \<Longrightarrow> (A,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>c,(update_var \<Lambda> n_s x v)\<rangle> \<Down> BoolV False) \<Longrightarrow> s' = Magic \<Longrightarrow> P\<rbrakk> \<Longrightarrow> 
+    \<And>v ty c w. lookup_var_decl \<Lambda> x = Some (ty,w) \<Longrightarrow> type_of_val v = instantiate \<Omega> ty \<Longrightarrow> (w = Some c \<Longrightarrow> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>c,(update_var \<Lambda> n_s x v)\<rangle> \<Down> BoolV True) \<Longrightarrow> s' = Normal (update_var \<Lambda> n_s x v) \<Longrightarrow> P;
+    \<And>v ty c. lookup_var_decl \<Lambda> x = Some (ty, Some c) \<Longrightarrow> type_of_val v = instantiate \<Omega> ty \<Longrightarrow> (\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>c,(update_var \<Lambda> n_s x v)\<rangle> \<Down> BoolV False) \<Longrightarrow> s' = Magic \<Longrightarrow> P\<rbrakk> \<Longrightarrow> 
     P"
   by (erule red_cmd.cases; auto)
   
 (*
 lemma havoc_cases_2:
-  "\<lbrakk>A,M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Havoc x, s\<rangle> \<rightarrow> s';
+  "\<lbrakk>M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Havoc x, s\<rangle> \<rightarrow> s';
     s = Normal n_s;
-    \<And>v w ty. lookup_var_decl \<Lambda> x = Some (ty,None) \<Longrightarrow> type_of_val A v = instantiate \<Omega> ty \<Longrightarrow> s' = Normal (update_var \<Lambda> n_s x v) \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+    \<And>v w ty. lookup_var_decl \<Lambda> x = Some (ty,None) \<Longrightarrow> type_of_val v = instantiate \<Omega> ty \<Longrightarrow> s' = Normal (update_var \<Lambda> n_s x v) \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
   using havoc_cases
 *)
 
 lemma type_of_val_int_elim:
-  "\<lbrakk> type_of_val A v = TPrim TInt;
+  "\<lbrakk> type_of_val v = TPrim TInt;
      \<And>i. v = LitV (LInt i) \<Longrightarrow> P
    \<rbrakk> \<Longrightarrow> P"
   apply (cases v)
-   apply auto[2]
+   apply auto[3]
   by (metis prim_ty.distinct(1) prim_ty.distinct(5) type_of_lit.simps(1) type_of_lit.simps(3) unop_minus.cases)
 
 lemma type_of_val_bool_elim:
-  "\<lbrakk> type_of_val A v = TPrim TBool;
+  "\<lbrakk> type_of_val v = TPrim TBool;
      \<And>b. v = LitV (LBool b) \<Longrightarrow> P
    \<rbrakk> \<Longrightarrow> P"
   apply (cases v)
-   apply auto[2]
+   apply auto[3]
   by (metis prim_ty.distinct(1) prim_ty.distinct(3) type_of_lit.simps(2) type_of_lit.simps(3) unop_minus.cases)
 
 lemma type_of_val_real_elim:
-  "\<lbrakk> type_of_val A v = TPrim TReal;
+  "\<lbrakk> type_of_val v = TPrim TReal;
      \<And>r. v = LitV (LReal r) \<Longrightarrow> P
    \<rbrakk> \<Longrightarrow> P"
   apply (cases v)
-   apply auto[2]
+   apply auto[3]
   by (metis prim_ty.distinct(3) prim_ty.distinct(5) type_of_lit.simps(1) type_of_lit.simps(2) unop_minus.cases)
  
 lemma val_elim [elim!]:
- "\<lbrakk> A,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>Lit l, n_s\<rangle> \<Down> v'; (LitV l) = v' \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
+ "\<lbrakk> \<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>Lit l, n_s\<rangle> \<Down> v'; (LitV l) = v' \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
   by (erule red_expr.cases; simp)
 
 lemma cons_exp_elim :
- "A,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e # es, n_s\<rangle> [\<Down>] vs \<Longrightarrow> (vs \<noteq> [] \<Longrightarrow> A,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e, n_s\<rangle> \<Down> hd vs \<Longrightarrow> A,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>es, n_s\<rangle> [\<Down>] tl vs \<Longrightarrow> P) \<Longrightarrow> P"
+ "\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e # es, n_s\<rangle> [\<Down>] vs \<Longrightarrow> (vs \<noteq> [] \<Longrightarrow> \<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e, n_s\<rangle> \<Down> hd vs \<Longrightarrow> \<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>es, n_s\<rangle> [\<Down>] tl vs \<Longrightarrow> P) \<Longrightarrow> P"
   by (erule red_exprs.cases; simp_all)
 
 lemma cons_exp_elim2:
-  "\<lbrakk>A,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e # es, n_s\<rangle> [\<Down>] vs;
-   \<And>v vs'. vs = v # vs' \<Longrightarrow> A,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e, n_s\<rangle> \<Down> v \<Longrightarrow> A,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>es, n_s\<rangle> [\<Down>] vs' \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P" 
+  "\<lbrakk>\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e # es, n_s\<rangle> [\<Down>] vs;
+   \<And>v vs'. vs = v # vs' \<Longrightarrow> \<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e, n_s\<rangle> \<Down> v \<Longrightarrow> \<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>es, n_s\<rangle> [\<Down>] vs' \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P" 
   by (erule red_exprs.cases; simp_all)
 
 lemma singleton_exp:
-  "A,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>[e], n_s\<rangle> [\<Down>] vs \<Longrightarrow> A,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e, n_s\<rangle> \<Down> hd vs"
+  "\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>[e], n_s\<rangle> [\<Down>] vs \<Longrightarrow> \<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e, n_s\<rangle> \<Down> hd vs"
   by (auto elim: cons_exp_elim)
 
 lemma nil_exp_elim [elim!]:
- "\<lbrakk>A,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>[], n_s\<rangle> [\<Down>] vs; vs = [] \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+ "\<lbrakk>\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>[], n_s\<rangle> [\<Down>] vs; vs = [] \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
  by (erule red_exprs.cases; simp)
 
 
 lemma nil_cmd_elim [elim!]:
- "\<lbrakk>A,M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>[], s\<rangle> [\<rightarrow>] s'; s' = s \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
+ "\<lbrakk>M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>[], s\<rangle> [\<rightarrow>] s'; s' = s \<Longrightarrow> P\<rbrakk> \<Longrightarrow> P"
   by (erule red_cmd_list.cases; simp)
 
 lemma magic_stays_cmd_list_2:
-  assumes "A,M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>cs, s\<rangle> [\<rightarrow>] s'" and "s = Magic"
+  assumes "M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>cs, s\<rangle> [\<rightarrow>] s'" and "s = Magic"
   shows   "s' = Magic"
   using assms
   by (simp add: magic_stays_cmd_list)
 
 lemma red_cfg_multi_backwards_step:
   assumes
-   Red: "A,M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile> (Inl m, (Normal  n_s)) -n\<rightarrow>* (m', s')" and
+   Red: "M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile> (Inl m, (Normal  n_s)) -n\<rightarrow>* (m', s')" and
    Block: "node_to_block G ! m = cs" and
-   BlockCorrect: "\<And> s''. A,M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs, Normal n_s\<rangle> [\<rightarrow>] s'' \<Longrightarrow> 
+   BlockCorrect: "\<And> s''. M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs, Normal n_s\<rangle> [\<rightarrow>] s'' \<Longrightarrow> 
             s'' \<noteq> Failure \<and> (\<forall>  n_s'. ((s'' = (Normal  n_s')) \<longrightarrow> (n_s' = n_s) \<and> vcsuc))" and
-   SuccCorrect:"\<And> msuc s2 m2. List.member (out_edges(G) ! m) msuc \<Longrightarrow> A,M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile> (Inl(msuc), Normal n_s) -n\<rightarrow>* (m2, s2) \<Longrightarrow> vcsuc \<Longrightarrow> s2 \<noteq> Failure"
+   SuccCorrect:"\<And> msuc s2 m2. List.member (out_edges(G) ! m) msuc \<Longrightarrow> M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile> (Inl(msuc), Normal n_s) -n\<rightarrow>* (m2, s2) \<Longrightarrow> vcsuc \<Longrightarrow> s2 \<noteq> Failure"
 shows "s' \<noteq> Failure"
   using assms
 proof (cases rule: converse_rtranclpE2[OF assms(1)])
@@ -268,11 +275,11 @@ qed
 
 lemma red_cfg_multi_backwards_step_2:
   assumes
-   Red: "A,M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile> (Inl m, (Normal  n_s)) -n\<rightarrow>* (m', s')" and
+   Red: "M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile> (Inl m, (Normal  n_s)) -n\<rightarrow>* (m', s')" and
    Block: "node_to_block G ! m = cs" and
-   BlockCorrect: "\<And> s''. A,M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs, Normal n_s\<rangle> [\<rightarrow>] s'' \<Longrightarrow> 
+   BlockCorrect: "\<And> s''. M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs, Normal n_s\<rangle> [\<rightarrow>] s'' \<Longrightarrow> 
             s'' \<noteq> Failure \<and> (\<forall>  n_s'. ((s'' = (Normal  n_s')) \<longrightarrow> (n_s' = n_s)))" and
-   SuccCorrect:"\<And> msuc s2 m2. List.member (out_edges(G) ! m) msuc \<Longrightarrow> A,M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile> (Inl(msuc), Normal n_s) -n\<rightarrow>* (m2, s2) \<Longrightarrow> s2 \<noteq> Failure"
+   SuccCorrect:"\<And> msuc s2 m2. List.member (out_edges(G) ! m) msuc \<Longrightarrow> M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile> (Inl(msuc), Normal n_s) -n\<rightarrow>* (m2, s2) \<Longrightarrow> s2 \<noteq> Failure"
  shows "s' \<noteq> Failure"
   apply (rule red_cfg_multi_backwards_step[where ?vcsuc=True])
   using assms by auto  
@@ -280,10 +287,10 @@ lemma red_cfg_multi_backwards_step_2:
 
 lemma red_cfg_multi_backwards_step_no_succ:
   assumes
-   Red: "A,M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile> (Inl m, (Normal  n_s)) -n\<rightarrow>* (m', s')" and
+   Red: "M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile> (Inl m, (Normal  n_s)) -n\<rightarrow>* (m', s')" and
    Block: "node_to_block G ! m = cs" and
    NoSucc: "out_edges G ! m = []" and
-   BlockCorrect: "\<And> s''. A,M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs, Normal n_s\<rangle> [\<rightarrow>] s'' \<Longrightarrow> 
+   BlockCorrect: "\<And> s''. M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs, Normal n_s\<rangle> [\<rightarrow>] s'' \<Longrightarrow> 
             s'' \<noteq> Failure \<and> (\<forall>  n_s'. ((s'' = (Normal  n_s')) \<longrightarrow> (n_s' = n_s)))"
 shows "s' \<noteq> Failure"
   using assms
@@ -311,9 +318,9 @@ qed
 
 lemma red_cfg_multi_backwards_step_magic:
   assumes
-   Red: "A,M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile> (Inl m, (Normal  n_s)) -n\<rightarrow>* (m', s')" and
+   Red: "M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile> (Inl m, (Normal  n_s)) -n\<rightarrow>* (m', s')" and
    Block: "node_to_block G ! m = cs" and   
-   BlockCorrect: "\<And> s''. A,M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs, Normal n_s\<rangle> [\<rightarrow>] s'' \<Longrightarrow> s'' = Magic"
+   BlockCorrect: "\<And> s''. M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs, Normal n_s\<rangle> [\<rightarrow>] s'' \<Longrightarrow> s'' = Magic"
 shows "s' \<noteq> Failure"
   using assms
 proof (cases rule: converse_rtranclpE2[OF assms(1)])
@@ -339,11 +346,11 @@ qed
    
 lemma red_cfg_multi_backwards_step_no_succ:
   assumes
-   Red: "A,M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile> (Inl m, (Normal  n_s)) -n\<rightarrow>* (m', s')" and
+   Red: "M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile> (Inl m, (Normal  n_s)) -n\<rightarrow>* (m', s')" and
    Block: "node_to_block G ! m = cs" and
-   BlockCorrect: "\<And> s''. A,M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs, Normal n_s\<rangle> [\<rightarrow>] s'' \<Longrightarrow> 
+   BlockCorrect: "\<And> s''. M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs, Normal n_s\<rangle> [\<rightarrow>] s'' \<Longrightarrow> 
             s'' \<noteq> Failure \<and> (\<forall>  n_s'. ((s'' = (Normal  n_s')) \<longrightarrow> (n_s' = n_s)))" and
-   SuccCorrect:"\<And> msuc s2 m2. List.member (out_edges(G) ! m) msuc \<Longrightarrow> A,M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile> (Inl(msuc), Normal n_s) -n\<rightarrow>* (m2, s2) \<Longrightarrow>  s2 \<noteq> Failure"
+   SuccCorrect:"\<And> msuc s2 m2. List.member (out_edges(G) ! m) msuc \<Longrightarrow> M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile> (Inl(msuc), Normal n_s) -n\<rightarrow>* (m2, s2) \<Longrightarrow>  s2 \<noteq> Failure"
  shows "s' \<noteq> Failure"
   oops
 
@@ -449,7 +456,7 @@ lemma lookup_var_const_restr_util_ty_2:
   assumes "map_option fst (map_of C x) =  Some \<tau>"
   shows "lookup_var (C,[]) ns x = lookup_var (C,[]) (nstate_global_restriction ns C) x"
   using assms lookup_var_const_restr_util_2
-  by fastforce
+  by blast
 
 lemma lookup_var_const_restr:
   assumes "set (map fst (C@G)) \<inter> set (map fst L) = {}"
@@ -459,17 +466,17 @@ lemma lookup_var_const_restr:
   by metis
 
 lemma state_typ_wf_const_restr:
-  assumes "state_typ_wf  A [] (global_state n_s) (C@G)"
-  shows "state_typ_wf A [] (global_state (nstate_global_restriction n_s C)) C"
+  assumes "state_typ_wf  [] (global_state n_s) (C@G)"
+  shows "state_typ_wf [] (global_state (nstate_global_restriction n_s C)) C"
   unfolding state_typ_wf_def lookup_vdecls_ty_def  
 proof (rule allI, rule allI, rule impI)
   fix v t
   assume "map_option fst (map_of C v) = Some t"
-  moreover from this have "map_option (type_of_val A) (global_state n_s v) = Some t"
+  moreover from this have "map_option type_of_val (global_state n_s v) = Some t"
     using assms
     unfolding state_typ_wf_def lookup_vdecls_ty_def
     by force  
-  ultimately show "map_option (type_of_val A) (global_state (nstate_global_restriction n_s C) v) = Some (instantiate [] t)"    
+  ultimately show "map_option type_of_val (global_state (nstate_global_restriction n_s C) v) = Some (instantiate [] t)"    
     by (metis instantiate_nil lookup_var_const_restr_util_ty_2 lookup_var_global_no_locals)
 qed
 
@@ -486,9 +493,9 @@ lemma helper_min:
   by force
 
 lemma red_cmd_list_append:
-  assumes "A,M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs1,s\<rangle> [\<rightarrow>] s''" and
-          "A,M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs2,s''\<rangle> [\<rightarrow>] s'"
-  shows "A,M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs1@cs2,s\<rangle> [\<rightarrow>] s'"
+  assumes "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs1,s\<rangle> [\<rightarrow>] s''" and
+          "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs2,s''\<rangle> [\<rightarrow>] s'"
+  shows "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs1@cs2,s\<rangle> [\<rightarrow>] s'"
   using assms
   by (induction) (auto intro: red_cmd_list.RedCmdListCons)
 
@@ -586,5 +593,7 @@ method handle_cmd_list_full uses v_assms =
 
 lemmas relpowp_E2_2 =
   relpowp_E2[of _ _ "(n', s')" "(n'',s'')", split_rule]
+
+end
 
 end

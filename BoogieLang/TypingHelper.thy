@@ -52,17 +52,28 @@ lemma typ_funexp_helper:
 text \<open>The following corollary of type safety is used in the certification of the CFG-to-DAG phase 
 to prove that that invariants reduce to booleans.\<close>
 
+
+locale typingHelper =
+  fixes map_select :: "('a::absval, 'm::mapval) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
+  fixes map_store  :: "('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
+begin
+
+interpretation semantics map_select map_store .
+interpretation typeSafety map_select map_store .
+interpretation util map_select map_store .
+
+
 lemma type_safety_top_level_inv:
   assumes 
-          Wf_\<Gamma>: "fun_interp_wf A F \<Gamma>" and
+          Wf_\<Gamma>: "fun_interp_wf F \<Gamma>" and
           Wf_F: "list_all (wf_fdecl \<circ> snd) F" and
           Wf_\<Lambda>: "\<forall>x \<tau>. lookup_var_ty \<Lambda> x = Some \<tau> \<longrightarrow> wf_ty 0 \<tau>" and    
-          "state_well_typed A \<Lambda> [] n_s" and
+          "state_well_typed \<Lambda> [] n_s" and
           Wf_e: "wf_expr (length []) e" and
           "F, (lookup_var_ty \<Lambda>, Map.empty) \<turnstile> e : TPrim TBool"
-        shows "\<exists>b. (A,\<Lambda>,\<Gamma>,[] \<turnstile> \<langle>e,n_s\<rangle> \<Down> (BoolV b))"
+        shows "\<exists>b. (\<Lambda>,\<Gamma>,[] \<turnstile> \<langle>e,n_s\<rangle> \<Down> (BoolV b))"
 proof -
-  have "\<exists>v. (A,\<Lambda>,\<Gamma>,[] \<turnstile> \<langle>e,n_s\<rangle> \<Down> v) \<and> type_of_val A v = instantiate [] (TPrim TBool)"
+  have "\<exists>v. (\<Lambda>,\<Gamma>,[] \<turnstile> \<langle>e,n_s\<rangle> \<Down> v) \<and> type_of_val v = instantiate [] (TPrim TBool)"
     apply (rule type_safety_top_level)
     using assms
     by auto
@@ -72,15 +83,15 @@ qed
 
 lemma type_safety_top_level_inv_int:
   assumes 
-          Wf_\<Gamma>: "fun_interp_wf A F \<Gamma>" and
+          Wf_\<Gamma>: "fun_interp_wf F \<Gamma>" and
           Wf_F: "list_all (wf_fdecl \<circ> snd) F" and
           Wf_\<Lambda>: "\<forall>x \<tau>. lookup_var_ty \<Lambda> x = Some \<tau> \<longrightarrow> wf_ty 0 \<tau>" and    
-          "state_well_typed A \<Lambda> [] n_s" and
+          "state_well_typed \<Lambda> [] n_s" and
           Wf_e: "wf_expr (length []) e" and
           "F, (lookup_var_ty \<Lambda>, Map.empty) \<turnstile> e : TPrim TInt"
-  shows "\<exists>i. (A,\<Lambda>,\<Gamma>,[] \<turnstile> \<langle>e,n_s\<rangle> \<Down> (IntV i))"
+  shows "\<exists>i. (\<Lambda>,\<Gamma>,[] \<turnstile> \<langle>e,n_s\<rangle> \<Down> (IntV i))"
 proof -
-  have "\<exists>v. (A,\<Lambda>,\<Gamma>,[] \<turnstile> \<langle>e,n_s\<rangle> \<Down> v) \<and> type_of_val A v = instantiate [] (TPrim TInt)"
+  have "\<exists>v. (\<Lambda>,\<Gamma>,[] \<turnstile> \<langle>e,n_s\<rangle> \<Down> v) \<and> type_of_val v = instantiate [] (TPrim TInt)"
     apply (rule type_safety_top_level)
     using assms
     by auto
@@ -90,20 +101,22 @@ qed
 
 lemma type_safety_top_level_inv_real:
   assumes 
-          Wf_\<Gamma>: "fun_interp_wf A F \<Gamma>" and
+          Wf_\<Gamma>: "fun_interp_wf F \<Gamma>" and
           Wf_F: "list_all (wf_fdecl \<circ> snd) F" and
           Wf_\<Lambda>: "\<forall>x \<tau>. lookup_var_ty \<Lambda> x = Some \<tau> \<longrightarrow> wf_ty 0 \<tau>" and    
-          "state_well_typed A \<Lambda> [] n_s" and
+          "state_well_typed \<Lambda> [] n_s" and
           Wf_e: "wf_expr (length []) e" and
           "F, (lookup_var_ty \<Lambda>, Map.empty) \<turnstile> e : TPrim TReal"
-  shows "\<exists>r. (A,\<Lambda>,\<Gamma>,[] \<turnstile> \<langle>e,n_s\<rangle> \<Down> (RealV r))"
+  shows "\<exists>r. (\<Lambda>,\<Gamma>,[] \<turnstile> \<langle>e,n_s\<rangle> \<Down> (RealV r))"
 proof -
-  have "\<exists>v. (A,\<Lambda>,\<Gamma>,[] \<turnstile> \<langle>e,n_s\<rangle> \<Down> v) \<and> type_of_val A v = instantiate [] (TPrim TReal)"
+  have "\<exists>v. (\<Lambda>,\<Gamma>,[] \<turnstile> \<langle>e,n_s\<rangle> \<Down> v) \<and> type_of_val v = instantiate [] (TPrim TReal)"
     apply (rule type_safety_top_level)
     using assms
     by auto
   thus ?thesis
     by (metis instantiate_nil type_of_val_real_elim)
 qed
+
+end
 
 end
