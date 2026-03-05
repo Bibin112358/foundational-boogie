@@ -110,12 +110,7 @@ lemma nstate_same_on_update_3:
   by (simp add: update_var_binder_same update_var_old_global_same)
 
 
-locale backedgeElim =
-  fixes map_select :: "('a::absval, 'm::mapval) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
-  fixes map_store  :: "('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
-begin
-
-interpretation semantics map_select map_store .
+context semantics begin
 
 text \<open>The following lemma reflects that if two states cannot be distinguished w.r.t. a variable context,
 then evaluation yields the same value.\<close>
@@ -159,8 +154,6 @@ lemma expr_all_sat_nstate_same_on:
   by fastforce
 
 subsection \<open>Some lemmas on well-typed states and reductions\<close>
-
-interpretation typeSafety map_select map_store .
 
 lemma update_var_state_wt:
   assumes "state_well_typed \<Lambda> \<Omega> ns" and Lookup:"lookup_var_ty \<Lambda> x = Some ty" and TyV:"type_of_val v = instantiate \<Omega> ty"
@@ -323,8 +316,6 @@ proof (induction arbitrary: ns2)
     using RelRest by simp
 qed (auto intro: RedCmdListNil cfg_dag_rel.intros)
 
-interpretation util map_select map_store .
-
 lemma cfg_dag_rel_pre_invs:
   assumes "cfg_dag_rel c H pre_invs post_invs cs1 cs2" and
           "H = []" and
@@ -438,7 +429,7 @@ next
     apply (rule exI[where ?x="[]"])
     using DagRel_Main
       by (auto intro: RedCmdListNil cfg_dag_rel.DagRel_Main)
-qed (auto intro: RedCmdListNil cfg_dag_rel.intros simp: nstate_same_on_def) oops
+qed (auto intro: RedCmdListNil cfg_dag_rel.intros simp: nstate_same_on_def)
 
 lemma red_cmd_nstate_same_on:
   assumes "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>c, Normal ns1\<rangle> \<rightarrow> s'" and
@@ -1435,8 +1426,8 @@ subsection \<open>Helper lemma for final end-to-end theorem\<close>
 lemma end_to_end_util:
   assumes AExpanded:"\<And> \<Gamma> m' s' ns M.
            M,\<Lambda>,\<Gamma>,[],cfg_body  \<turnstile> (Inl n, Normal ns) -n\<rightarrow>* (m', s') \<Longrightarrow>
-           (\<And> v. (closed (type_of_val v))) \<Longrightarrow>
-           (\<And> t. ((closed t) \<Longrightarrow> (\<exists> v. ((type_of_val v) = t)))) \<Longrightarrow>
+           (\<And> v::('a, 'm) val. (closed (type_of_val v))) \<Longrightarrow>
+           (\<And> t. ((closed t) \<Longrightarrow> (\<exists> v::('a, 'm) val. ((type_of_val v) = t)))) \<Longrightarrow>
            (fun_interp_wf fun_decls \<Gamma>) \<Longrightarrow>
            (axiom_assm \<Gamma> constants (ns::(('a, 'm)nstate)) axioms) \<Longrightarrow>
            (expr_all_sat \<Lambda> \<Gamma> [] ns all_pres) \<Longrightarrow>
@@ -1456,13 +1447,13 @@ lemma end_to_end_util:
           "proc_ty_args proc = 0" and
           "n = entry cfg_body"
           (*"const_decls = prog_consts prog"*)
-        shows "proc_is_correct fun_decls constants unique_consts global_vars axioms proc semantics.proc_body_satisfies_spec"
+        shows "proc_is_correct fun_decls constants unique_consts global_vars axioms proc proc_body_satisfies_spec"
 proof -
-  show "proc_is_correct fun_decls constants unique_consts global_vars axioms proc Semantics.proc_body_satisfies_spec"
+  show "proc_is_correct fun_decls constants unique_consts global_vars axioms proc proc_body_satisfies_spec"
   proof( (simp only: proc_is_correct.simps), subst ABody, simp split: option.split, (rule allI | rule impI)+,
          unfold proc_body_satisfies_spec_def,(rule allI | rule impI)+)  
     fix \<Gamma> \<Omega> gs ls m' s' 
-    assume Atyp:"(\<forall>t. closed t \<longrightarrow> (\<exists>v. type_of_val v = t)) \<and> (\<forall>v. closed (type_of_val v))" and
+    assume Atyp:"(\<forall>t. closed t \<longrightarrow> (\<exists>v::('a, 'm) val. type_of_val v = t)) \<and> (\<forall>v::('a, 'm) val. closed (type_of_val v))" and
            FunWf:"fun_interp_wf fun_decls \<Gamma>" and
            ARenv: "list_all closed \<Omega> \<and> length \<Omega> = proc_ty_args proc" and
            WfGlobal: "state_typ_wf \<Omega> gs (constants @ global_vars)" and

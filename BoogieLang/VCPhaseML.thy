@@ -2,14 +2,7 @@ theory VCPhaseML
   imports Semantics Util VCHints VCExprHelper HelperML
 begin
 
-locale vcphaseML =
-  fixes map_select :: "('a::absval, 'm::mapval) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
-  fixes map_store  :: "('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
-begin
-
-interpretation util map_select map_store .
-interpretation vcExprHelper map_select map_store .
-interpretation semantics map_select map_store .
+context semantics begin
 
 ML \<open>
 (** tactics for end-to-endproof**)

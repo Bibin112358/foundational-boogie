@@ -145,12 +145,7 @@ lemma map_map:
   by auto
 
 
-locale typeSafety =
-  fixes map_select :: "('a::absval, 'm::mapval) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
-  fixes map_store  :: "('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
-begin
-
-interpretation semantics map_select map_store .
+context semantics begin
 
 definition state_well_typed :: "var_context \<Rightarrow> rtype_env \<Rightarrow> ('a, 'm) nstate \<Rightarrow> bool"
   where "state_well_typed \<Lambda> \<Omega> ns \<equiv>
@@ -208,7 +203,7 @@ next
 next
 case (TypPrim l prim_ty \<Delta>)
   then show ?case
-    by (metis instantiate.simps(2) type_of_val.simps(1) util.val_elim)
+    by (metis instantiate.simps(2) type_of_val.simps(1) val_elim)
 next
   case (TypUnOp \<Delta> e arg_ty uop ret_ty)
   from this obtain v' where 
@@ -292,17 +287,17 @@ next
   then show ?case using msubst_ty_existsT by (auto dest: existst_red_bool)
 next
   case (TypListNil \<Delta>)
-  then show ?case by (metis map_is_Nil_conv util.nil_exp_elim)
+  then show ?case by (metis map_is_Nil_conv nil_exp_elim)
 next
   case (TypListCons \<Delta> e ty es tys)
   from \<open>\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>(e # es),n_s\<rangle> [\<Down>] vs\<close> have A0:"\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, n_s\<rangle> \<Down> hd vs"
-    using util.cons_exp_elim by blast 
+    using cons_exp_elim by blast 
   moreover from \<open>\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>(e # es),n_s\<rangle> [\<Down>] vs\<close> have "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>es, n_s\<rangle> [\<Down>] tl vs"
-   using util.cons_exp_elim by blast
+   using cons_exp_elim by blast
   with A0 TypListCons have A1:"type_of_val (hd vs) = instantiate \<Omega> ty" and
                         A2:"map (type_of_val) (tl vs) = map (instantiate \<Omega>) tys" by auto
   moreover have "(hd vs) # (tl vs) = vs" using \<open>\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>(e # es),n_s\<rangle> [\<Down>] vs\<close> 
-      using util.cons_exp_elim list.collapse by blast
+      using cons_exp_elim list.collapse by blast
   ultimately show ?case
     by (metis list.simps(9))
 qed
@@ -458,7 +453,7 @@ next
     using preservation(1)[OF \<open>list_all closed \<Omega>\<close> TypCondExp.prems(5) TypCondExp.prems(6) TypCondExp.prems(7) 
                              Wf_\<Gamma> Wf_F \<open>F,\<Delta> \<turnstile> cond : TPrim TBool\<close>]
           \<open>wf_expr _ _\<close>
-    by (metis instantiate.simps(2) util.type_of_val_bool_elim wf_expr.simps(9))
+    by (metis instantiate.simps(2) type_of_val_bool_elim wf_expr.simps(9))
 
   ultimately show ?case
     by (metis (full_types) RedCondExpFalse RedCondExpTrue)
@@ -511,7 +506,7 @@ next
       and "type_of_val w' = TPrim (TBool)"
     by fastforce
     ultimately show ?thesis
-      by (metis (full_types) RedForAllFalse util.type_of_val_bool_elim) 
+      by (metis (full_types) RedForAllFalse type_of_val_bool_elim) 
   qed
 next
   case (TypExists \<Delta> ty e)
@@ -548,7 +543,7 @@ next
       and "type_of_val w' = TPrim (TBool)"
     by fastforce
     ultimately show ?thesis
-      by (metis (full_types) RedExistsTrue util.type_of_val_bool_elim) 
+      by (metis (full_types) RedExistsTrue type_of_val_bool_elim) 
   qed
 next
   case (TypForallT \<Delta> e)
@@ -588,7 +583,7 @@ next
     moreover from this RedBody RedBodyTy obtain w' where "\<Lambda>,\<Gamma>,(t#\<Omega>) \<turnstile> \<langle>e, n_s\<rangle> \<Down> w'"
       and "type_of_val w' = TPrim (TBool)" by fastforce
     ultimately show ?thesis
-      by (metis (full_types) RedForallT_False util.type_of_val_bool_elim)
+      by (metis (full_types) RedForallT_False type_of_val_bool_elim)
   qed
 next
   case (TypExistsT \<Delta> e)
@@ -630,7 +625,7 @@ next
     moreover from this RedBody RedBodyTy obtain w' where "\<Lambda>,\<Gamma>,(t#\<Omega>) \<turnstile> \<langle>e, n_s\<rangle> \<Down> w'"
       and "type_of_val w' = TPrim TBool" by fastforce
     ultimately show ?thesis
-     by (metis (full_types) RedExistsT_True util.type_of_val_bool_elim)
+     by (metis (full_types) RedExistsT_True type_of_val_bool_elim)
   qed
 next
   case (TypListNil \<Delta>)

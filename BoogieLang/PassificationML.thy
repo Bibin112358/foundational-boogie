@@ -2,13 +2,7 @@ theory PassificationML
 imports Semantics HelperML Passification
 begin
 
-locale passificationML =
-  fixes map_select :: "('a::absval, 'm::mapval) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
-  fixes map_store  :: "('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
-begin
-
-interpretation util map_select map_store .
-interpretation passification map_select map_store .
+context semantics begin
 
 ML \<open>
 fun type_rel_tac _ [] = (fn _ => all_tac)

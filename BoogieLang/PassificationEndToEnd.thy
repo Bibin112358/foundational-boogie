@@ -6,15 +6,7 @@ begin
 
 subsection \<open>Picking an initial set of target states\<close>
 
-locale passificationEndToEnd =
-  fixes map_select :: "('a::absval, 'm::mapval) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
-  fixes map_store  :: "('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
-begin
-
-interpretation passification map_select map_store .
-interpretation semantics map_select map_store .
-interpretation vcExprHelper map_select map_store .
-interpretation util map_select map_store .
+context semantics begin
 
 text \<open>The global block theorem for the entry block in the passification phase states the following:
 Given an initial source state s (in the non-passified program) and given a non-empty set of initial target
@@ -92,7 +84,7 @@ qed
 text \<open>The following lemma shows the set we pick for U is non-empty under certain assumptions.\<close>
 lemma init_state_elem_init_set:
   assumes 
-          NonEmptyTypes:"\<And> t. closed t \<Longrightarrow> \<exists>v. type_of_val v = t" and
+          NonEmptyTypes:"\<And> t. closed t \<Longrightarrow> \<exists>v::('a, 'm) val. type_of_val v = t" and
           Closed:"\<And>y \<tau>. \<not>(\<exists> x. R x = Some (Inl y)) \<Longrightarrow> lookup_var_ty \<Lambda>' y = Some \<tau> \<Longrightarrow> closed (instantiate \<Omega> \<tau>)" and          
           RelTy:"\<And>x y. R x = Some (Inl y) \<Longrightarrow> lookup_var_ty \<Lambda> x = lookup_var_ty \<Lambda>' y" and
           RelWt:"rel_well_typed \<Lambda> \<Omega> R ns" and
@@ -180,7 +172,7 @@ next
 qed
 
 lemma init_set_non_empty:
-  assumes NonEmptyTypes:"\<And> t. closed t \<Longrightarrow> \<exists>v. type_of_val v = t" and
+  assumes NonEmptyTypes:"\<And> t. closed t \<Longrightarrow> \<exists>v::('a, 'm) val. type_of_val v = t" and
           Closed:"\<And>y \<tau>. \<not>(\<exists> x. R x = Some (Inl y)) \<Longrightarrow> lookup_var_ty \<Lambda>' y = Some \<tau> \<Longrightarrow> closed (instantiate \<Omega> \<tau>)" and          
           RelTy:"\<And>x y. R x = Some (Inl y) \<Longrightarrow> lookup_var_ty \<Lambda> x = lookup_var_ty \<Lambda>' y" and
           RelWt:"rel_well_typed \<Lambda> \<Omega> R ns" and

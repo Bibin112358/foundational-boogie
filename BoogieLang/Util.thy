@@ -4,12 +4,7 @@ theory Util
 imports Semantics "HOL-Eisbach.Eisbach" "HOL-Eisbach.Eisbach_Tools"
 begin
 
-locale util =
-  fixes map_select :: "('a::absval, 'm::mapval) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
-  fixes map_store  :: "('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
-begin
-
-interpretation semantics map_select map_store .
+context semantics begin
 
 lemma finterp_extract_1: "fun_interp_wf fds \<Gamma> \<Longrightarrow> map_of fds fn = Some fd \<Longrightarrow> \<Gamma> fn = Some f \<Longrightarrow> 
   fun_interp_single_wf fd f"

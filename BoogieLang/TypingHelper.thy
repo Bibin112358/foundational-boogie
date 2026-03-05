@@ -52,16 +52,7 @@ lemma typ_funexp_helper:
 text \<open>The following corollary of type safety is used in the certification of the CFG-to-DAG phase 
 to prove that that invariants reduce to booleans.\<close>
 
-
-locale typingHelper =
-  fixes map_select :: "('a::absval, 'm::mapval) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
-  fixes map_store  :: "('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
-begin
-
-interpretation semantics map_select map_store .
-interpretation typeSafety map_select map_store .
-interpretation util map_select map_store .
-
+context semantics begin
 
 lemma type_safety_top_level_inv:
   assumes 

@@ -9,13 +9,7 @@ abbreviation ite_vc :: "bool \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a"
 
 subsection \<open>vc_to_expr and expr_to_vc\<close>
 
-locale vcExprHelper =
-  fixes map_select :: "('a::absval, 'm::mapval) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
-  fixes map_store  :: "('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
-begin
-
-interpretation semantics map_select map_store .
-interpretation util map_select map_store .
+context semantics begin
 
 lemma vc_to_expr:"\<lbrakk>vc; \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e,ns\<rangle> \<Down> LitV (LBool vc)\<rbrakk> \<Longrightarrow> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e,ns\<rangle> \<Down> LitV (LBool True)"
   by simp
@@ -215,22 +209,22 @@ lemma vc_type_of_val_bool: "vc_type_of_val (IntV i) = TPrimC TInt"
 
 text\<open>Return some arbitrary value of correct type\<close>
 
-fun val_of_type :: "ty \<Rightarrow> ('a, 'm) val"
+fun val_of_type :: "ty \<Rightarrow> ('a::absval, 'm::mapval) val"
   where
    "val_of_type t = (SOME v. type_of_val v = t)"
 
-definition val_of_closed_type ::"closed_ty \<Rightarrow> ('a, 'm) val"
+definition val_of_closed_type ::"closed_ty \<Rightarrow> ('a::absval, 'm::mapval) val"
   where
    "val_of_closed_type t  = (val_of_type (closed_to_ty t))"
 
 lemma val_of_type_correct:
-  assumes "\<And> t. closed t \<Longrightarrow> \<exists>v. type_of_val v = t" and
+  assumes "\<And> t. closed t \<Longrightarrow> \<exists>v::('a, 'm) val. type_of_val v = t" and
          "closed t'"
   shows "type_of_val (val_of_type t') = t'"
   by (metis (mono_tags, lifting) assms(1) assms(2) someI val_of_type.simps)
 
 lemma val_of_closed_type_correct: 
-  assumes "\<And> t. closed t \<Longrightarrow> \<exists>v. type_of_val v = t"
+  assumes "\<And> t. closed t \<Longrightarrow> \<exists>v::('a, 'm) val. type_of_val v = t"
   shows "ty_to_closed (type_of_val (val_of_closed_type ct)) = ct"
   by (metis assms closed_closed_to_ty closed_inv1 val_of_closed_type_def val_of_type_correct)
 
@@ -262,7 +256,7 @@ text \<open>Value quantification relation\<close>
 (** primitive types **)
 lemma forall_vc_rel_general: 
   assumes "\<And> i. \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, full_ext_env ns (LitV (C i))\<rangle> \<Down> LitV (LBool (P i))" and
-          "\<And> i v. type_of_val v = TPrim primty \<Longrightarrow> \<exists>i. v = LitV (C i)"
+          "\<And> i v::('a, 'm) val. type_of_val v = TPrim primty \<Longrightarrow> \<exists>i. v = LitV (C i)"
           "\<And> i. type_of_val (LitV (C i)) = TPrim primty"
   shows  "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Forall (TPrim primty) e, ns\<rangle> \<Down> LitV (LBool (\<forall>i. P i))"
 proof (cases "(\<forall>i. P i)")
@@ -281,7 +275,7 @@ qed
 
 lemma exists_vc_rel_general:
   assumes "\<And> i. \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, full_ext_env ns (LitV (C i))\<rangle> \<Down> LitV (LBool (P i))"
-          "\<And> i v. type_of_val v = TPrim primty \<Longrightarrow> \<exists>i. v = LitV (C i)"
+          "\<And> i v::('a, 'm) val. type_of_val v = TPrim primty \<Longrightarrow> \<exists>i. v = LitV (C i)"
           "\<And> i. type_of_val (LitV (C i)) = TPrim primty"
   shows "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Exists (TPrim primty) e, ns\<rangle> \<Down> LitV (LBool (\<exists>i. P i))"
 proof (cases "\<exists>i. P i")
@@ -336,7 +330,7 @@ lemma exists_vc_rel_real:
 
 (** general types **)
 lemma forall_vc_type:
-  assumes closedTypeOfVal:"\<And> v. closed (type_of_val v)" and
+  assumes closedTypeOfVal:"\<And> v::('a, 'm) val. closed (type_of_val v)" and
    closedInstTy:"closed (instantiate \<Omega> ty)" and
    vcTypeFalse:"\<And> i. \<not> (P i) \<Longrightarrow> vc_type_of_val i = ty_to_closed (instantiate \<Omega> ty)" and
    body: "\<And> i. type_of_val i = instantiate \<Omega> ty \<Longrightarrow> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, full_ext_env ns i\<rangle> \<Down> BoolV (P i)"
@@ -359,7 +353,7 @@ next
 qed
 
 lemma exists_vc_type:
-  assumes closedTypeOfVal:"\<And> v. closed (type_of_val v)" and
+  assumes closedTypeOfVal:"\<And> v::('a, 'm) val. closed (type_of_val v)" and
    closedInstTy:"closed (instantiate \<Omega> ty)" and
    vcTypeTrue:"\<And> i. (P i) \<Longrightarrow> vc_type_of_val i = ty_to_closed (instantiate \<Omega> ty)" and
    body: "\<And> i. type_of_val i = instantiate \<Omega> ty \<Longrightarrow> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, full_ext_env ns i\<rangle> \<Down> BoolV (P i)"
@@ -500,13 +494,13 @@ lemma treal_realv: "\<lbrakk> type_of_val v = TPrim TReal \<rbrakk> \<Longrighta
   by (auto elim: type_of_val_real_elim)
 
 lemma vc_tint_intv: "vc_type_of_val v = TPrimC TInt \<Longrightarrow> \<exists>i. v = IntV i"
-  by (metis closed.simps(2) closed_inv2_2 closed_to_ty.simps(1) closed_ty.distinct(1) ty_to_closed.simps(2) type_of_val.elims type_of_val_int_elim vc_type_of_val.simps)
+  by (cases v, rename_tac x, case_tac x; force)
 
 lemma vc_tbool_boolv: "vc_type_of_val v = TPrimC TBool \<Longrightarrow> \<exists>i. v = BoolV i"
-  by (metis closed.simps(2) closed_inv2_2 closed_to_ty.simps(1) closed_ty.distinct(1) ty_to_closed.simps(2) type_of_val.elims type_of_val_bool_elim vc_type_of_val.simps)
+  by (cases v, rename_tac x, case_tac x; force)
 
 lemma vc_treal_realv: "vc_type_of_val v = TPrimC TReal \<Longrightarrow> \<exists>i. v = RealV i"
-  by (metis closed.simps(2) closed_inv2_2 closed_to_ty.simps(1) closed_ty.distinct(1) ty_to_closed.simps(2) type_of_val.elims type_of_val_real_elim vc_type_of_val.simps)
+  by (cases v, rename_tac x, case_tac x; force)
 
 text \<open>Lemmas used for proving equivalence between VC quantifiers with and without extractors\<close>
 
@@ -529,7 +523,7 @@ proof (rule allI, rule impI)
   fix v
   assume "vc_type_of_val v = TPrimC TInt"
   from this obtain i where "v = IntV i"
-    by (metis closed.simps(2) closed_inv2 closed_to_ty.simps(1) closed_ty.distinct(1) ty_to_closed.simps(2) type_of_val.elims type_of_val_int_elim vc_type_of_val.simps) 
+    by (cases v, rename_tac x, case_tac x; force)
   thus "IntV (convert_val_to_int v) = v"
     by auto
 qed
@@ -546,7 +540,7 @@ proof (rule allI, rule impI)
   fix v
   assume "vc_type_of_val v = TPrimC TBool"
   hence "type_of_val v = TPrim TBool"
-    by (metis closed.simps(2) closed_inv2 closed_to_ty.simps(1) closed_ty.distinct(1) ty_to_closed.simps(2) type_of_val.elims vc_type_of_val.simps) 
+    by (cases v, rename_tac x, case_tac x; force)
   from this obtain b where "v = BoolV b"
     using tbool_boolv by auto  
   thus "BoolV (convert_val_to_bool v) = v"

@@ -2,13 +2,7 @@ theory CFGOptimizationsLoop
   imports Semantics Util
 begin
 
-locale cfgOptimizationsLoop =
-  fixes map_select :: "('a::absval, 'm::mapval) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
-  fixes map_store  :: "('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
-begin
-
-interpretation semantics map_select map_store .
-interpretation util map_select map_store .
+context semantics begin
 
 definition hybrid_block_lemma_target_succ_verifies
   where "hybrid_block_lemma_target_succ_verifies M \<Lambda> \<Gamma> \<Omega> G' tgt_block s1' posts \<equiv>

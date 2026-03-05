@@ -37,15 +37,7 @@ inductive ast_cfg_rel :: "expr option \<Rightarrow> cmd list \<Rightarrow> bigbl
 
 subsection \<open>Miscellaneous helper lemmas\<close>
 
-locale ast_cfg_transformation =
-  fixes map_select :: "('a::absval, 'm::mapval) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
-  fixes map_store  :: "('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
-begin
-
-interpretation semantics map_select map_store .
-interpretation util map_select map_store .
-interpretation ast map_select map_store .
-interpretation backedgeElim map_select map_store .
+context semantics begin
 
 lemma not_true_equals_false:
   assumes "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>UnOp unop.Not expr, ns1\<rangle> \<Down> BoolV True"
@@ -327,12 +319,13 @@ lemma end_return:
 text \<open>If an ast configuration is final, then any transition in the ast will stay in the same configuration.\<close>
 lemma final_is_static: 
   assumes "is_final ((BigBlock name [] None None), start_cont, start_state)"
-  shows "\<And>A M \<Lambda> \<Gamma> \<Omega> T end_bb end_cont end_state. 
+  shows "\<And>M \<Lambda> \<Gamma> \<Omega> T end_bb end_cont end_state.
          (red_bigblock M \<Lambda> \<Gamma> \<Omega> T ((BigBlock name [] None None), start_cont, start_state) (end_bb, end_cont, end_state)) \<Longrightarrow> 
          ((end_bb, end_cont, end_state) = ((BigBlock name [] None None), start_cont, start_state))" 
   using assms 
 proof -
-  fix M \<Lambda> \<Gamma> \<Omega> T end_bb  end_cont end_state
+  fix M::"'p proc_context"
+  fix \<Lambda> \<Gamma> \<Omega> T end_bb  end_cont end_state
   have cont_eq: "start_cont = KStop" using assms is_final.elims(1) by blast  
   assume prem1: "(red_bigblock M \<Lambda> \<Gamma> \<Omega> T ((BigBlock name [] None None), start_cont, start_state) (end_bb, end_cont, end_state))"
   from prem1 show "((end_bb, end_cont, end_state) = ((BigBlock name [] None None), start_cont, start_state))" using cont_eq
@@ -615,11 +608,11 @@ text \<open>Pair 1: The starting configuration represents a point in the program
 lemma endblock_skip:
   assumes "M,\<Lambda>,\<Gamma>,\<Omega>,T \<turnstile>(bb0, KEndBlock cont0, Normal ns3) -n\<longrightarrow>^l (reached_bb, reached_cont, reached_state)"
       and "bb0 = BigBlock name [] None None" 
-    shows "(valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state) \<or> 
+    shows "(ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state) \<or> 
             (\<exists> l1. (M,\<Lambda>,\<Gamma>,\<Omega>,T \<turnstile>(bb0, cont0, Normal ns3) -n\<longrightarrow>^l1 (reached_bb, reached_cont, reached_state)) \<and> (l = Suc l1) )"
 proof (cases l)
   case 0
-  then show ?thesis by (metis Ast.valid_configuration_def assms(1) get_state.simps is_final.simps(6) relpowp_fun_conv state.simps(3))
+  then show ?thesis by (metis ast_valid_configuration_def assms(1) get_state.simps is_final.simps(6) relpowp_fun_conv state.simps(3))
 next
   case 1: (Suc l1)
   then show ?thesis 
@@ -648,18 +641,18 @@ lemma ending_after_skipping_endblock:
            (\<And>m' s'. M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile>(Inl n, Normal ns1'') -n\<rightarrow>* (m', s') \<Longrightarrow> s' \<noteq> Failure) \<Longrightarrow>
            (\<And>m' s'. (M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile>(Inl n, Normal ns1'') -n\<rightarrow>* (m', s')) \<Longrightarrow>
            is_final_config (m', s') \<Longrightarrow> \<forall>ns_end. s' = Normal ns_end \<longrightarrow> (expr_all_sat \<Lambda>1_local \<Gamma> \<Omega> ns_end) posts) \<Longrightarrow>
-           ((cont_guard = Some guard) \<Longrightarrow> (\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>guard,ns1''\<rangle> \<Down> BoolV False)) \<Longrightarrow> (valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)"
-    shows "valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state"
-proof -
+           ((cont_guard = Some guard) \<Longrightarrow> (\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>guard,ns1''\<rangle> \<Down> BoolV False)) \<Longrightarrow> (ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)"
+    shows "ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state"
+proof -         
   from assms(2-3) have disj_a:
-    "(valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state) \<or> 
+    "(ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state) \<or> 
        (\<exists> l2. (M,\<Lambda>,\<Gamma>,\<Omega>,T \<turnstile>(bb, cont0, Normal ns1'') -n\<longrightarrow>^l2 (reached_bb, reached_cont, reached_state)) \<and> (j' = Suc l2) )" 
     by (simp add: endblock_skip)
   thus ?thesis
   proof cases
-    assume "(valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)" thus ?thesis by simp
+    assume "(ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)" thus ?thesis by simp
   next 
-    assume "\<not> ((valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state))"
+    assume "\<not> ((ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state))"
     hence "(\<exists> l2. (M,\<Lambda>,\<Gamma>,\<Omega>,T \<turnstile>(bb, cont0, Normal ns1'') -n\<longrightarrow>^l2 (reached_bb, reached_cont, reached_state)) \<and> (j' = Suc l2) )" 
       using disj_a by blast
     thus ?thesis
@@ -687,12 +680,12 @@ text \<open>Pair 2: The starting configuration represents a point in the program
 lemma endblock_skip2:
   assumes "M,\<Lambda>,\<Gamma>,\<Omega>,T \<turnstile>(bb0, KEndBlock (KSeq bb_next cont0), Normal ns3) -n\<longrightarrow>^l (reached_bb, reached_cont, reached_state)"
     and "bb0 = BigBlock None [] None None" 
-  shows "(valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state) \<or> 
+  shows "(ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state) \<or> 
             (\<exists> l2. (M,\<Lambda>,\<Gamma>,\<Omega>,T \<turnstile>(bb_next, cont0, Normal ns3) -n\<longrightarrow>^l2 (reached_bb, reached_cont, reached_state)) \<and> (l = Suc (Suc l2)) )"
   using assms
 proof (cases l)
   case 0
-  then show ?thesis by (metis Ast.valid_configuration_def assms(1) get_state.simps is_final.simps(6) relpowp_fun_conv state.simps(3))
+  then show ?thesis by (metis ast_valid_configuration_def assms(1) get_state.simps is_final.simps(6) relpowp_fun_conv state.simps(3))
 next
   case 1: (Suc l1)
   then show ?thesis 
@@ -702,7 +695,7 @@ next
       by fastforce
     then show ?thesis
     proof cases
-      case RedSkipEndBlock thus ?thesis by (simp add: Ast.valid_configuration_def)
+      case RedSkipEndBlock thus ?thesis by (simp add: ast_valid_configuration_def)
     qed auto
   next
     case 2: (Suc l2)
@@ -746,19 +739,19 @@ lemma ending_after_skipping_endblock2:
            (\<And>m' s'. (M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile>(Inl n, Normal ns1'') -n\<rightarrow>* (m', s')) \<Longrightarrow>
            is_final_config (m', s') \<Longrightarrow> \<forall>ns_end. s' = Normal ns_end \<longrightarrow> (expr_all_sat \<Lambda>1_local \<Gamma> \<Omega> ns_end) posts) \<Longrightarrow>
            ((cont_guard = Some guard) \<Longrightarrow> (\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>guard,ns1''\<rangle> \<Down> BoolV False)) \<Longrightarrow> 
-           valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state"
-    shows "valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state"
+           ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state"
+    shows "ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state"
 proof -
   from assms(2-3) have disj_a:
-    "(valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state) \<or> 
+    "(ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state) \<or> 
        (\<exists> l2. (M,\<Lambda>,\<Gamma>,\<Omega>,T \<turnstile>(bigblock_next, cont0, Normal ns1'') -n\<longrightarrow>^l2 (reached_bb, reached_cont, reached_state)) \<and> 
               (j' = Suc (Suc l2)) )" 
     by (simp add: endblock_skip2)
   thus ?thesis
   proof cases
-    assume "(valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)" thus ?thesis by simp
+    assume "(ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)" thus ?thesis by simp
   next 
-    assume "\<not> ((valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state))"
+    assume "\<not> ((ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state))"
     hence "(\<exists> l2. (M,\<Lambda>,\<Gamma>,\<Omega>,T \<turnstile>(bigblock_next, cont0, Normal ns1'') -n\<longrightarrow>^l2 (reached_bb, reached_cont, reached_state)) \<and> 
                   (j' = Suc (Suc l2)) )" 
       using disj_a by blast
@@ -790,14 +783,14 @@ text \<open>Pair 3: The starting configuration represents a point in the program
 lemma wrapper_to_endblock:
   assumes "M,\<Lambda>,\<Gamma>,\<Omega>,T \<turnstile>(bb0, cont0, Normal ns) -n\<longrightarrow>^l (reached_bb, reached_cont, reached_state)"
       and "bb0 = BigBlock name [] (Some (WhileWrapper loop)) None"
-    shows "(valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state) \<or> 
+    shows "(ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state) \<or> 
               (\<exists> l1. (M,\<Lambda>,\<Gamma>,\<Omega>,T \<turnstile>((BigBlock name [] (Some loop) None), KEndBlock cont0, Normal ns) -n\<longrightarrow>^l1 
                      (reached_bb, reached_cont, reached_state)) \<and> (l = Suc l1))"
   using assms
 proof (cases l)
   case 0
   hence "(reached_bb, reached_cont, reached_state) = (bb0, cont0, Normal ns)" using assms(1) by simp
-  then show ?thesis by (simp add: Ast.valid_configuration_def assms(2))
+  then show ?thesis by (simp add: ast_valid_configuration_def assms(2))
 next
   case 1: (Suc l1)
   then show ?thesis 
@@ -828,18 +821,18 @@ lemma ending_after_unwrapping:
            (\<And>m' s'. M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile>(Inl n, Normal ns1'') -n\<rightarrow>* (m', s') \<Longrightarrow> s' \<noteq> Failure) \<Longrightarrow>
            (\<And>m' s'. (M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile>(Inl n, Normal ns1'') -n\<rightarrow>* (m', s')) \<Longrightarrow>
            is_final_config (m', s') \<Longrightarrow> \<forall>ns_end. s' = Normal ns_end \<longrightarrow> (expr_all_sat \<Lambda>1_local \<Gamma> \<Omega> ns_end) posts) \<Longrightarrow>
-           (valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)"
-    shows "valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state"
+           (ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)"
+    shows "ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state"
 proof -
   from assms(1-2) have disj_a:
-    "(valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state) \<or> 
+    "(ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state) \<or> 
        (\<exists> l1. (M,\<Lambda>,\<Gamma>,\<Omega>,T \<turnstile>(BigBlock name [] (Some loop) None, KEndBlock cont0, Normal ns1'') -n\<longrightarrow>^l1 (reached_bb, reached_cont, reached_state)) \<and> (j = Suc l1) )" 
     by (simp add: wrapper_to_endblock)
   thus ?thesis
   proof cases
-    assume "(valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)" thus ?thesis by simp
+    assume "(ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)" thus ?thesis by simp
   next 
-    assume "\<not> ((valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state))"
+    assume "\<not> ((ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state))"
     hence "(\<exists> l2. (M,\<Lambda>,\<Gamma>,\<Omega>,T \<turnstile>(BigBlock name [] (Some loop) None, KEndBlock cont0, Normal ns1'') -n\<longrightarrow>^l2 (reached_bb, reached_cont, reached_state)) \<and> (j = Suc l2) )" 
       using disj_a by blast
     thus ?thesis
@@ -866,13 +859,13 @@ lemma endblock_skip_wrapper:
   assumes "M,\<Lambda>,\<Gamma>,\<Omega>,T \<turnstile> (bb0, KEndBlock (KSeq (BigBlock name [] (Some (WhileWrapper str)) tr) cont0), Normal ns3) -n\<longrightarrow>^l 
                           (reached_bb, reached_cont, reached_state)"
       and "bb0 = BigBlock None [] None None"
-    shows "(valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state) \<or> 
+    shows "(ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state) \<or> 
            (\<exists> l3. (M,\<Lambda>,\<Gamma>,\<Omega>,T \<turnstile>((BigBlock name [] (Some str) tr), KEndBlock cont0, Normal ns3) -n\<longrightarrow>^l3 (reached_bb, reached_cont, reached_state)) \<and>
                   l = Suc (Suc (Suc l3)) )"
   using assms
 proof (cases l)
   case 0
-  then show ?thesis by (metis Ast.valid_configuration_def assms(1) get_state.simps is_final.simps(6) relpowp_fun_conv state.simps(3))
+  then show ?thesis by (metis ast_valid_configuration_def assms(1) get_state.simps is_final.simps(6) relpowp_fun_conv state.simps(3))
 next
   case 1: (Suc l1)
   then show ?thesis 
@@ -883,7 +876,7 @@ next
       by fastforce
     then show ?thesis
     proof cases
-      case RedSkipEndBlock thus ?thesis by (simp add: Ast.valid_configuration_def)
+      case RedSkipEndBlock thus ?thesis by (simp add: ast_valid_configuration_def)
     qed auto
   next
     case 2: (Suc l2)
@@ -904,7 +897,7 @@ next
       proof cases 
         case RedSkip thus ?thesis  using \<open>(inter_bb, inter_cont, inter_state) = (BigBlock None [] None None, (KSeq (BigBlock name [] (Some (WhileWrapper str)) tr) cont0), Normal ns3)\<close> by fastforce
       qed auto
-      then show ?thesis by (simp add: Ast.valid_configuration_def)
+      then show ?thesis by (simp add: ast_valid_configuration_def)
     next
       case 3: (Suc l3)
       from 3 2 1 have "l = Suc (Suc (Suc l3))" by auto
@@ -959,20 +952,20 @@ lemma ending_after_skipping_endblock_and_unwrapping:
           (\<And>m' s'. M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile>(Inl n, Normal ns1'') -n\<rightarrow>* (m', s') \<Longrightarrow> s' \<noteq> Failure) \<Longrightarrow>
           (\<And>m' s'. (M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile>(Inl n, Normal ns1'') -n\<rightarrow>* (m', s')) \<Longrightarrow>
            is_final_config (m', s') \<Longrightarrow> \<forall>ns_end. s' = Normal ns_end \<longrightarrow> (expr_all_sat \<Lambda>1_local \<Gamma> \<Omega> ns_end) posts) \<Longrightarrow> 
-          (Ast.valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)"
-    shows "(Ast.valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)"
+          (ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)"
+    shows "(ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)"
   using assms
 proof -
   from assms(2-3) have disj_a:
-    "(valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state) \<or> 
+    "(ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state) \<or> 
        (\<exists> l3. (M,\<Lambda>,\<Gamma>,\<Omega>,T \<turnstile> ((BigBlock None [] (Some (ParsedWhile next_guard next_invs (next_body_bb#body_bbs))) None), KEndBlock cont1, Normal ns1'') 
               -n\<longrightarrow>^l3 (reached_bb, reached_cont, reached_state)) \<and> (j' = Suc (Suc (Suc l3))) )"
     by (simp add: endblock_skip_wrapper)
   thus ?thesis
   proof cases
-    assume "(valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)" thus ?thesis by simp
+    assume "(ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)" thus ?thesis by simp
   next 
-    assume "\<not> ((valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state))"
+    assume "\<not> ((ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state))"
     hence skipped_endblock: 
       "(\<exists> l3. (M,\<Lambda>,\<Gamma>,\<Omega>,T \<turnstile>((BigBlock None [] (Some (ParsedWhile next_guard next_invs (next_body_bb#body_bbs))) None), KEndBlock cont1, Normal ns1'') 
                    -n\<longrightarrow>^l3 (reached_bb, reached_cont, reached_state)) \<and> (j' = Suc (Suc (Suc l3))) )" 
@@ -1108,7 +1101,7 @@ lemma generic_ending_block_global_rel:
                     (\<And> s2'.((red_cmd_list M \<Lambda> \<Gamma> \<Omega> (node_to_block(G) ! n) (Normal ns1) s2') \<Longrightarrow> (s2' \<noteq> Failure))) \<Longrightarrow>
                     step_state \<noteq> Failure  \<and>
                     (\<forall>ns1'. step_state = Normal ns1' \<longrightarrow> (M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>node_to_block(G) ! n, Normal ns1\<rangle> [\<rightarrow>] Normal ns1'))"
-    shows "(valid_configuration \<Lambda> \<Gamma> \<Omega> post_invs reached_bb reached_cont reached_state)"
+    shows "(ast_valid_configuration \<Lambda> \<Gamma> \<Omega> post_invs reached_bb reached_cont reached_state)"
   using assms
 proof (cases cs2)
   case Nil 
@@ -1122,7 +1115,7 @@ proof (cases cs2)
         by (metis RedCmdListNil RedNormalReturn push_through_assumption0 push_through_assumption1 r_into_rtranclp)
       hence "(expr_all_sat \<Lambda> \<Gamma> \<Omega> ns1) post_invs" using cfg_satisfies_posts 
         using is_final_config.simps(2) by blast
-      thus ?thesis using complete Ast.valid_configuration_def
+      thus ?thesis using complete ast_valid_configuration_def
         by (metis None Pair_inject \<open>cs1 = []\<close> assms(3) cfg_satisfies_posts ending final_is_static_propagate is_final.simps(1) is_final_config.simps(2) j_step_ast_trace relpowp_imp_rtranclp state.distinct(1))
     qed
   next
@@ -1133,7 +1126,7 @@ proof (cases cs2)
       from this j_step_ast_trace assms(3) 
       have "(reached_bb, reached_cont, reached_state) = ((BigBlock name [] None (Some Return)), cont0, (Normal ns1))" 
         using \<open>cs1 = []\<close> Some assms(4) by simp
-      then show ?thesis by (simp add: valid_configuration_def)
+      then show ?thesis by (simp add: ast_valid_configuration_def)
     next
       case (Suc j')
       thus ?thesis 
@@ -1173,8 +1166,8 @@ proof (cases cs2)
           using cfg_satisfies_posts is_final_config.simps(2) by blast
         then have "is_final (inter_bb, inter_cont, inter_state)"
           using inter_conc is_final.simps(1) by blast
-        then have "(valid_configuration \<Lambda> \<Gamma> \<Omega> post_invs inter_bb inter_cont inter_state)" 
-          unfolding valid_configuration_def
+        then have "(ast_valid_configuration \<Lambda> \<Gamma> \<Omega> post_invs inter_bb inter_cont inter_state)" 
+          unfolding ast_valid_configuration_def
           apply (simp only: get_state.simps)
           apply (simp add: inter_conc)
           using \<open>(expr_all_sat \<Lambda> \<Gamma> \<Omega> ns1) post_invs\<close> expr_all_sat_def inter_conc by blast
@@ -1197,7 +1190,7 @@ next
     then show ?thesis 
     proof (cases any_tr)
       case None
-      then show ?thesis using eq \<open>cs1 \<noteq> []\<close> Ast.valid_configuration_def get_state.simps
+      then show ?thesis using eq \<open>cs1 \<noteq> []\<close> ast_valid_configuration_def get_state.simps
         by (metis is_final.simps(2) list.collapse state.distinct(1))
     next
       case (Some a)
@@ -1207,7 +1200,7 @@ next
         then show ?thesis using Some assms(4) by blast
       next
         case Return
-        then show ?thesis using eq Some by (simp add: Ast.valid_configuration_def) 
+        then show ?thesis using eq Some by (simp add: ast_valid_configuration_def) 
       qed
     qed
   next
@@ -1242,8 +1235,8 @@ next
 
       have "is_final (inter_bb, inter_cont, inter_state)" using concrete_inter ending \<open>cont0 = KStop\<close> by simp 
 
-      hence valid_inter: "(valid_configuration \<Lambda> \<Gamma> \<Omega> post_invs inter_bb inter_cont inter_state)" 
-        unfolding valid_configuration_def
+      hence valid_inter: "(ast_valid_configuration \<Lambda> \<Gamma> \<Omega> post_invs inter_bb inter_cont inter_state)" 
+        unfolding ast_valid_configuration_def
         using posts_sat local_corr by auto
 
       then show ?thesis 
@@ -1288,7 +1281,7 @@ next
           proof (cases j')
             case 0
             then show ?thesis using concrete_inter 
-              by (metis Ast.valid_configuration_def \<open>inter_state \<noteq> Failure\<close> get_state.simps is_final.simps(4) relpowp_0_E rest)
+              by (metis ast_valid_configuration_def \<open>inter_state \<noteq> Failure\<close> get_state.simps is_final.simps(4) relpowp_0_E rest)
           next
             case (Suc j'')
             from this rest obtain inter_bb2 inter_cont2 inter_state2 where
@@ -1299,8 +1292,8 @@ next
               using concrete_inter \<open>inter_state \<noteq> Failure\<close> Normal
               by (cases) blast+
             hence "is_final (inter_bb2, inter_cont2, inter_state2)" by simp
-            hence valid_inter: "(valid_configuration \<Lambda> \<Gamma> \<Omega> post_invs inter_bb2 inter_cont2 inter_state2)" 
-              using Ast.valid_configuration_def \<open>inter_state \<noteq> Failure\<close> inter2_conc posts_sat by blast
+            hence valid_inter: "(ast_valid_configuration \<Lambda> \<Gamma> \<Omega> post_invs inter_bb2 inter_cont2 inter_state2)" 
+              using ast_valid_configuration_def \<open>inter_state \<noteq> Failure\<close> inter2_conc posts_sat by blast
             then show ?thesis
               by (metis \<open>is_final (inter_bb2, inter_cont2, inter_state2)\<close> final_is_static_propagate inter2_conc prod.inject relpowp_imp_rtranclp snd_rest)
           qed
@@ -1309,7 +1302,7 @@ next
           then show ?thesis using \<open>inter_state \<noteq> Failure\<close> by simp
         next
           case Magic
-          then show ?thesis by (metis valid_configuration_def \<open>inter_state \<noteq> Failure\<close>  magic_propagates rest state.simps(5))
+          then show ?thesis by (metis ast_valid_configuration_def \<open>inter_state \<noteq> Failure\<close>  magic_propagates rest state.simps(5))
         qed
       qed
     qed
@@ -1345,14 +1338,14 @@ lemma block_global_rel_while_successor:
                                                              (\<forall>ns_end. s' = Normal ns_end \<longrightarrow> (expr_all_sat \<Lambda> \<Gamma> \<Omega> ns_end) posts))) \<Longrightarrow>
          M,\<Lambda>,\<Gamma>,\<Omega>,T \<turnstile> ((BigBlock name [] (Some (ParsedWhile guard invs (body_bb0#body_bbs))) None), KEndBlock cont1, Normal ns2) -n\<longrightarrow>^k 
                       (reached_bb, reached_cont, reached_state) \<Longrightarrow> 
-         (valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)"
-    shows "(valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)"
+         (ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)"
+    shows "(ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)"
   using assms
 proof cases
   assume "j = 0"
   then have "(reached_bb, reached_cont, reached_state) = 
              ((BigBlock name cmds (Some (WhileWrapper (ParsedWhile guard invs (body_bb0#body_bbs)))) None), cont1, Normal ns1)" using j_step_ast_trace assms(3) by auto
-  thus ?thesis by (simp add: valid_configuration_def)
+  thus ?thesis by (simp add: ast_valid_configuration_def)
 next
   assume "j \<noteq> 0"
   from this obtain j' where "j = Suc j'" using not0_implies_Suc by blast
@@ -1411,7 +1404,7 @@ next
     then show ?thesis using local_conclusion by blast
   next
     case Magic
-    then show ?thesis by (metis valid_configuration_def local_conclusion magic_propagates rest state.simps(5))
+    then show ?thesis by (metis ast_valid_configuration_def local_conclusion magic_propagates rest state.simps(5))
   qed
 qed
 
@@ -1451,15 +1444,15 @@ lemma block_global_rel_loop_head:
     ((cont_guard = None) \<and> 
      ((M,\<Lambda>,\<Gamma>,\<Omega>,T \<turnstile> ((BigBlock name [] None None), KEndBlock cont1, (Normal ns1'')) -n\<longrightarrow>^j' (reached_bb, reached_cont, reached_state)) \<or>
       (M,\<Lambda>,\<Gamma>,\<Omega>,T \<turnstile> (bb0, convert_list_to_cont (( body_bbs)@[bb]) (KEndBlock cont1), (Normal ns1'')) -n\<longrightarrow>^j' (reached_bb, reached_cont, reached_state))))  \<Longrightarrow>  
-    (Ast.valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)"
-    shows "(Ast.valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)" 
+    (ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)"
+    shows "(ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)" 
   using assms cases
 proof -
   show ?thesis 
   proof cases
     assume "j = 0"
     hence "(reached_bb, reached_cont, reached_state) = ((BigBlock name [] any_str any_tr), cont0, (Normal ns1))" using ast_trace assms(5) by simp 
-    thus ?thesis by (simp add: Ast.valid_configuration_def \<open>cont0 = KEndBlock cont1\<close>)
+    thus ?thesis by (simp add: ast_valid_configuration_def \<open>cont0 = KEndBlock cont1\<close>)
   next
     assume "j \<noteq> 0" 
     from this obtain j' where "j = Suc j'" using not0_implies_Suc by blast
@@ -1488,7 +1481,7 @@ proof -
                                                         (\<forall>m' s'. ((M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile>(Inl (msuc2), inter_state) -n\<rightarrow>* (m', s')) \<longrightarrow>
                                                         is_final_config (m', s') \<longrightarrow> 
                                                         (\<forall>ns_end. s' = Normal ns_end \<longrightarrow> (expr_all_sat \<Lambda> \<Gamma> \<Omega> ns_end) posts))) )"
-          using cfg_satisfies_post 
+          using cfg_satisfies_post
           by (metis (no_types) RedNormalSucc assms(5) assms(8) block_local_rel cfg_correct converse_rtranclp_into_rtranclp dag_verifies_propagate_2 local.RedParsedWhileTrue(4))
 
         show ?thesis using \<open>j = Suc j'\<close> succ_cfg_correct succ_cfg_satisfies_post None rest concrete_inter1 succ_correct assms(5) \<open>cont0 = KEndBlock cont1\<close> by blast 
@@ -1506,7 +1499,7 @@ proof -
                                                         (\<forall>m' s'. ((M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile>(Inl (msuc2), inter_state) -n\<rightarrow>* (m', s')) \<longrightarrow>
                                                         is_final_config (m', s') \<longrightarrow> 
                                                         (\<forall>ns_end. s' = Normal ns_end \<longrightarrow> (expr_all_sat \<Lambda> \<Gamma> \<Omega> ns_end) posts))) )"
-          using cfg_satisfies_post 
+          using cfg_satisfies_post
           by (metis (no_types) RedNormalSucc assms(5) assms(8) block_local_rel cfg_correct converse_rtranclp_into_rtranclp dag_verifies_propagate_2 local.RedParsedWhileFalse(5))
 
         show ?thesis using \<open>j = Suc j'\<close> succ_cfg_correct succ_cfg_satisfies_post None rest concrete_inter2 succ_correct \<open>cont0 = KEndBlock cont1\<close>  by blast
@@ -1618,8 +1611,8 @@ lemma block_global_rel_if_successor:
         ( (cont_guard = None) \<and> 
           ((M,\<Lambda>,\<Gamma>,\<Omega>,T \<turnstile> (then0, convert_list_to_cont ( then_bbs) cont0, (Normal ns1'')) -n\<longrightarrow>^k (reached_bb, reached_cont, reached_state)) \<or>
            (M,\<Lambda>,\<Gamma>,\<Omega>,T \<turnstile> (else0, convert_list_to_cont ( else_bbs) cont0, (Normal ns1'')) -n\<longrightarrow>^k (reached_bb, reached_cont, reached_state)) ) ) \<Longrightarrow>  
-        (Ast.valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)"
-    shows "(Ast.valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)" 
+        (ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)"
+    shows "(ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)" 
     using assms cases
 proof cases
   case Rel_Main_test
@@ -1635,7 +1628,7 @@ proof cases
     proof (cases j)
       case 0
       hence "(reached_bb, reached_cont, reached_state) = ((BigBlock name cs1 any_str any_tr), cont0, (Normal ns1))" using ast_trace assms(3) by auto
-      then show ?thesis by (simp add: Ast.valid_configuration_def bb_successor_if) 
+      then show ?thesis by (simp add: ast_valid_configuration_def bb_successor_if) 
     next
       case 1: (Suc j')
       from this assms(3) obtain inter_bb inter_cont inter_state where
@@ -1666,7 +1659,7 @@ proof cases
         proof (cases j')
           case 0
           then show ?thesis 
-            by (metis Ast.valid_configuration_def a1 a2 bb_successor_if get_state.simps is_final.simps(3) relpowp_0_E rest_of_steps) 
+            by (metis ast_valid_configuration_def a1 a2 bb_successor_if get_state.simps is_final.simps(3) relpowp_0_E rest_of_steps) 
         next
           case 3: (Suc j'')
           from this rest_of_steps obtain snd_inter_bb snd_inter_cont snd_inter_state where
@@ -1788,7 +1781,7 @@ proof cases
           by linarith
       next
         case Magic
-        then show ?thesis by (metis Ast.valid_configuration_def a2 magic_propagates rest_of_steps state.distinct(3))
+        then show ?thesis by (metis ast_valid_configuration_def a2 magic_propagates rest_of_steps state.distinct(3))
       qed
     qed
   qed
@@ -1803,7 +1796,7 @@ next
     proof (cases j)
       case 0
       hence "(reached_bb, reached_cont, reached_state) = ((BigBlock name cs1 any_str any_tr), cont0, (Normal ns1))" using ast_trace assms(3) by auto
-      then show ?thesis by (simp add: Ast.valid_configuration_def bb_successor_if) 
+      then show ?thesis by (simp add: ast_valid_configuration_def bb_successor_if) 
     next
       case 1: (Suc j')
       from this assms(3) obtain snd_inter_bb snd_inter_cont snd_inter_state where
@@ -1992,8 +1985,8 @@ lemma block_global_rel_generic:
                                                             is_final_config (m', s') \<longrightarrow> 
                                                             (\<forall>ns_end. s' = Normal ns_end \<longrightarrow> expr_all_sat \<Lambda> \<Gamma> \<Omega> ns_end posts))) \<Longrightarrow>
         M,\<Lambda>,\<Gamma>,\<Omega>,T \<turnstile> (bb1, cont1, (Normal ns1'')) -n\<longrightarrow>^k (reached_bb, reached_cont, reached_state) \<Longrightarrow> 
-        (Ast.valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)"
-    shows "(Ast.valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)" 
+        (ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)"
+    shows "(ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)" 
   using assms cases
 proof cases
   case Rel_Main_test
@@ -2009,7 +2002,7 @@ proof cases
     proof (cases j)
       case 0
       hence "(reached_bb, reached_cont, reached_state) = ((BigBlock name cs1 any_str any_tr), cont0, (Normal ns1))" using ast_trace assms(3) by auto
-      then show ?thesis unfolding Ast.valid_configuration_def by (simp add: trivial_bb_successor)
+      then show ?thesis unfolding ast_valid_configuration_def by (simp add: trivial_bb_successor)
     next
       case succ_0: (Suc j')
       from this assms(3) obtain inter_bb inter_cont inter_state where
@@ -2050,7 +2043,7 @@ proof cases
         proof (cases j')
           case 0
           then show ?thesis 
-            by (metis valid_configuration_def a1 a2 get_state.simps is_final.simps(5) relpowp_0_E rest_of_steps trivial_bb_successor)
+            by (metis ast_valid_configuration_def a1 a2 get_state.simps is_final.simps(5) relpowp_0_E rest_of_steps trivial_bb_successor)
         next
           case 2: (Suc j'')
           from this rest_of_steps obtain snd_inter_bb snd_inter_cont snd_inter_state where
@@ -2088,7 +2081,7 @@ proof cases
           by linarith
       next
         case Magic
-        then show ?thesis by (metis valid_configuration_def a2  magic_propagates rest_of_steps state.distinct(3))
+        then show ?thesis by (metis ast_valid_configuration_def a2  magic_propagates rest_of_steps state.distinct(3))
       qed
     qed 
   qed
@@ -2102,7 +2095,7 @@ next
     proof (cases j)
       case 0
       hence "(reached_bb, reached_cont, reached_state) = ((BigBlock name cs1 any_str any_tr), cont0, (Normal ns1))" using ast_trace assms(3) by auto
-      then show ?thesis by (simp add: Ast.valid_configuration_def trivial_bb_successor) 
+      then show ?thesis by (simp add: ast_valid_configuration_def trivial_bb_successor) 
     next
       case 1: (Suc j')
       from this assms(3) obtain snd_inter_bb snd_inter_cont snd_inter_state where
@@ -2153,7 +2146,7 @@ definition loop_IH
                     (\<forall>m' s'. (red_cfg_multi M \<Lambda> \<Gamma> \<Omega> G ((Inl block_index),(Normal ns1)) (m',s')) \<longrightarrow> (s' \<noteq> Failure)) \<longrightarrow>
                     (\<forall>m' s'.  (M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile>(Inl block_index, Normal ns1) -n\<rightarrow>* (m', s')) \<longrightarrow>
                                is_final_config (m', s') \<longrightarrow> (\<forall>ns_end. s' = Normal ns_end \<longrightarrow> (expr_all_sat \<Lambda> \<Gamma> \<Omega> ns_end) posts)) \<longrightarrow>
-                    (Ast.valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state))"
+                    (ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state))"
 
 lemma loop_IH_prove:
   assumes "\<And> k ns1. k < j \<Longrightarrow>
@@ -2161,7 +2154,7 @@ lemma loop_IH_prove:
                     (\<forall>m' s'. (red_cfg_multi M \<Lambda> \<Gamma> \<Omega> G ((Inl block_index),(Normal ns1)) (m',s')) \<longrightarrow> (s' \<noteq> Failure)) \<Longrightarrow>
                     (\<forall>m' s'.  (M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile>(Inl block_index, Normal ns1) -n\<rightarrow>* (m', s')) \<longrightarrow>
                                is_final_config (m', s') \<longrightarrow> (\<forall>ns_end. s' = Normal ns_end \<longrightarrow> (expr_all_sat \<Lambda> \<Gamma> \<Omega> ns_end) posts)) \<Longrightarrow>
-                    (Ast.valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)"
+                    (ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)"
   shows "loop_IH j M \<Lambda> \<Gamma> \<Omega> T bb0 cont0 G block_index posts reached_bb reached_cont reached_state"
   using assms
   unfolding loop_IH_def
@@ -2174,7 +2167,7 @@ lemma loop_IH_apply:
       and "(\<forall>m' s'. (red_cfg_multi M \<Lambda> \<Gamma> \<Omega> G ((Inl block_index),(Normal ns1)) (m',s')) \<longrightarrow> (s' \<noteq> Failure))"
       and "(\<forall>m' s'.  (M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile>(Inl block_index, Normal ns1) -n\<rightarrow>* (m', s')) \<longrightarrow>
                                is_final_config (m', s') \<longrightarrow> (\<forall>ns_end. s' = Normal ns_end \<longrightarrow> (expr_all_sat \<Lambda> \<Gamma> \<Omega> ns_end posts)))"
-    shows "(Ast.valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)"
+    shows "(ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts reached_bb reached_cont reached_state)"
   using assms
   unfolding loop_IH_def 
   by blast
@@ -2184,45 +2177,45 @@ subsection \<open>Procedure correctness\<close>
 text \<open>The main lemma used to complete proof of the correctness of an \<^term>\<open>ast_procedure\<close>.\<close>
 lemma end_to_end_util2:
   assumes AExpanded: "\<And> \<Gamma> end_bb end_cont end_state ns (M::mbodyCFG proc_context).
-           rtranclp (red_bigblock B M \<Lambda> \<Gamma> [] ast) (init_ast ast ns) (end_bb, end_cont, end_state) \<Longrightarrow>
-           (\<And> v. (closed ((type_of_val B) v))) \<Longrightarrow>
-           (\<And> t. ((closed t) \<Longrightarrow> (\<exists> v. (((type_of_val B) v) = t)))) \<Longrightarrow>
-           (fun_interp_wf B fun_decls \<Gamma>) \<Longrightarrow>
-           (axiom_assm B \<Gamma> constants (ns::(('a, 'm)nstate)) axioms) \<Longrightarrow>
-           (expr_all_sat B \<Lambda> \<Gamma> [] ns all_pres) \<Longrightarrow>
-           (state_typ_wf B [] (local_state ns) (snd \<Lambda>)) \<Longrightarrow>
-           (state_typ_wf B [] (global_state ns) (fst \<Lambda>)) \<Longrightarrow>
+           rtranclp (red_bigblock M \<Lambda> \<Gamma> [] ast) (init_ast ast ns) (end_bb, end_cont, end_state) \<Longrightarrow>
+           (\<And> v::('a, 'm) val. (closed ((type_of_val) v))) \<Longrightarrow>
+           (\<And> t. ((closed t) \<Longrightarrow> (\<exists> v::('a, 'm) val. (((type_of_val) v) = t)))) \<Longrightarrow>
+           (fun_interp_wf fun_decls \<Gamma>) \<Longrightarrow>
+           (axiom_assm \<Gamma> constants (ns::(('a, 'm)nstate)) axioms) \<Longrightarrow>
+           (expr_all_sat \<Lambda> \<Gamma> [] ns all_pres) \<Longrightarrow>
+           (state_typ_wf [] (local_state ns) (snd \<Lambda>)) \<Longrightarrow>
+           (state_typ_wf [] (global_state ns) (fst \<Lambda>)) \<Longrightarrow>
            (unique_constants_distinct (global_state ns) unique_consts) \<Longrightarrow>
            ((global_state ns) = (old_global_state ns)) \<Longrightarrow>
            ((binder_state ns) = Map.empty) \<Longrightarrow> 
-           (Ast.valid_configuration B \<Lambda> \<Gamma> [] checked_posts end_bb end_cont end_state)"
+           (ast_valid_configuration \<Lambda> \<Gamma> [] checked_posts end_bb end_cont end_state)"
       and "all_pres = proc_all_pres proc_ast"
       and "checked_posts = proc_checked_posts proc_ast"
       and ABody: "procedure.proc_body proc_ast = Some (locals, ast)"
       and AVarContext:"\<Lambda> = (constants@global_vars, (proc_args proc_ast)@locals)"
       and ARets:"proc_rets proc_ast = []"
       and "proc_ty_args proc_ast = 0"   
-    shows "proc_is_correct B fun_decls constants unique_consts global_vars axioms proc_ast 
-             (Ast.proc_body_satisfies_spec :: mbodyCFG proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env \<Rightarrow> expr list \<Rightarrow> expr list \<Rightarrow> ast \<Rightarrow> ('a, 'm) nstate \<Rightarrow> bool)"
+    shows "proc_is_correct fun_decls constants unique_consts global_vars axioms proc_ast 
+             (ast_proc_body_satisfies_spec :: mbodyCFG proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env \<Rightarrow> expr list \<Rightarrow> expr list \<Rightarrow> ast \<Rightarrow> ('a, 'm) nstate \<Rightarrow> bool)"
 proof -
-  show "proc_is_correct B fun_decls constants unique_consts global_vars axioms proc_ast (Ast.proc_body_satisfies_spec :: mbodyCFG proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env \<Rightarrow> expr list \<Rightarrow> expr list \<Rightarrow> ast \<Rightarrow> ('a, 'm) nstate \<Rightarrow> bool)"
+  show "proc_is_correct fun_decls constants unique_consts global_vars axioms proc_ast (ast_proc_body_satisfies_spec :: mbodyCFG proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env \<Rightarrow> expr list \<Rightarrow> expr list \<Rightarrow> ast \<Rightarrow> ('a, 'm) nstate \<Rightarrow> bool)"
   proof( (simp only: proc_is_correct.simps), subst ABody, simp split: option.split, (rule allI | rule impI)+,
-      unfold proc_body_satisfies_spec_def,(rule allI | rule impI)+)  
+      unfold ast_proc_body_satisfies_spec_def,(rule allI | rule impI)+)  
     fix \<Gamma> \<Omega> gs ls end_bb end_cont end_state
-    assume Atyp:"(\<forall>t. closed t \<longrightarrow> (\<exists>v. type_of_val B v = t)) \<and> (\<forall>v. closed (type_of_val B v))" and
-      FunWf:"fun_interp_wf B fun_decls \<Gamma>" and
+    assume Atyp:"(\<forall>t. closed t \<longrightarrow> (\<exists>v::('a, 'm) val. type_of_val v = t)) \<and> (\<forall>v::('a, 'm) val. closed (type_of_val v))" and
+      FunWf:"fun_interp_wf fun_decls \<Gamma>" and
       ARenv: "list_all closed \<Omega> \<and> length \<Omega> = proc_ty_args proc_ast" and
-      WfGlobal: "state_typ_wf B \<Omega> gs (constants @ global_vars)" and
-      WfLocal: "state_typ_wf B \<Omega> ls (proc_args proc_ast @ locals @ proc_rets proc_ast)" and
+      WfGlobal: "state_typ_wf \<Omega> gs (constants @ global_vars)" and
+      WfLocal: "state_typ_wf \<Omega> ls (proc_args proc_ast @ locals @ proc_rets proc_ast)" and
       UniqueConsts: "unique_constants_distinct gs unique_consts" and
-      AxSat: "axioms_sat B (constants, []) \<Gamma>
+      AxSat: "axioms_sat (constants, []) \<Gamma>
         \<lparr>old_global_state = Map.empty, global_state = state_restriction gs constants, local_state = Map.empty, binder_state = Map.empty\<rparr>
         axioms" and
-      APres:  "expr_all_sat B (constants @ global_vars, proc_args proc_ast @ locals @ proc_rets proc_ast) \<Gamma> \<Omega>
+      APres:  "expr_all_sat (constants @ global_vars, proc_args proc_ast @ locals @ proc_rets proc_ast) \<Gamma> \<Omega>
         \<lparr>old_global_state = gs, global_state = gs, local_state = ls, binder_state = Map.empty\<rparr> (map fst (proc_pres proc_ast))" and
       Ared: "rtranclp 
                (red_bigblock 
-                B ([]::mbodyCFG proc_context) (constants @ global_vars,
+                ([]::mbodyCFG proc_context) (constants @ global_vars,
                 proc_args proc_ast @
                 locals @
                 proc_rets
@@ -2231,7 +2224,7 @@ proof -
     have Contexteq:"\<Lambda> = (constants @ global_vars, proc_args proc_ast @ locals @ proc_rets proc_ast)"
       using AVarContext ARets by simp
     from ARenv \<open>proc_ty_args proc_ast = 0\<close> have "\<Omega> = []" by simp
-    have "Ast.valid_configuration B \<Lambda> \<Gamma> [] checked_posts end_bb end_cont end_state"
+    have "ast_valid_configuration \<Lambda> \<Gamma> [] checked_posts end_bb end_cont end_state"
       apply (rule AExpanded)
       apply (subst Contexteq)
       using Ared \<open>\<Omega> = []\<close> 
@@ -2253,7 +2246,7 @@ proof -
       apply simp
       apply simp
       done
-    thus "Ast.valid_configuration B (constants @ global_vars, proc_args proc_ast @ locals @ proc_rets proc_ast) \<Gamma> \<Omega>
+    thus "ast_valid_configuration (constants @ global_vars, proc_args proc_ast @ locals @ proc_rets proc_ast) \<Gamma> \<Omega>
         (map fst (filter (\<lambda>x. \<not> snd x) (proc_posts proc_ast))) end_bb end_cont end_state"
       using Contexteq \<open>\<Omega> = []\<close> \<open>checked_posts = _\<close>
       by simp

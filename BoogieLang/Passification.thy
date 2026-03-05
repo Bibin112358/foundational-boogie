@@ -27,12 +27,7 @@ lemma dependent_ext:
   unfolding dependent_def
   by blast
 
-locale passification =
-  fixes map_select :: "('a::absval, 'm::mapval) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
-  fixes map_store  :: "('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
-begin
-
-interpretation semantics map_select map_store .
+context semantics begin
 
 definition set_red_cmd :: "'p proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env \<Rightarrow> cmd \<Rightarrow> ('a, 'm) nstate set \<Rightarrow> ('a, 'm) state set"
   where "set_red_cmd M \<Lambda> \<Gamma> \<Omega> c N = {s. \<exists>n_s. n_s \<in> N \<and> M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>c, Normal n_s\<rangle> \<rightarrow> s}"
@@ -371,8 +366,6 @@ lemma old_local_var_red:
   apply cases
   apply (erule RedVar_case)
   by (metis RedVar lookup_var_def nstate.ext_inject nstate.surjective nstate.update_convs(2) option.case_eq_if)
-
-interpretation util map_select map_store .
 
 text \<open>The following lemma proves that if we can show two expressions are related by 
 \<^term>\<open>expr_rel\<close> (the non-passive and passive versions) w.r.t. some variable relation R

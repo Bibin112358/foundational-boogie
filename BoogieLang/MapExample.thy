@@ -185,7 +185,7 @@ qed
 
 subsection \<open>Store\<close>
 
-(* takes long time to proof, 20s *)
+(* takes long time to proof, 25s *)
 fun storeImplAux :: "'a val3210 \<Rightarrow> 'a val3210 \<Rightarrow> 'a val3210 \<Rightarrow> 'a val3210" where
     "storeImplAux (Inr (Inr (Inl (MapVal m t)))) (Inr (Inr (Inr k))) (Inr (Inr (Inl v)))
       = (Inr (Inr (Inl (MapVal (m(k := v)) t))))"

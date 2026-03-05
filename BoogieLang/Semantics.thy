@@ -21,7 +21,7 @@ abbreviation BoolV where "BoolV b \<equiv> LitV (LBool b)"
 abbreviation RealV where "RealV r \<equiv> LitV (LReal r)"
 
 
-primrec is_lit_val :: "('a, 'k) val \<Rightarrow> bool"
+primrec is_lit_val :: "('a, 'm) val \<Rightarrow> bool"
   where 
     "is_lit_val (LitV _) = True"
   | "is_lit_val (AbsV _) = False"
@@ -43,13 +43,13 @@ We did not pick a pure DeBruijn approach, since it becomes a bit unnatural to di
 and global variables. Moreover, we did not pick a locally nameless approach, since generating proofs
 becomes cumbersome due to the free variable constraints when opening terms.\<close>
 
-type_synonym ('a, 'k) named_state = "vname \<rightharpoonup> ('a, 'k) val"
+type_synonym ('a, 'm) named_state = "vname \<rightharpoonup> ('a, 'm) val"
 
-record ('a, 'k) nstate =
-  old_global_state :: "('a, 'k) named_state"
-  global_state :: "('a, 'k) named_state"
-  local_state :: "('a, 'k) named_state"
-  binder_state :: "nat \<rightharpoonup> ('a, 'k) val"
+record ('a, 'm) nstate =
+  old_global_state :: "('a, 'm) named_state"
+  global_state :: "('a, 'm) named_state"
+  local_state :: "('a, 'm) named_state"
+  binder_state :: "nat \<rightharpoonup> ('a, 'm) val"
 
 text \<open>
 \<^const>\<open>old_global_state\<close> stores the global state (global variable mapping) 
@@ -60,14 +60,14 @@ as it was at the beginning of the procedure (required for old expressions).
 after a program statement in practice).
 \<close>
 
-fun local_to_nstate :: "('a, 'k) named_state \<Rightarrow> ('a, 'k) nstate"
+fun local_to_nstate :: "('a, 'm) named_state \<Rightarrow> ('a, 'm) nstate"
   where "local_to_nstate ls = \<lparr>old_global_state = Map.empty, global_state = Map.empty, local_state = ls, binder_state = Map.empty\<rparr>"
 
-fun global_to_nstate :: "('a, 'k) named_state => ('a, 'k) nstate"
+fun global_to_nstate :: "('a, 'm) named_state => ('a, 'm) nstate"
   where "global_to_nstate gs = \<lparr>old_global_state = Map.empty, global_state = gs, local_state = Map.empty, binder_state = Map.empty\<rparr>"
 
 text\<open>Boogie program state\<close>
-datatype ('a, 'k) state = Normal "('a, 'k) nstate" | Failure | Magic
+datatype ('a, 'm) state = Normal "('a, 'm) nstate" | Failure | Magic
 
 text\<open>A variable context is a tuple of the global variable declarations and the local variable 
 declarations (parameters, local variables, return variables) \<close>
@@ -109,7 +109,7 @@ lemma lookup_var_ty_decl_Some: "lookup_var_ty \<Lambda> x = Some \<tau> \<Longri
 lemma lookup_var_ty_decl_None: "lookup_var_ty \<Lambda> x = None \<Longrightarrow> lookup_var_decl \<Lambda> x = None"
   by (simp add: lookup_var_decl_def lookup_var_ty_def)
 
-definition lookup_var :: "var_context \<Rightarrow> ('a, 'k) nstate \<Rightarrow> vname \<Rightarrow> ('a, 'k) val option"
+definition lookup_var :: "var_context \<Rightarrow> ('a, 'm) nstate \<Rightarrow> vname \<Rightarrow> ('a, 'm) val option"
   where 
    "lookup_var \<Lambda> ns x = 
       (case (map_of (snd \<Lambda>) x) of Some res \<Rightarrow> local_state ns x |
@@ -117,13 +117,13 @@ definition lookup_var :: "var_context \<Rightarrow> ('a, 'k) nstate \<Rightarrow
 
 text\<open>If variable does not exist, then the global state is updated (for well-typed programs this 
 should not happen).\<close>
-definition update_var :: "var_context \<Rightarrow> ('a, 'k) nstate \<Rightarrow> vname \<Rightarrow> ('a, 'k) val \<Rightarrow>  ('a, 'k) nstate"
+definition update_var :: "var_context \<Rightarrow> ('a, 'm) nstate \<Rightarrow> vname \<Rightarrow> ('a, 'm) val \<Rightarrow>  ('a, 'm) nstate"
   where 
    "update_var \<Lambda> n_s x v =
             (case (map_of (snd \<Lambda>) x) of Some res \<Rightarrow> n_s\<lparr>local_state := (local_state(n_s))(x \<mapsto> v) \<rparr>  |
                                  None \<Rightarrow> n_s\<lparr>global_state := (global_state(n_s))(x \<mapsto> v) \<rparr>)"
 
-definition update_var_opt :: "var_context \<Rightarrow> ('a, 'k) nstate \<Rightarrow> vname \<Rightarrow> ('a, 'k) val option \<Rightarrow> ('a, 'k) nstate"
+definition update_var_opt :: "var_context \<Rightarrow> ('a, 'm) nstate \<Rightarrow> vname \<Rightarrow> ('a, 'm) val option \<Rightarrow> ('a, 'm) nstate"
   where 
    "update_var_opt \<Lambda> n_s x v =
             (case (map_of (snd \<Lambda>) x) of Some res \<Rightarrow> n_s\<lparr>local_state := (local_state(n_s))(x := v)\<rparr>  |
@@ -132,7 +132,7 @@ definition update_var_opt :: "var_context \<Rightarrow> ('a, 'k) nstate \<Righta
 lemma update_var_update_var_opt: "update_var \<Lambda> n_s x v = update_var_opt \<Lambda> n_s x (Some v)"
   by (auto simp: update_var_def update_var_opt_def)
 
-fun full_ext_env :: "('a, 'k) nstate \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) nstate"
+fun full_ext_env :: "('a, 'm) nstate \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) nstate"
   where "full_ext_env n_s v = n_s\<lparr> binder_state := ext_env (binder_state n_s) v \<rparr>"
 
 lemma lookup_var_local: "map_of L x = Some ty \<Longrightarrow> lookup_var (G,L) n_s x = local_state n_s x"
@@ -356,7 +356,7 @@ fun binop_eval ::"binop \<Rightarrow> lit \<Rightarrow> lit \<rightharpoonup> li
  | "binop_eval Imp v1 v2 = binop_implies v1 v2"
  | "binop_eval Iff v1 v2 = binop_iff v1 v2"
 
-fun binop_eval_val :: "binop \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) val \<rightharpoonup> ('a, 'k) val"
+fun binop_eval_val :: "binop \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val \<rightharpoonup> ('a, 'm) val"
   where 
   (* equality and inequality always reduce *)
    "binop_eval_val Eq v1 v2 = Some (LitV (LBool (v1 = v2)))"
@@ -386,7 +386,7 @@ fun unop_eval :: "unop \<Rightarrow> lit \<rightharpoonup> lit"
  | "unop_eval UMinus v = unop_minus v"
  | "unop_eval IntToReal v = unop_int_to_real v"
 
-fun unop_eval_val :: "unop \<Rightarrow> ('a, 'k) val \<rightharpoonup> ('a, 'k) val"
+fun unop_eval_val :: "unop \<Rightarrow> ('a, 'm) val \<rightharpoonup> ('a, 'm) val"
   where
    "unop_eval_val uop (LitV v) = map_option LitV (unop_eval uop v)"
  | "unop_eval_val _ _ = None"
@@ -397,8 +397,8 @@ text\<open>Function interpretation:
   A Boogie function is semantically represented by an Isabelle function that takes as parameters the 
   instantiated type parameters and the argument values\<close>
 
-type_synonym ('a, 'k) fun_repr = "ty list \<Rightarrow> ('a, 'k) val list \<rightharpoonup> ('a, 'k) val"
-type_synonym ('a, 'k) fun_interp = "fname \<rightharpoonup> ('a, 'k) fun_repr"
+type_synonym ('a, 'm) fun_repr = "ty list \<Rightarrow> ('a, 'm) val list \<rightharpoonup> ('a, 'm) val"
+type_synonym ('a, 'm) fun_interp = "fname \<rightharpoonup> ('a, 'm) fun_repr"
 
 text\<open>Type interpretation:
 Each value of the abstract carrier type must be mapped to a corresponding type (constructed via a
@@ -450,20 +450,20 @@ lemma instantiate_nil [simp]: "instantiate [] \<tau> = \<tau>"
 
 type_synonym 'struct_ty proc_context = "'struct_ty pdecl list"
 
-type_synonym ('a, 'k) cfg_config = "(node+unit) \<times> ('a, 'k) state"
+type_synonym ('a, 'm) cfg_config = "(node+unit) \<times> ('a, 'm) state"
 
 subsection \<open>Expression reduction (big-step semantics)\<close>
 
 locale semantics =
-  fixes map_select :: "('a::absval, 'k::mapval) val \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) val"
-  fixes map_store  :: "('a, 'k) val \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) val \<Rightarrow> ('a, 'k) val"
+  fixes map_select :: "('a::absval, 'm::mapval) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
+  fixes map_store  :: "('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
 begin
 
-inductive red_expr :: "var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> expr \<Rightarrow> ('a, 'k) nstate \<Rightarrow> ('a, 'k) val \<Rightarrow> bool"
+inductive red_expr :: "var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env \<Rightarrow> expr \<Rightarrow> ('a, 'm) nstate \<Rightarrow> ('a, 'm) val \<Rightarrow> bool"
   ("_,_,_ \<turnstile> ((\<langle>_,_\<rangle>) \<Down> _)" [51,0,0,0,0] 81)
-  and red_exprs :: "var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> expr list \<Rightarrow> ('a, 'k) nstate \<Rightarrow> ('a, 'k) val list \<Rightarrow> bool"
+  and red_exprs :: "var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env \<Rightarrow> expr list \<Rightarrow> ('a, 'm) nstate \<Rightarrow> ('a, 'm) val list \<Rightarrow> bool"
   ("_,_,_ \<turnstile> ((\<langle>_,_\<rangle>) [\<Down>] _)" [51,0,0,0,0] 81)
-  for \<Lambda> :: "var_context" and \<Gamma> :: "('a, 'k) fun_interp"
+  for \<Lambda> :: "var_context" and \<Gamma> :: "('a, 'm) fun_interp"
   where 
     RedVar: "\<lbrakk> lookup_var \<Lambda> n_s x = Some v \<rbrakk> \<Longrightarrow> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>(Var x), n_s\<rangle> \<Down> v"
   | RedBVar: "\<lbrakk> binder_state n_s i = Some v \<rbrakk> \<Longrightarrow> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>BVar i, n_s\<rangle> \<Down> v"
@@ -550,31 +550,31 @@ lemma red_cond_exp_cases:
   apply fastforce
   done
 
-definition expr_sat :: "var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env => ('a, 'k) nstate \<Rightarrow> expr \<Rightarrow> bool"
+definition expr_sat :: "var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env => ('a, 'm) nstate \<Rightarrow> expr \<Rightarrow> bool"
   where "expr_sat \<Lambda> \<Gamma> \<Omega> n_s e = (\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool True))"
 
-definition expr_all_sat :: "var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env => ('a, 'k) nstate \<Rightarrow> expr list \<Rightarrow> bool"
+definition expr_all_sat :: "var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env => ('a, 'm) nstate \<Rightarrow> expr list \<Rightarrow> bool"
   where "expr_all_sat \<Lambda> \<Gamma> \<Omega> n_s es = list_all (expr_sat \<Lambda> \<Gamma> \<Omega> n_s) es"
 
-definition expr_exists_fail :: "var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env => ('a, 'k) nstate \<Rightarrow> expr list \<Rightarrow> bool"
+definition expr_exists_fail :: "var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env => ('a, 'm) nstate \<Rightarrow> expr list \<Rightarrow> bool"
   where "expr_exists_fail \<Lambda> \<Gamma> \<Omega> n_s es = list_ex (expr_sat \<Lambda> \<Gamma> \<Omega> n_s) es"
 
-definition where_clause_sat :: "var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env => ('a, 'k) nstate \<Rightarrow> vdecl \<Rightarrow> bool"
+definition where_clause_sat :: "var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env => ('a, 'm) nstate \<Rightarrow> vdecl \<Rightarrow> bool"
   where "where_clause_sat \<Lambda> \<Gamma> \<Omega> n_s vd = (\<forall>x ty w. vd = (x,ty,Some w) \<longrightarrow> expr_sat \<Lambda> \<Gamma> \<Omega> n_s w)"
 
-definition where_clauses_all_sat :: "var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env => ('a, 'k) nstate \<Rightarrow> vdecls \<Rightarrow> bool"
+definition where_clauses_all_sat :: "var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env => ('a, 'm) nstate \<Rightarrow> vdecls \<Rightarrow> bool"
   where "where_clauses_all_sat \<Lambda> \<Gamma> \<Omega> n_s vs = list_all (where_clause_sat \<Lambda> \<Gamma> \<Omega> n_s) vs"
 
 (* where-clauses of global variables should be assumed without taking local variables into account, due to shadowing. *)
-definition where_clauses_all_sat_context :: "var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env => ('a, 'k) nstate \<Rightarrow> bool"
+definition where_clauses_all_sat_context :: "var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env => ('a, 'm) nstate \<Rightarrow> bool"
   where "where_clauses_all_sat_context \<Lambda> \<Gamma> \<Omega> ns \<equiv> 
            where_clauses_all_sat(fst \<Lambda>, []) \<Gamma> \<Omega> ns (fst \<Lambda>) \<and> where_clauses_all_sat \<Lambda> \<Gamma> \<Omega> ns (snd \<Lambda>)"
 
 subsection \<open>Command reduction (big-step semantics)\<close>
 
-inductive red_cmd :: "'m proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> cmd \<Rightarrow> ('a, 'k) state \<Rightarrow> ('a, 'k) state \<Rightarrow> bool"
+inductive red_cmd :: "'p proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env \<Rightarrow> cmd \<Rightarrow> ('a, 'm) state \<Rightarrow> ('a, 'm) state \<Rightarrow> bool"
   ("_,_,_,_ \<turnstile> ((\<langle>_,_\<rangle>) \<rightarrow>/ _)" [51,0,0] 81)
-  for M :: "'m proc_context" and \<Lambda> :: var_context and  \<Gamma> :: "('a, 'k) fun_interp" and \<Omega> :: rtype_env
+  for M :: "'p proc_context" and \<Lambda> :: var_context and  \<Gamma> :: "('a, 'm) fun_interp" and \<Omega> :: rtype_env
   where
     RedAssertOk: "\<lbrakk> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool True) \<rbrakk> \<Longrightarrow> 
                  M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Assert e, Normal n_s\<rangle> \<rightarrow> Normal n_s"
@@ -626,9 +626,9 @@ inductive_cases RedHavoc_case: "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<lan
 
 text \<open>Command list reduction (big-step semantics)\<close>
 
-inductive red_cmd_list :: "'m proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> cmd list \<Rightarrow> ('a, 'k) state \<Rightarrow> ('a, 'k) state \<Rightarrow> bool"
+inductive red_cmd_list :: "'p proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env \<Rightarrow> cmd list \<Rightarrow> ('a, 'm) state \<Rightarrow> ('a, 'm) state \<Rightarrow> bool"
   ("_,_,_,_ \<turnstile> ((\<langle>_,_\<rangle>) [\<rightarrow>]/ _)" [51,0,0,0] 81)
-  for M :: "'m proc_context" and \<Lambda> :: var_context and \<Gamma> :: "('a, 'k) fun_interp" and \<Omega> :: rtype_env
+  for M :: "'p proc_context" and \<Lambda> :: var_context and \<Gamma> :: "('a, 'm) fun_interp" and \<Omega> :: rtype_env
   where
     RedCmdListNil: "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>[],s\<rangle> [\<rightarrow>] s"
   | RedCmdListCons: "\<lbrakk> M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>c,s\<rangle> \<rightarrow> s''; M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs,s''\<rangle> [\<rightarrow>] s' \<rbrakk> \<Longrightarrow> 
@@ -639,9 +639,9 @@ inductive_cases RedCmdListCons_case [elim]: "M,\<Lambda>,\<Gamma>,\<Omega> \<tur
 
 subsection \<open>CFG reduction (small-step semantics)\<close>
 
-inductive red_cfg :: "mbodyCFG proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> mbodyCFG \<Rightarrow> ('a, 'k) cfg_config \<Rightarrow> ('a, 'k) cfg_config \<Rightarrow> bool"
+inductive red_cfg :: "mbodyCFG proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env \<Rightarrow> mbodyCFG \<Rightarrow> ('a, 'm) cfg_config \<Rightarrow> ('a, 'm) cfg_config \<Rightarrow> bool"
   ("_,_,_,_,_ \<turnstile> (_ -n\<rightarrow>/ _)" [51,0,0,0] 81)
-  for M :: "mbodyCFG proc_context" and \<Lambda> :: var_context and \<Gamma> :: "('a, 'k) fun_interp" and \<Omega> :: rtype_env and G :: mbodyCFG
+  for M :: "mbodyCFG proc_context" and \<Lambda> :: var_context and \<Gamma> :: "('a, 'm) fun_interp" and \<Omega> :: rtype_env and G :: mbodyCFG
   where
     RedNormalSucc: "\<lbrakk>node_to_block(G) ! n = cs; M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs,Normal ns\<rangle> [\<rightarrow>] Normal ns'; List.member (out_edges(G) ! n) n'  \<rbrakk> \<Longrightarrow> 
               M,\<Lambda>,\<Gamma>,\<Omega>,G  \<turnstile> (Inl n, Normal ns) -n\<rightarrow> (Inl n', Normal ns')"
@@ -652,7 +652,7 @@ inductive red_cfg :: "mbodyCFG proc_context \<Rightarrow> var_context \<Rightarr
   | RedMagic: "\<lbrakk>node_to_block(G) ! n = cs; M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs,Normal ns\<rangle> [\<rightarrow>] Magic \<rbrakk> \<Longrightarrow>
               M,\<Lambda>,\<Gamma>,\<Omega>,G  \<turnstile> (Inl n, Normal ns) -n\<rightarrow> (Inr (), Magic)"
 
-fun is_final_config :: "('a, 'k) cfg_config \<Rightarrow> bool"
+fun is_final_config :: "('a, 'm) cfg_config \<Rightarrow> bool"
   where
     "is_final_config (Inl n,_) = False"
   | "is_final_config (Inr n,_) = True"
@@ -661,18 +661,18 @@ inductive_cases RedNormalSucc_case: "M,\<Lambda>,\<Gamma>,G,\<Omega>  \<turnstil
 
 text \<open>Reflexive and transitive closure of CFG reduction\<close>
 
-abbreviation red_cfg_multi :: "mbodyCFG proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> mbodyCFG \<Rightarrow> ('a, 'k) cfg_config \<Rightarrow> ('a, 'k) cfg_config \<Rightarrow> bool"
+abbreviation red_cfg_multi :: "mbodyCFG proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env \<Rightarrow> mbodyCFG \<Rightarrow> ('a, 'm) cfg_config \<Rightarrow> ('a, 'm) cfg_config \<Rightarrow> bool"
   ("_,_,_,_,_ \<turnstile>_ -n\<rightarrow>*/ _" [0,0,0] 81)
   where "red_cfg_multi M \<Lambda> \<Gamma> \<Omega> G \<equiv> rtranclp (red_cfg M \<Lambda> \<Gamma> \<Omega> G)"
                                                  
 text \<open>N-step CFG reduction\<close>
 
-abbreviation red_cfg_k_step :: "mbodyCFG proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> mbodyCFG \<Rightarrow> ('a, 'k) cfg_config \<Rightarrow> nat \<Rightarrow> ('a, 'k) cfg_config \<Rightarrow> bool"
+abbreviation red_cfg_k_step :: "mbodyCFG proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env \<Rightarrow> mbodyCFG \<Rightarrow> ('a, 'm) cfg_config \<Rightarrow> nat \<Rightarrow> ('a, 'm) cfg_config \<Rightarrow> bool"
   ("_,_,_,_,_ \<turnstile>_ -n\<rightarrow>^_/ _" [0,0,0,0] 81)
 where "red_cfg_k_step M \<Lambda> \<Gamma> \<Omega> G c1 n c2 \<equiv> ((red_cfg M \<Lambda> \<Gamma> \<Omega> G)^^n) c1 c2"
 
 (* if inputs types are correct, then function reduces to a value of correct output type *)
-fun fun_interp_single_wf :: "nat \<times> ty list \<times> ty \<Rightarrow> (ty list \<Rightarrow> ('a, 'k) val list \<rightharpoonup> ('a, 'k) val) \<Rightarrow> bool"
+fun fun_interp_single_wf :: "nat \<times> ty list \<times> ty \<Rightarrow> (ty list \<Rightarrow> ('a, 'm) val list \<rightharpoonup> ('a, 'm) val) \<Rightarrow> bool"
   where "fun_interp_single_wf(n_ty_params, args_ty, ret_ty) f =
          (\<forall> ts. (length ts = n_ty_params \<and> list_all closed ts) \<longrightarrow>  
                (\<forall> vs. length vs = length args_ty \<and>
@@ -681,7 +681,7 @@ fun fun_interp_single_wf :: "nat \<times> ty list \<times> ty \<Rightarrow> (ty 
  "
 
 (* if function reduces, then input types must have been correct *)
-fun fun_interp_single_wf_2 :: "nat \<times> ty list \<times> ty \<Rightarrow> (ty list \<Rightarrow> ('a, 'k) val list \<rightharpoonup> ('a, 'k) val) \<Rightarrow> bool"
+fun fun_interp_single_wf_2 :: "nat \<times> ty list \<times> ty \<Rightarrow> (ty list \<Rightarrow> ('a, 'm) val list \<rightharpoonup> ('a, 'm) val) \<Rightarrow> bool"
   where "fun_interp_single_wf_2(n_ty_params, args_ty, ret_ty) f =
          (\<forall>ts vs v. (f ts vs = Some v \<longrightarrow> 
                        (type_of_val v = instantiate ts ret_ty \<and>
@@ -689,12 +689,12 @@ fun fun_interp_single_wf_2 :: "nat \<times> ty list \<times> ty \<Rightarrow> (t
                         map type_of_val vs = map (instantiate ts) args_ty))  )"
          
 
-definition fun_interp_wf :: "fdecls \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> bool"
+definition fun_interp_wf :: "fdecls \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> bool"
   where "fun_interp_wf fds \<gamma>_interp = 
             (\<forall>fn fd. map_of fds fn = Some fd \<longrightarrow> 
                   (\<exists>f. \<gamma>_interp fn = Some f \<and> fun_interp_single_wf fd f \<and> fun_interp_single_wf_2 fd f))"
 
-definition state_typ_wf :: "rtype_env \<Rightarrow> ('a, 'k) named_state \<Rightarrow> vdecls \<Rightarrow> bool"
+definition state_typ_wf :: "rtype_env \<Rightarrow> ('a, 'm) named_state \<Rightarrow> vdecls \<Rightarrow> bool"
   where "state_typ_wf \<Omega> ns vs = 
            (\<forall> v t. lookup_vdecls_ty vs v = Some t  \<longrightarrow> 
                           Option.map_option (\<lambda>v. type_of_val v) (ns(v)) = (Some (instantiate \<Omega> t)))"
@@ -732,7 +732,7 @@ definition valid_configuration
          s' \<noteq> Failure \<and> 
          (is_final_config (m',s') \<longrightarrow> (\<forall>ns'. s' = Normal ns' \<longrightarrow> expr_all_sat \<Lambda> \<Gamma> \<Omega> ns' posts))"
 
-definition proc_body_satisfies_spec :: "mbodyCFG proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> expr list \<Rightarrow> expr list \<Rightarrow> mbodyCFG \<Rightarrow> ('a, 'k) nstate \<Rightarrow> bool"
+definition proc_body_satisfies_spec :: "mbodyCFG proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env \<Rightarrow> expr list \<Rightarrow> expr list \<Rightarrow> mbodyCFG \<Rightarrow> ('a, 'm) nstate \<Rightarrow> bool"
   where "proc_body_satisfies_spec M \<Lambda> \<Gamma> \<Omega> pres posts mbody ns \<equiv>
          expr_all_sat \<Lambda> \<Gamma> \<Omega> ns pres \<longrightarrow> 
           (\<forall> m' s'. ( M, \<Lambda>, \<Gamma>, \<Omega>, mbody \<turnstile> (Inl (entry(mbody)), Normal ns) -n\<rightarrow>* (m',s')) \<longrightarrow> 
@@ -743,14 +743,14 @@ text \<open>\<^term>\<open>proc_body_satisfies_spec\<close> states when a proced
 under the assumption of preconditions \<^term>\<open>pres\<close>. To add support for where-clauses, one would need to 
 add an additional assumption here (proof generation does not support where-clauses currently).\<close>
 
-definition axioms_sat :: "var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> ('a, 'k) nstate \<Rightarrow> axiom list \<Rightarrow> bool"
+definition axioms_sat :: "var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> ('a, 'm) nstate \<Rightarrow> axiom list \<Rightarrow> bool"
   where "axioms_sat \<Lambda> \<Gamma> n_s as = list_all (expr_sat \<Lambda> \<Gamma> [] n_s) as"
 
-definition state_restriction :: "('a, 'k) named_state \<Rightarrow> vdecls \<Rightarrow> ('a, 'k) named_state"
+definition state_restriction :: "('a, 'm) named_state \<Rightarrow> vdecls \<Rightarrow> ('a, 'm) named_state"
   where "state_restriction ns_orig vs x = 
          (if map_of vs x \<noteq> None then ns_orig x else None)"
 
-definition nstate_global_restriction :: "('a, 'k) nstate \<Rightarrow> vdecls \<Rightarrow> ('a, 'k) nstate"
+definition nstate_global_restriction :: "('a, 'm) nstate \<Rightarrow> vdecls \<Rightarrow> ('a, 'm) nstate"
   where "nstate_global_restriction ns vs = global_to_nstate (state_restriction (global_state ns) vs)"
 
 abbreviation axiom_assm
@@ -766,17 +766,17 @@ text \<open>The following condition specifies what must hold for the list of con
       definitions are equivalent, since values of different types are distinct in Boogie by default
       (every value can have only one type as reflected by the function \<^const>\<open>type_of_val\<close>).\<close>
 
-definition unique_constants_distinct :: "('a, 'k) named_state \<Rightarrow> vname list \<Rightarrow> bool"
+definition unique_constants_distinct :: "('a, 'm) named_state \<Rightarrow> vname list \<Rightarrow> bool"
   where "unique_constants_distinct ns xs \<longleftrightarrow> distinct (map (\<lambda>x. the (ns x)) xs)"
 
 fun proc_is_correct :: "fdecls \<Rightarrow> vdecls \<Rightarrow> vname list \<Rightarrow> vdecls \<Rightarrow> axiom list \<Rightarrow> 'struct_ty2 procedure \<Rightarrow>
-                       ('struct_ty proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'k) fun_interp \<Rightarrow> rtype_env \<Rightarrow> expr list \<Rightarrow> expr list \<Rightarrow> 'struct_ty2 \<Rightarrow> ('a, 'k) nstate \<Rightarrow> bool) \<Rightarrow>
+                       ('struct_ty proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env \<Rightarrow> expr list \<Rightarrow> expr list \<Rightarrow> 'struct_ty2 \<Rightarrow> ('a, 'm) nstate \<Rightarrow> bool) \<Rightarrow>
                          bool"
   where 
     "proc_is_correct fun_decls constants unique_consts global_vars axioms proc proc_body_satisfies_spec_general =  
       (case proc_body(proc) of
         Some (locals, struct) \<Rightarrow> 
-          ( ( (\<forall>t. closed t \<longrightarrow> (\<exists>v. type_of_val (v :: ('a, 'k) val) = t)) \<and> (\<forall>v. closed (type_of_val (v :: ('a, 'k) val))) ) \<longrightarrow>
+          ( ( (\<forall>t. closed t \<longrightarrow> (\<exists>v. type_of_val (v :: ('a, 'm) val) = t)) \<and> (\<forall>v. closed (type_of_val (v :: ('a, 'm) val))) ) \<longrightarrow>
           (\<forall> \<Gamma>. fun_interp_wf fun_decls \<Gamma> \<longrightarrow>
           (
              (\<forall>\<Omega> gs ls. (list_all closed \<Omega> \<and> length \<Omega> = proc_ty_args proc) \<longrightarrow>        
@@ -798,7 +798,7 @@ fun proc_is_correct :: "fdecls \<Rightarrow> vdecls \<Rightarrow> vdecls \<Right
     "proc_is_correctfun_decls constants global_vars axioms proc =
       (case proc_body(proc) of
         Some (locals, mCFG) \<Rightarrow>
-          ( ( (\<forall>t. closed t \<longrightarrow> (\<exists>v. type_of_val(v :: ('a, 'k) val) = t)) \<and> (\<forall>v. closed ((type_of_val A) v)) ) \<longrightarrow>
+          ( ( (\<forall>t. closed t \<longrightarrow> (\<exists>v. type_of_val(v :: ('a, 'm) val) = t)) \<and> (\<forall>v. closed ((type_of_val A) v)) ) \<longrightarrow>
           (\<forall> \<Gamma>. fun_interp_wffun_decls \<Gamma> \<longrightarrow>
           (
              (\<forall>\<Omega> gs ls. (list_all closed \<Omega> \<and> length \<Omega> = proc_ty_args proc) \<longrightarrow>        
