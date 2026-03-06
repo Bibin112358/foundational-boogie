@@ -406,34 +406,15 @@ type constructor).\<close>
 
 class absval =
   fixes absval_ty :: "'a \<Rightarrow> (tcon_id \<times> ty list)"
-(* TODO: default_value
-  fixes default_of_absty  :: "(tcon_id \<times> ty list) \<Rightarrow> 'a"
-  assumes default_absty_ty [simp]: "absval_ty (default_of_absty T) = T"
-*)
 
 class mapval =
   fixes mapval_ty :: "'a \<Rightarrow> (ty \<times> ty)"
-(* TODO: default_value
-  fixes default_of_mapty  :: "(ty \<times> ty) \<Rightarrow> 'a"
-  assumes default_mapty_ty [simp]: "mapval_ty (default_of_mapty T) = T"
-*)
 
 fun type_of_val :: "('a::absval, 'm::mapval) val \<Rightarrow> ty"
   where
    "type_of_val (LitV v) = TPrim (type_of_lit v)"
  | "type_of_val (AbsV v) = TCon (fst (absval_ty v)) (snd (absval_ty v))"
  | "type_of_val (MapV v) = TMap (fst (mapval_ty v)) (snd (mapval_ty v))"
-
-(* TODO: default_value
-fun default_of_ty :: "ty \<Rightarrow> ('a::absval, 'm::mapval) val"
-  where
-    "default_of_ty (TPrim TBool) = BoolV False"
-  | "default_of_ty (TPrim TInt) = IntV 0"
-  | "default_of_ty (TPrim TReal) = RealV 0"
-  | "default_of_ty (TCon name tys) = AbsV (default_of_absty (name, tys))"
-  | "default_of_ty (TMap tk tv) = MapV (default_of_mapty (tk, tv))"
-  | "default_of_ty (TVar _) = undefined"  (* TODO: check if this makes sense *)
-*)
 
 type_synonym rtype_env = "ty list"
 
@@ -457,6 +438,7 @@ subsection \<open>Expression reduction (big-step semantics)\<close>
 locale semantics =
   fixes map_select :: "('a::absval, 'm::mapval) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
   fixes map_store  :: "('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
+  fixes valid_mapty :: "ty \<Rightarrow> bool"
 begin
 
 inductive red_expr :: "var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env \<Rightarrow> expr \<Rightarrow> ('a, 'm) nstate \<Rightarrow> ('a, 'm) val \<Rightarrow> bool"

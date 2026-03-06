@@ -7,6 +7,10 @@ begin
 abbreviation ite_vc :: "bool \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a"
   where "ite_vc cond thn els \<equiv> if cond then thn else els"
 
+fun val_of_type :: "ty \<Rightarrow> ('a::absval, 'm::mapval) val"
+  where
+   "val_of_type t = (SOME v. type_of_val v = t)"
+
 subsection \<open>vc_to_expr and expr_to_vc\<close>
 
 context semantics begin
@@ -209,9 +213,6 @@ lemma vc_type_of_val_bool: "vc_type_of_val (IntV i) = TPrimC TInt"
 
 text\<open>Return some arbitrary value of correct type\<close>
 
-fun val_of_type :: "ty \<Rightarrow> ('a::absval, 'm::mapval) val"
-  where
-   "val_of_type t = (SOME v. type_of_val v = t)"
 
 definition val_of_closed_type ::"closed_ty \<Rightarrow> ('a::absval, 'm::mapval) val"
   where
@@ -220,7 +221,7 @@ definition val_of_closed_type ::"closed_ty \<Rightarrow> ('a::absval, 'm::mapval
 lemma val_of_type_correct:
   assumes "\<And> t. closed t \<Longrightarrow> \<exists>v::('a, 'm) val. type_of_val v = t" and
          "closed t'"
-  shows "type_of_val (val_of_type t') = t'"
+  shows "type_of_val ((val_of_type t') :: ('a, 'm) val) = t'"
   by (metis (mono_tags, lifting) assms(1) assms(2) someI val_of_type.simps)
 
 lemma val_of_closed_type_correct: 

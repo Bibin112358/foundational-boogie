@@ -1,7 +1,7 @@
 section \<open>Instantiation Example for MapV\<close>
 
 theory MapExample
-  imports Semantics
+  imports Semantics VCExprHelper
 begin
 
 subsection \<open>Type Definition\<close>
@@ -45,53 +45,6 @@ abbreviation mg4 :: "'a valn" where "mg4 \<equiv> MapV (Inl mg3)"
 
 abbreviation ms3 :: "'a val3" where "ms3 \<equiv> MapVal (undefined(Inr (Inr (IntV 3)) := m33)) (TT, (TMap TT  (TPrim TInt)))"
 abbreviation ms4 :: "'a valn" where "ms4 \<equiv> MapV (Inl ms3)"
-
-subsection \<open>Select\<close>
-(* there needs to be as many additional store functions, as there are nesting levels *)
-(* user needs to generate these functions (is there a way to make this cleaner, macro?) *)
-fun toVal3210 :: "'a valn \<Rightarrow> 'a val3210" where
-    "toVal3210 (LitV v) = (Inr (Inr (Inr (LitV0 v))))"
-  | "toVal3210 (AbsV v) = (Inr (Inr (Inr (AbsV0 v))))"
-  | "toVal3210 (MapV (Inr (Inr m))) = (Inr (Inr (Inl m)))"
-  | "toVal3210 (MapV (Inr (Inl m))) = (Inr (Inl m))"
-  | "toVal3210 (MapV (Inl m)) = (Inl m)"
-
-fun val3ToValn :: "'a val3210 \<Rightarrow> 'a valn" where
-    "val3ToValn (Inr (Inr (Inr (LitV0 v)))) = (LitV v)"
-  | "val3ToValn (Inr (Inr (Inr (AbsV0 v)))) = (AbsV v)"
-  | "val3ToValn (Inr (Inr (Inl m))) = (MapV (Inr (Inr m)))"
-  | "val3ToValn (Inr (Inl m)) = (MapV (Inr (Inl m)))"
-  | "val3ToValn (Inl m) = (MapV (Inl m))"
-
-fun selectImplAux :: "'a val3210 \<Rightarrow> 'a val3210 \<Rightarrow> 'a val3210" where
-    "selectImplAux (Inr (Inr (Inr (LitV0 v)))) _ = (Inr (Inr (Inr undefined)))"
-  | "selectImplAux (Inr (Inr (Inr (AbsV0 v)))) _ = (Inr (Inr (Inr undefined)))"
-  | "selectImplAux (Inr (Inr (Inl (MapVal m _)))) (Inr (Inr (Inr k))) = Inr (Inr (Inl (m k)))"
-  | "selectImplAux (Inr (Inr (Inl (MapKey m _)))) (Inr (Inr (Inr k))) = Inr (Inr (Inr (m k)))"
-  | "selectImplAux (Inr (Inl (MapVal m _))) (Inr (Inr k)) = Inr (Inl (m k))"
-  | "selectImplAux (Inr (Inl (MapKey m _))) (Inr (Inr (Inl k))) = Inr (Inr (m k))"
-  | "selectImplAux (Inl (MapVal m _)) (Inr k) = Inl (m k)"
-  | "selectImplAux (Inl (MapKey m _)) (Inr (Inl k)) = Inr (m k)"
-  | "selectImplAux _ _ = (Inr (Inr (Inr undefined)))"
-
-fun selectImpl :: "'a valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn" where
-  "selectImpl m k = val3ToValn (selectImplAux (toVal3210 m) (toVal3210 k))"
-
-lemma "selectImpl mg4 m24 = (MapV (Inr (Inr (MapKey (undefined(IntV 3 := IntV 2)) (TT, TT)))))" by simp
-
-
-subsection \<open>Helper Case Distinction\<close>
-thm val3ToValn.cases
-lemma ValnCases:
-"(\<And>v. x = LitV v \<Longrightarrow> P) \<Longrightarrow>
-(\<And>v. x = AbsV v \<Longrightarrow> P) \<Longrightarrow>
-(\<And>f tk tv. x = MapV (Inr (Inr (MapKey f (tk, tv)))) \<Longrightarrow> P) \<Longrightarrow>
-(\<And>f tk tv. x = MapV (Inr (Inr (MapVal f (tk, tv)))) \<Longrightarrow> P) \<Longrightarrow>
-(\<And>f tk tv. x = MapV (Inr (Inl (MapKey f (tk, tv)))) \<Longrightarrow> P) \<Longrightarrow>
-(\<And>f tk tv. x = MapV (Inr (Inl (MapVal f (tk, tv)))) \<Longrightarrow> P) \<Longrightarrow>
-(\<And>f tk tv. x = MapV (Inl (MapKey f (tk, tv))) \<Longrightarrow> P) \<Longrightarrow>
-(\<And>f tk tv. x = MapV (Inl (MapVal f (tk, tv))) \<Longrightarrow> P) \<Longrightarrow> P"
-  by (metis L.exhaust sumE surj_pair val.exhaust_sel)
 
 
 subsection \<open>Type Of Val\<close>
@@ -137,11 +90,61 @@ fun wf_ty :: "'a valn \<Rightarrow> bool" where
 
 lemma map_level_gt_0: "count_level_map_ty (TMap tv tk) \<ge> 1" by auto
 
+subsection \<open>Select\<close>
+(* there needs to be as many additional store functions, as there are nesting levels *)
+(* user needs to generate these functions (is there a way to make this cleaner, macro?) *)
+fun toVal3210 :: "'a valn \<Rightarrow> 'a val3210" where
+    "toVal3210 (LitV v) = (Inr (Inr (Inr (LitV0 v))))"
+  | "toVal3210 (AbsV v) = (Inr (Inr (Inr (AbsV0 v))))"
+  | "toVal3210 (MapV (Inr (Inr m))) = (Inr (Inr (Inl m)))"
+  | "toVal3210 (MapV (Inr (Inl m))) = (Inr (Inl m))"
+  | "toVal3210 (MapV (Inl m)) = (Inl m)"
+
+fun val3ToValn :: "'a val3210 \<Rightarrow> 'a valn" where
+    "val3ToValn (Inr (Inr (Inr (LitV0 v)))) = (LitV v)"
+  | "val3ToValn (Inr (Inr (Inr (AbsV0 v)))) = (AbsV v)"
+  | "val3ToValn (Inr (Inr (Inl m))) = (MapV (Inr (Inr m)))"
+  | "val3ToValn (Inr (Inl m)) = (MapV (Inr (Inl m)))"
+  | "val3ToValn (Inl m) = (MapV (Inl m))"
+
+fun selectImplAux :: "'a::absval val3210 \<Rightarrow> 'a val3210 \<Rightarrow> 'a val3210" where
+    "selectImplAux (Inr (Inr (Inr (LitV0 v)))) _ = (Inr (Inr (Inr undefined)))"
+  | "selectImplAux (Inr (Inr (Inr (AbsV0 v)))) _ = (Inr (Inr (Inr undefined)))"
+  | "selectImplAux (Inr (Inr (Inl (MapVal m _)))) (Inr (Inr (Inr k))) = Inr (Inr (Inl (m k)))"
+  | "selectImplAux (Inr (Inr (Inl (MapKey m _)))) (Inr (Inr (Inr k))) = Inr (Inr (Inr (m k)))"
+  | "selectImplAux (Inr (Inl (MapVal m _))) (Inr (Inr k)) = Inr (Inl (m k))"
+  | "selectImplAux (Inr (Inl (MapKey m _))) (Inr (Inr (Inl k))) = Inr (Inr (m k))"
+  | "selectImplAux (Inl (MapVal m _)) (Inr k) = Inl (m k)"
+  | "selectImplAux (Inl (MapKey m _)) (Inr (Inl k)) = Inr (m k)"
+  | "selectImplAux m _ = toVal3210 (val_of_type (val_ty (type_of_val (val3ToValn m))))"
+
+fun selectImpl :: "'a::absval valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn" where
+  "selectImpl m k = val3ToValn (selectImplAux (toVal3210 m) (toVal3210 k))"
+
+lemma "selectImpl mg4 m24 = (MapV (Inr (Inr (MapKey (undefined(IntV 3 := IntV 2)) (TT, TT)))))" by simp
+
+
+subsection \<open>Helper Case Distinction\<close>
+thm val3ToValn.cases
+lemma ValnCases:
+"(\<And>v. x = LitV v \<Longrightarrow> P) \<Longrightarrow>
+(\<And>v. x = AbsV v \<Longrightarrow> P) \<Longrightarrow>
+(\<And>f tk tv. x = MapV (Inr (Inr (MapKey f (tk, tv)))) \<Longrightarrow> P) \<Longrightarrow>
+(\<And>f tk tv. x = MapV (Inr (Inr (MapVal f (tk, tv)))) \<Longrightarrow> P) \<Longrightarrow>
+(\<And>f tk tv. x = MapV (Inr (Inl (MapKey f (tk, tv)))) \<Longrightarrow> P) \<Longrightarrow>
+(\<And>f tk tv. x = MapV (Inr (Inl (MapVal f (tk, tv)))) \<Longrightarrow> P) \<Longrightarrow>
+(\<And>f tk tv. x = MapV (Inl (MapKey f (tk, tv))) \<Longrightarrow> P) \<Longrightarrow>
+(\<And>f tk tv. x = MapV (Inl (MapVal f (tk, tv))) \<Longrightarrow> P) \<Longrightarrow> P"
+  by (metis L.exhaust sumE surj_pair val.exhaust_sel)
+
 
 subsection \<open>Helper Injectivity Lemmas for toVal3210 and val3ToValn\<close>
 
 lemma valBij: "toVal3210 (val3ToValn x) = x"
   by (cases x rule: val3ToValn.cases; simp)
+
+lemma valBij2: "val3ToValn (toVal3210 x) = x"
+  by (cases x rule: toVal3210.cases; simp)
 
 lemma toVal3210_inj:
   assumes "toVal3210 x = toVal3210 y"
@@ -215,14 +218,22 @@ lemma "selectImpl (storeImpl mg4 m24 (LitV (LInt 42))) m24
 
 subsection \<open>Well Formedness\<close>
 
-(* TODO: default_value:
-(\<forall>k. wf k \<or> (selectImpl m k) = default_of_ty (val_ty (type_of_val m))); *)
+(* TODO?
+fun wf_val_of_type :: "ty \<Rightarrow> nat \<Rightarrow> 'a valn" where
+    "wf_val_of_type (TVar  _) _ = undefined"
+  | "wf_val_of_type (TMap _ _) 0 = undefined"
+  | "wf_val_of_type (TPrim t) _ = undefined"
+*)
+
 inductive wf where
     wfLitV: "wf (LitV v)" | wfAbsV: "wf (AbsV v)" |
     wfMapV: "\<lbrakk> wf_ty m;  (\<forall>k. wf (selectImpl m k));
-      (\<forall>k. wf_ty k \<and> type_of_val k = key_ty (type_of_val m) \<longrightarrow> type_of_val (selectImpl m k) = val_ty (type_of_val m))
+      (\<forall>k. (\<not>wf k \<or> type_of_val k \<noteq> key_ty (type_of_val m)) \<longrightarrow> (selectImpl m k) = val_of_type (val_ty (type_of_val m)));
+      (\<forall>k. type_of_val (selectImpl m k) = val_ty (type_of_val m))
       \<rbrakk> \<Longrightarrow> wf m"
 
+
+fun valid_mapty :: "ty \<Rightarrow> bool" where "valid_mapty t = (count_level_map_ty t \<le> 3)"
 
 text \<open>Lemma for return value of invalid select\<close>
 lemma wfundef: "(wf (val3ToValn (Inr (Inr (Inr undefined)))))"
@@ -303,9 +314,10 @@ done
 
 
 subsubsection \<open>Proving well formdness of a simple map\<close>
-fun fAdd1 where "fAdd1 (IntV x) = (IntV (x+1))" | "fAdd1 _ = undefined"
-abbreviation mAdd1 :: "'a val1" where "mAdd1 \<equiv> MapKey fAdd1 ((TPrim TInt), (TPrim TInt))"
-abbreviation vAdd1 :: "'a valn" where "vAdd1 \<equiv> MapV (Inr (Inr mAdd1))"
+fun toVal0 :: "'a valn \<Rightarrow> 'a val0" where "toVal0 (LitV l) = LitV0 l" | "toVal0 _ = undefined"
+fun fAdd1 where "fAdd1 (IntV x) = (IntV (x+1))" | "fAdd1 _ = toVal0 (val_of_type (TT))"
+abbreviation mAdd1 :: "'a::absval val1" where "mAdd1 \<equiv> MapKey fAdd1 ((TPrim TInt), (TPrim TInt))"
+abbreviation vAdd1 :: "'a::absval valn" where "vAdd1 \<equiv> MapV (Inr (Inr mAdd1))"
 
 lemma "wf_ty vAdd1" by simp
 
@@ -327,30 +339,84 @@ next
   then show ?thesis by simp
 qed
 
+lemma wfvotTT: "(type_of_val ((val_of_type TT)::'a::absval valn) = TT \<and> wf ((val_of_type TT)::'a::absval valn))"
+proof -
+  obtain i where "val_of_type (TPrim TInt) = LitV (LInt i)"
+    by (metis (mono_tags, lifting) semantics.int_inverse_3 someI_ex
+        type_of_lit.simps(2) type_of_val.simps(1) val_of_type.simps)
+  then show ?thesis
+    by (metis
+        \<open>\<And>thesis. (\<And>i. val_of_type TT = Semantics.IntV i \<Longrightarrow> thesis) \<Longrightarrow> thesis\<close>
+        type_of_lit.simps(2) type_of_val.simps(1) wfLitV)
+qed
+
 lemma H2:
-  assumes "wf_ty k"
-  assumes "type_of_val k = (TPrim TInt)"
   shows "type_of_val (selectImpl vAdd1 k) = (TPrim TInt)"
-  using assms type_of_val_Int by fastforce
-
-lemma HH: "(\<forall>k. (wf_ty k \<and> type_of_val k = key_ty (type_of_val vAdd1)
-    \<longrightarrow> type_of_val (selectImpl vAdd1 k) = val_ty (type_of_val vAdd1)))"
-  using VTAdd1 KTAdd1 H2 by auto
-
-lemma vAdd1wfSelect: "wf (selectImpl vAdd1 k)"
-  apply (cases k rule: toVal3210.cases; simp add: wfundef)
-      apply (case_tac v; simp add: wfundef)
-        apply (simp add: wfLitV)
+  apply (cases k rule: toVal3210.cases)
+  apply (metis (no_types, lifting) fAdd1.elims selectImpl.simps selectImplAux.simps(4)
+      semantics.int_inverse_3 toVal0.simps(1) toVal3210.simps(1,3) type_of_lit.simps(2)
+      type_of_val.simps(1) val3ToValn.simps(1) wfvotTT)
+  using wfvotTT semantics.tint_intv
+  apply (metis (no_types, lifting) fAdd1.simps(4) selectImpl.simps
+      selectImplAux.simps(4) toVal0.elims toVal3210.simps(2,3) val.distinct(1,3)
+      val3ToValn.simps(1))
+    apply (metis VTAdd1 selectImpl.simps
+      selectImplAux.simps(22) toVal3210.simps(3) valBij2 wfvotTT)
+   apply (metis VTAdd1 selectImpl.simps
+      selectImplAux.simps(21) toVal3210.simps(3,4) valBij2 wfvotTT)
+   apply (metis VTAdd1 selectImpl.simps
+      selectImplAux.simps(20) toVal3210.simps(3,5) valBij2 wfvotTT)
   done
 
-lemma wf_vAdd1: "wf vAdd1" using VTAdd1 HH vAdd1wfSelect
-  using wfMapV[of vAdd1] by force
+lemma HH: "type_of_val (selectImpl vAdd1 k) = val_ty (type_of_val vAdd1)"
+  using VTAdd1 KTAdd1 H2 by auto
+
+(* TODO: more general *)
+lemma votTTpreserved: "val3ToValn (Inr (Inr (Inr (toVal0 (val_of_type (TT)))))) = (val_of_type (TT))"
+  using wfvotTT type_of_val_Int 
+  by (metis toVal0.simps(1) val3ToValn.simps(1))
+
+lemma vAdd1defualt: "(\<not>wf k \<or> type_of_val k \<noteq> key_ty (type_of_val vAdd1)) \<Longrightarrow> (selectImpl vAdd1 k) = val_of_type (val_ty (type_of_val vAdd1))"
+  apply (cases "k" rule: toVal3210.cases; cases "type_of_val k"; simp) 
+      apply (rename_tac v t, case_tac v; simp) using votTTpreserved apply fastforce
+  using wfLitV wfAbsV toVal3210_inj valBij apply blast
+  using votTTpreserved apply auto[1]
+  using votTTpreserved apply auto[1]
+  using wfLitV wfAbsV toVal3210_inj valBij apply blast+
+  done
+
+lemma vAdd1wfSelect: "wf (selectImpl vAdd1 k)"
+  apply (cases k rule: toVal3210.cases)
+  apply (metis (no_types, opaque_lifting) selectImpl.simps selectImplAux.simps(4) val0.exhaust
+      val3ToValn.simps(1,2,3) valBij wfAbsV wfLitV)
+  apply (metis fAdd1.simps(4) selectImpl.simps selectImplAux.simps(4) toVal0.elims toVal3210.simps(2,3)
+      val3ToValn.simps(1) wfLitV wfundef)
+    apply (metis VTAdd1 selectImpl.simps
+      selectImplAux.simps(22) toVal3210.simps(3) valBij2 wfvotTT)
+   apply (metis VTAdd1 selectImpl.simps
+      selectImplAux.simps(21) toVal3210.simps(3,4) valBij2 wfvotTT)
+   apply (metis VTAdd1 selectImpl.simps
+      selectImplAux.simps(20) toVal3210.simps(3,5) valBij2 wfvotTT)
+  done
+
+lemma wf_vAdd1: "wf vAdd1" using VTAdd1 HH vAdd1wfSelect wfMapV[of vAdd1] vAdd1defualt by fastforce
 
 
 subsubsection \<open>Well formdness of a higher order map\<close>
-(* TODO: I actually want to only assume wf (MapV (Inr (Inr (MapKey (f) ty)))) *)
-fun hof where "hof (MapKey f ty) = (case wf (MapV (Inr (Inr (MapKey (fAdd1 \<circ> f) ty)))) of True \<Rightarrow> Inl (MapKey (fAdd1 \<circ> f) ty) | False \<Rightarrow> Inl mAdd1)" | "hof _ = Inl mAdd1"
+
+locale valoftype =
+  assumes VOT: "\<And>t. valid_mapty t \<Longrightarrow> closed t \<Longrightarrow> (type_of_val ((val_of_type t)::'a::absval valn) = t \<and> wf ((val_of_type t)::'a::absval valn))"
+begin
+
+fun toVal1 :: "'a valn \<Rightarrow> 'a val1" where "toVal1 (MapV (Inr (Inr m))) = m" | "toVal1 _ = undefined"
 abbreviation TMII where "TMII \<equiv> TMap (TPrim TInt) (TPrim TInt)"
+fun compint where "compint g f (IntV x) = g (f (IntV x))" | "compint _ _  _ = toVal0 (val_of_type (TT))"
+fun hof where 
+  "hof (MapKey f (tk, tv)) =
+    (if (tk, tv) = (TT, TT) \<and> wf (MapV (Inr (Inr (MapKey (f) (tk, tv)))))
+        then Inl (MapKey (compint fAdd1 f) (TT, TT))
+        else Inl (toVal1 (val_of_type (TMII))))"
+  | "hof _ = Inl (toVal1 (val_of_type (TMII)))"
 abbreviation hom :: "'a::absval val2" where "hom \<equiv> MapKey hof (TMII, TMII)"
 abbreviation homV :: "'a::absval valn" where "homV \<equiv> MapV (Inr (Inl hom))"
 
@@ -376,37 +442,125 @@ proof -
     using K assms(2) by auto
 qed
 
-lemma wff:
-  assumes "wf_ty k \<and> type_of_val k = TMII"
-  shows "type_of_val (selectImpl homV k) = TMII"
+lemma homvotdef: "tyL (toVal1 (val_of_type (TMap TT TT))) = (TT, TT)" using VOT
+  by (smt (verit) One_nat_def Suc_eq_plus1 closed.simps(2,4) count_level_map_ty.simps(1,3) kTMII
+      le_eq_less_or_eq max_0_1(2) not_less_eq_eq numeral_Bit1 numeral_One plus_1_eq_Suc toVal1.simps(1)
+      tyL.simps(2) val.distinct(3) valid_mapty.elims(3) wf.simps wf_ty.elims(1) wf_ty.simps(2)
+      zero_less_two)
+
+
+lemma votTMIIpreserved: "val3ToValn (Inr (Inr (Inl (toVal1 (val_of_type (TMII)))))) = (val_of_type (TMII))"
+  by (metis (no_types, lifting) One_nat_def Suc_eq_plus1 closed.simps(2,4)
+      count_level_map_ty.simps(1,3) kTMII le_eq_less_or_eq max_0_1(2) not_less_eq_eq numeral_Bit1
+      numeral_One plus_1_eq_Suc toVal1.simps(1) val3ToValn.simps(3) valid_mapty.elims(3) wf.simps
+      wf_ty.simps(1,2) zero_less_two VOT)
+
+
+lemma wff: "type_of_val (selectImpl homV k) = TMII"
+  apply (case_tac k rule: ValnCases; (simp add: valBij2))
+    using homvotdef VOT by auto
+
+lemma validClosedTMII: "valid_mapty (TMap TT TT) \<and> closed (TMap TT TT)" by simp
+
+lemma compwf:
+  assumes "a = (MapV (Inr (Inr (MapKey f (TT, TT)))))"
+  assumes "b = (MapV (Inr (Inr (MapKey (compint fAdd1 f) (TT, TT)))))"
+  assumes "wf a"
+  shows "wf b"
 proof -
-  obtain f where K: "k = MapV (Inr (Inr (MapKey f (TT, TT))))"
-    using assms kTMII by auto
-  then have S: "selectImpl homV k = val3ToValn (Inr (Inr (hof (MapKey f (TT, TT)))))"
-    by auto
-  have "wf_L 1 (MapKey f (TT, TT))" using assms K by simp
-  moreover have "type_of_val (MapV (Inr (Inr (MapKey f (TT, TT))))) = TMII" using assms K by simp
-  then show ?thesis
-    using S
-    apply (cases "wf (MapV (Inr (Inr (MapKey (fAdd1 \<circ> f) (TT, TT)))))")
-    by auto
+  have wft: "wf_ty b" by (simp add: assms(2))
+
+  have wf1: "\<forall>k. wf (selectImpl b k)"
+    apply rule
+    apply (case_tac k rule: toVal3210.cases; (simp add: assms))
+    apply (metis toVal3210.simps(1) val0.exhaust val3ToValn.simps(2) valBij2 wfAbsV
+        wfLitV)
+    apply (metis toVal3210.simps(1) val0.exhaust val3ToValn.simps(2) valBij2 wfAbsV
+        wfLitV)
+    by (metis VTAdd1 vAdd1defualt vAdd1wfSelect valBij2 val_of_type.simps)+
+  have KTT: "key_ty (type_of_val b) = TT" by (simp add: assms(2))
+  have wf2: "\<forall>k. (\<not>wf k \<or> type_of_val k \<noteq> key_ty (type_of_val b)) \<longrightarrow> (selectImpl b k) = val_of_type (val_ty (type_of_val b))"
+  proof (rule) fix k
+    show "(\<not>wf k \<or> type_of_val k \<noteq> key_ty (type_of_val b)) \<longrightarrow> (selectImpl b k) = val_of_type (val_ty (type_of_val b))"
+    proof (cases k rule: toVal3210.cases)
+      case (1 v)
+      then show ?thesis apply (cases v)
+        using assms(2) votTTpreserved apply auto[1]
+        apply (simp add: KTT wfLitV)
+        using assms(2) votTTpreserved apply auto
+        done
+    next
+      case (2 v)
+      then show ?thesis
+        using assms(2) votTTpreserved by auto
+    qed (auto simp add: assms valBij2)
+  qed
+    
+  have wf3: "\<forall>k. type_of_val (selectImpl b k) = val_ty (type_of_val b)"
+    apply rule
+    apply (case_tac k rule: toVal3210.cases; (simp add: assms))
+    apply (rename_tac v, case_tac v; simp)
+      apply (metis val_of_type.simps votTTpreserved wfvotTT)
+      apply (metis (no_types, lifting) H2 VTAdd1 fAdd1.elims type_of_lit.simps(2)
+          type_of_val.simps(1) vAdd1defualt val3ToValn.simps(1) votTTpreserved)
+      apply (metis val_of_type.simps votTTpreserved wfvotTT)
+      apply (metis val_of_type.simps votTTpreserved wfvotTT)
+      apply (metis valBij2 val_of_type.simps wfvotTT)+
+    done
+
+  have wf2: "\<forall>k. (\<not>wf k \<or> type_of_val k \<noteq> key_ty (type_of_val b)) \<longrightarrow> (selectImpl b k) = val_of_type (val_ty (type_of_val b))"
+    apply rule
+    apply (case_tac k rule: toVal3210.cases; (simp add: assms valBij2))
+        apply (rename_tac v, case_tac v; simp)
+    using votTTpreserved apply fastforce
+    using wfLitV apply blast
+    using votTTpreserved apply fastforce+
+    done
+
+  show ?thesis using wft wf1 wf2 wf3 wfMapV by simp
 qed
 
+
 lemma vhomVwfSelect: "wf (selectImpl homV k)"
-  apply (cases k rule: toVal3210.cases; simp add: wfundef)
-      apply (case_tac m; auto)
-  using H2 vAdd1wfSelect wf.simps apply force
-  apply (smt (z3) H2 KTAdd1 One_nat_def VTAdd1 add_diff_cancel_left'
-      count_level_map_ty.simps(3) le_numeral_extra(3) plus_1_eq_Suc vAdd1wfSelect
-      val3ToValn.simps(3) wfMapV wf_L.simps(1) wf_ty.simps(3))
-  done
+  apply (cases k rule: toVal3210.cases; simp)
+    using valBij2 VOT validClosedTMII val_of_type.simps apply metis
+    using valBij2 VOT validClosedTMII val_of_type.simps apply metis
+    apply (rename_tac m, case_tac m)
+    using VOT validClosedTMII val_of_type.simps
+    apply (metis (no_types, lifting) hof.simps(2) kTMII toVal1.simps(1) val3ToValn.simps(3)
+        wf.simps wf_ty.simps(1,2))
+    using VOT compwf votTMIIpreserved apply fastforce
+    apply (metis (no_types, lifting) Eps_cong VOT valBij2 val_of_type.simps
+        validClosedTMII)
+    apply (metis (no_types, lifting) Eps_cong VOT valBij2 val_of_type.simps
+        validClosedTMII)
+    done
 
-lemma "wf homV" using wff vhomVwfSelect wf.simps[of homV] by auto
+lemma homVdef:
+  "(\<forall>k. (\<not>wf k \<or> type_of_val k \<noteq> key_ty (type_of_val homV)) \<longrightarrow> (selectImpl homV k) = val_of_type (val_ty (type_of_val homV)))"
+proof rule
+  fix k
+  show "(\<not>wf k \<or> type_of_val k \<noteq> key_ty (type_of_val homV)) \<longrightarrow> (selectImpl homV k) = val_of_type (val_ty (type_of_val homV))"
+    apply simp
+    apply (cases k rule: ValnCases)
+    apply (simp add: valBij2)
+    apply (simp add: valBij2)
+    apply (simp add: votTMIIpreserved)
+    using votTMIIpreserved apply force
+    using votTMIIpreserved apply force
+    apply (simp add: valBij2)+
+    done
+qed
 
-lemma wf_impl_wf_ty: "wf k \<Longrightarrow> wf_ty k" using wf.cases by force
+
+lemma "wf homV" using wff vhomVwfSelect wf.simps[of homV] homVdef by auto
+
+end  (* valoftype locale *)
 
 
 subsubsection \<open>Some more general wf properties\<close>
+
+lemma wf_impl_wf_ty: "wf k \<Longrightarrow> wf_ty k" using wf.cases by force
 
 (* conclude Isabelle type from key of a select assuming wf and typed *)
 lemma
@@ -523,7 +677,7 @@ lemma ArrayAxStable:
   assumes "x \<noteq> y"
   shows "selectImpl (storeImpl M x v) y = selectImpl M y"
   apply (cases "(toVal3210 M, toVal3210 x, toVal3210 v)" rule: storeImplAux.cases; (simp add: assms);
-      cases y rule: toVal3210.cases; (simp add: valBij))
+     cases y rule: toVal3210.cases; (simp add: valBij); auto)
      apply (metis assms toVal3210.simps toVal3210_inj)+
   done
 
@@ -645,7 +799,7 @@ next
 qed
 
 
-lemma extensionalityMapV:
+lemma extensionalityMapVWeak:
   assumes "wf (MapV m)"
   assumes "wf (MapV n)"
   assumes "type_of_val (MapV m) = type_of_val (MapV n)"
@@ -654,12 +808,34 @@ lemma extensionalityMapV:
   by (metis (no_types, lifting) ext extensionalityAux assms(1,2,3,4) selectImpl.simps
       valBij)
 
+
 lemma extensionalityMapV:
   assumes "wf (MapV m)"
   assumes "wf (MapV n)"
   assumes "type_of_val (MapV m) = type_of_val (MapV n)"
-  assumes "\<forall>k. (wf k \<longrightarrow> selectImpl (MapV m) k = selectImpl (MapV n) k)"
-  shows "m = n" oops  (* actually what we want, but not true *)
+  assumes "\<forall>k. (wf k \<and> type_of_val k = key_ty (type_of_val (MapV m))) \<longrightarrow> selectImpl (MapV m) k = selectImpl (MapV n) k"
+  shows "m = n"
+proof -
+  have "\<And>k. selectImpl (MapV m) k = selectImpl (MapV n) k"
+  proof -
+    fix k show "selectImpl (MapV m) k = selectImpl (MapV n) k"
+    proof (cases "(wf k \<and> type_of_val k = key_ty (type_of_val (MapV m)))")
+      case True
+      then show ?thesis using assms(4) by force
+    next
+      case False
+      then have PM: "(\<not>wf k \<or> type_of_val k \<noteq> key_ty (type_of_val (MapV m)))" by simp
+      then have M: "(selectImpl (MapV m) k) = val_of_type (val_ty (type_of_val (MapV m)))"
+        using assms(1) wf.cases by fastforce
+      have "(\<not>wf k \<or> type_of_val k \<noteq> key_ty (type_of_val (MapV n)))"
+        using assms PM by simp
+      then have N: "(selectImpl (MapV n) k) = val_of_type (val_ty (type_of_val (MapV n)))"
+        using assms(2) wf.cases by fastforce
+      then show ?thesis using M N assms by auto
+    qed
+  qed
+  then show ?thesis using extensionalityMapVWeak using assms(1,2,3) by blast
+qed
 
 
 subsection \<open>Select & Store is closed under wf\<close>
@@ -671,33 +847,22 @@ lemma selectClosedWf:
   by (metis wf.cases assms(1) selectImpl.elims selectImplAux.simps(1,2) toVal3210.simps(1,2)
       wfundef)
 
-
 lemma storePreserveTy:
-  assumes "wf m" "wf k" "wf v"
-  assumes "type_of_val m = TMap (type_of_val k) (type_of_val v)"
   shows "type_of_val m = type_of_val (storeImpl m k v)"
   by (cases m rule: ValnCases;
-      (simp add: assms);
+      (simp);
       cases "((toVal3210 m), (toVal3210 k), (toVal3210 v))" rule: storeImplAux.cases;
-      (simp add: assms))
+      (simp))
 
 lemma storeClosedWf3:
   assumes "wf m" "wf k" "wf v"
   assumes "type_of_val m = TMap (type_of_val k) (type_of_val v)"
-  assumes "wf_ty x" "type_of_val x  = key_ty (type_of_val (storeImpl m k v))"
   shows "type_of_val (selectImpl (storeImpl m k v) x) = val_ty (type_of_val (storeImpl m k v))"
-proof -
-  have "type_of_val x = key_ty (type_of_val m)" using storePreserveTy assms by metis
-  then show "type_of_val (selectImpl (storeImpl m k v) x) = val_ty (type_of_val (storeImpl m k v))"
-    apply (cases "x = k")
-     apply (simp add: assms(4))
-    using storePreserveTy ArrayAxUpdate assms apply simp
-    apply (smt (z3) ArrayAxUpdate selectImpl.simps storeImpl.simps storePreserveTy
-        val_ty.simps(1))
-    by (metis (no_types, opaque_lifting) ArrayAxStable InrrrC0 assms(1,2,3,4,5)
-        count_level_map_ty.simps(3) map_level_gt_0 not_one_le_zero storePreserveTy
-        toVal3210.simps(2) type_of_val.simps(1) wf.cases)
-qed
+  using assms
+  apply (cases "x = k"; simp)
+   apply (metis ArrayAxUpdate selectImpl.simps storeImpl.simps storePreserveTy val_ty.simps(1))
+  by (metis (no_types, opaque_lifting) ArrayAxStable selectImpl.elims storeImpl.simps storePreserveTy
+      ty.simps(14,16) type_of_val.simps(1,2) wf.cases)
 
 lemma storeClosedWf2:
   assumes "wf m" "wf k" "wf v"
@@ -715,13 +880,26 @@ lemma storeClosedWf1:
      cases "(toVal3210 k)" rule: val3ToValn.cases;
      cases "(toVal3210 v)" rule: val3ToValn.cases; fastforce)
 
+
+lemma storeClosedWfDef:
+  assumes "wf m" "wf k'" "wf v"
+  assumes "type_of_val m = TMap (type_of_val k') (type_of_val v)"
+  shows "(\<forall>k. (\<not>wf k \<or> type_of_val k \<noteq> key_ty (type_of_val (storeImpl m k' v))) \<longrightarrow> (selectImpl (storeImpl m k' v) k) = val_of_type (val_ty (type_of_val (storeImpl m k' v))))"
+  by (metis (no_types, opaque_lifting) ArrayAxStable assms(1,2,4) key_ty.simps(1)
+      storePreserveTy ty.distinct(9) ty.simps(16) type_of_val.simps(1,2)
+      wf.cases)
+  
+
 lemma storeClosedWf:
   assumes "wf m"
   assumes "wf k"
   assumes "wf v"
   shows "wf (storeImpl m k v)"
-  using  storeClosedWf1 storeClosedWf2 storeClosedWf3 wfMapV assms
-  by (smt (verit) storeImpl.simps)
+  using  storeClosedWf1 storeClosedWf2 storeClosedWf3 storeClosedWfDef wfMapV assms
+  by (smt (verit) One_nat_def add_diff_cancel_left' count_level_map_ty.simps(3,4)
+      diff_diff_cancel diff_is_0_eq map_level_gt_0 mapval_ty_eq_ty321 plus_1_eq_Suc
+      storeImpl.simps storePreserveTy type_of_val.simps(1,2) wf.cases wf_impl_wf_ty
+      zero_neq_one)
 
 
 subsection \<open>Defining well formed type\<close>
@@ -836,13 +1014,14 @@ lemma Ax1:
 lemma Ex:
   assumes "m = MapV m' \<and> n = MapV n'"
   assumes "type_of_val m = type_of_val n"
-  assumes "wf_select m = wf_select n"
+  assumes "\<forall>k. type_of_val k = key_ty (type_of_val m) \<longrightarrow> wf_select m k = wf_select n k"
   shows "m = n"
   using assms
   apply transfer
   apply auto[1]
-  using extensionalityMapV wf_wf_val
-  oops (* not true *)
+  using extensionalityMapV wf_wf_val apply auto
+  by (smt (verit) extensionalityMapV key_ty.simps(1) selectImpl.simps top1I type_of_val.simps(3)
+      val.pred_inject(1,2,3) wf_map_bij)
 
 lemma Ax2_wf_val:
   shows "x = y \<or> wf_select (wf_store m x v) y = wf_select m y"
