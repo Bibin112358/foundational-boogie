@@ -2,7 +2,6 @@ theory PassificationML
 imports Semantics HelperML Passification
 begin
 
-context semantics begin
 
 ML \<open>
 fun type_rel_tac _ [] = (fn _ => all_tac)
@@ -49,7 +48,7 @@ fun cfg_lemma_tac ctxt red_assm passive_lemma_assm state_rel_assms pre_node_edge
   let 
      val (pre_node_thm, pre_edge_thm) = pre_node_edge_thms
      val (passive_node_thm, passive_edge_thm) = passive_node_edge_thms
-     val cfg_helper_inst = @{thm passification_cfg_helper} OF [red_assm, passive_lemma_assm, pre_node_thm, passive_node_thm]
+     val cfg_helper_inst = @{thm semantics.passification_cfg_helper} OF [red_assm, passive_lemma_assm, pre_node_thm, passive_node_thm]
   in
     resolve_tac ctxt [cfg_helper_inst] THEN'
     (asm_full_simp_tac (add_simps [pre_edge_thm, passive_edge_thm] ctxt)) THEN'
@@ -61,7 +60,5 @@ fun cfg_lemma_tac ctxt red_assm passive_lemma_assm state_rel_assms pre_node_edge
     cfg_lemma_successors_tac ctxt state_rel_assms succ_cfg_lemmas
   end
 \<close>
-
-end
 
 end

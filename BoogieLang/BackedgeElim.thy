@@ -153,6 +153,9 @@ lemma expr_all_sat_nstate_same_on:
   using assms(1) eval_nstate_same_on(1)
   by fastforce
 
+end
+
+
 subsection \<open>Some lemmas on well-typed states and reductions\<close>
 
 lemma update_var_state_wt:
@@ -198,6 +201,9 @@ fun is_proc_call :: "cmd \<Rightarrow> bool"
     "is_proc_call (ProcCall m args rets) = True"
   | "is_proc_call _ = False"
 
+
+context semantics begin
+
 lemma red_cmd_state_wt_preserve:
   assumes "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>c, Normal ns\<rangle> \<rightarrow> Normal ns'" and "state_well_typed \<Lambda> \<Omega> ns" and "\<not> (is_proc_call c)"
   shows "state_well_typed \<Lambda> \<Omega> ns'"
@@ -207,7 +213,7 @@ proof cases
   then show ?thesis using update_var_state_wt assms by blast 
 next
   case (RedHavocNormal x ty w v)
-  then show ?thesis using update_var_state_wt assms lookup_var_decl_ty_Some by simp 
+  then show ?thesis using update_var_state_wt assms lookup_var_decl_ty_Some by blast
 qed auto
 
 lemma normal_reduce_aux:
@@ -232,6 +238,9 @@ lemma red_cmds_state_wt_preserve:
   shows "state_well_typed \<Lambda> \<Omega> ns'"
   using assms red_cmds_state_wt_preserve_aux
   by blast
+
+end
+
 
 subsection \<open>Helper lemmas to prove the local block lemmas in the CFG-to-DAG phase\<close>
 
@@ -275,6 +284,9 @@ method cfg_dag_rel_tac_single uses R_def R_old_def LocVar_assms =
                        "cfg_dag_rel ?cut_edge [] [] [] [] [Assume (Lit (LBool False))]" \<Rightarrow> \<open>rule DagRel_CutEdge, simp\<close> \<bar>
                        "cfg_dag_rel ?cut_edge ?H ?pre_invs ?post_invs ?cs1 ?cs2" \<Rightarrow> \<open>rule\<close> \<bar>
                        "_" \<Rightarrow> fail) | (rule DagRel_Nil)
+
+
+context semantics begin
 
 text \<open>Next we prove a series of lemmas that will allow us to prove the main lemma that we use to
 prove the local block lemma in the CFG-to-DAG phase\<close>
@@ -462,7 +474,7 @@ next
   case (RedHavocNormal x ty w v)
   then show ?thesis using nstate_same_on_update_2[OF assms(2)]
     using red_cmd.RedHavocNormal eval_nstate_same_on(1)
-    by (metis (full_types) assms(2) state.distinct(1) state.distinct(3) state.inject)
+    by (metis (full_types) state.distinct(1) state.distinct(3) state.inject)
 next
   case (RedHavocMagic x ty cond v)
   then show ?thesis
@@ -572,6 +584,9 @@ proof -
     by blast
 qed
 
+end
+
+
 lemma cfg_dag_rel_no_proc_calls:
   assumes "cfg_dag_rel c H pre_invs post_invs cs1 cs2"
   shows "list_all (\<lambda>c. \<not> is_proc_call c) cs2"
@@ -581,6 +596,9 @@ lemma cfg_dag_rel_no_proc_calls:
 text \<open>The following lemma is the main lemma used to prove the local block lemma in the CFG-to-DAG 
 phase. The lemma is in "expanded" form. Below we prove another version that hides some parts in 
 definitions, which is easier to use in the actual proofs.\<close>
+
+
+context semantics begin
 
 lemma dag_rel_block_lemma:
   assumes Red:"M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs1, Normal ns1\<rangle> [\<rightarrow>] s'" and
@@ -699,7 +717,7 @@ proof -
     qed
   qed
 
-definition dag_lemma_assms :: "var_context \<Rightarrow> 
+definition dag_lemma_assms :: "var_context \<Rightarrow>
                    ('a, 'm) fun_interp \<Rightarrow> rtype_env \<Rightarrow> vname list \<Rightarrow> expr list \<Rightarrow> 
                     ('a, 'm) nstate \<Rightarrow> ('a, 'm) nstate \<Rightarrow> bool"
   where "dag_lemma_assms \<Lambda> \<Gamma> \<Omega> H pre_invs ns1 ns2 \<equiv> 
@@ -753,6 +771,9 @@ lemma dag_rel_block_lemma_compact:
   using dag_rel_block_lemma
   by blast
 
+end
+
+
 subsection \<open>Definitions and lemmas to track modified variables\<close>
 
 fun mods_contained_in :: "vname set \<Rightarrow> cmd list \<Rightarrow> bool"
@@ -763,6 +784,30 @@ fun mods_contained_in :: "vname set \<Rightarrow> cmd list \<Rightarrow> bool"
 (* method calls are already desugared in this phase *)
   | "mods_contained_in H ((ProcCall _ _ _)#cs) = False"
   | "mods_contained_in H (c#cs) = mods_contained_in H cs"
+
+fun assume_pres :: "expr list \<Rightarrow> cmd list \<Rightarrow> bool"
+  where 
+    "assume_pres [] [] = True"
+  | "assume_pres (e1#es) ((Assume e2)#cs) = ((e1 = e2) \<and> assume_pres es cs)"
+  | "assume_pres _ _ = False"
+
+lemma cfg_dag_rel_no_cut:
+  assumes "cfg_dag_rel False [] [] [] [] cs"
+  shows "cs = []"
+  using assms
+  by (cases) auto
+
+lemma strictly_smaller_helper: "j'' \<le> j' \<Longrightarrow> j = Suc j' \<Longrightarrow> j'' < j"
+  by simp
+
+lemma smaller_transitive: "(j''::nat) \<le> j' \<Longrightarrow> j' \<le> j \<Longrightarrow> j'' \<le> j"
+  by auto
+
+lemma smaller_helper_suc: "j = Suc j' \<Longrightarrow> j' < j"
+  by simp
+
+
+context semantics begin
 
 lemma mods_contained_in_rel_aux: 
   assumes "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs, s\<rangle> [\<rightarrow>] s'"
@@ -1012,13 +1057,6 @@ lemma cfg_dag_helper_2:
   using SuccCorrect
   by blast
 
-
-fun assume_pres :: "expr list \<Rightarrow> cmd list \<Rightarrow> bool"
-  where 
-    "assume_pres [] [] = True"
-  | "assume_pres (e1#es) ((Assume e2)#cs) = ((e1 = e2) \<and> assume_pres es cs)"
-  | "assume_pres _ _ = False"
-
 lemma assume_pres_normal:
   assumes "expr_all_sat \<Lambda> \<Gamma> \<Omega> ns es" and "assume_pres es cs" 
   shows "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs, Normal ns\<rangle> [\<rightarrow>] Normal ns"
@@ -1185,12 +1223,6 @@ next
   qed
 qed
 
-lemma cfg_dag_rel_no_cut:
-  assumes "cfg_dag_rel False [] [] [] [] cs"
-  shows "cs = []"
-  using assms
-  by (cases) auto
-
 lemma cfg_dag_simple_propagate_helper_general:
   assumes DagVerifies:"\<forall> m2' s2'. ((M,\<Lambda>,\<Gamma>,\<Omega>,G \<turnstile> (Inl m, Normal ns2) -n\<rightarrow>* (m2', s2')) \<longrightarrow> (s2' \<noteq> Failure))" and
          StateRel:"nstate_same_on \<Lambda> ns1 ns2 {}" and
@@ -1303,9 +1335,6 @@ lemma cfg_dag_empty_propagate_helper:
   using Empty
   by (auto intro: cfg_dag_rel.intros)
 
-lemma strictly_smaller_helper: "j'' \<le> j' \<Longrightarrow> j = Suc j' \<Longrightarrow> j'' < j"
-  by simp
-
 definition loop_ih :: "mbodyCFG proc_context \<Rightarrow> var_context \<Rightarrow> 
                    ('a, 'm) fun_interp \<Rightarrow> rtype_env \<Rightarrow> mbodyCFG \<Rightarrow> vname list \<Rightarrow> expr list \<Rightarrow> expr list \<Rightarrow>
                     ('a, 'm) nstate \<Rightarrow> ('a, 'm) state \<Rightarrow> nat \<Rightarrow> nat + unit \<Rightarrow> nat \<Rightarrow> bool"
@@ -1386,12 +1415,6 @@ lemma loop_ih_convert_2:
     apply assumption
    apply assumption
   using assms dag_lemma_assms_subset by blast
-
-lemma smaller_transitive: "(j''::nat) \<le> j' \<Longrightarrow> j' \<le> j \<Longrightarrow> j'' \<le> j"
-  by auto
-
-lemma smaller_helper_suc: "j = Suc j' \<Longrightarrow> j' < j"
-  by simp
 
 lemma backedge_loop_head_helper:
   assumes 

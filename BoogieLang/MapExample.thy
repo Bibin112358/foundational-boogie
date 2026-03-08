@@ -28,22 +28,22 @@ subsection \<open>Examples\<close>
 (* MapV examples *)
 value "IntV 2 :: unit valn"
 
-abbreviation IntV where "IntV i \<equiv> LitV0 (LInt i)"
+abbreviation IntV0 where "IntV0 i \<equiv> LitV0 (LInt i)"
 abbreviation TT where "TT \<equiv> TPrim TInt"  (* convenience for testing purposes *)
 
-abbreviation m11 :: "'a val1" where "m11 \<equiv> MapKey (undefined(IntV 3 := IntV 2)) (TT, TT)"
+abbreviation m11 :: "'a val1" where "m11 \<equiv> MapKey (undefined(IntV0 3 := IntV0 2)) (TT, TT)"
 abbreviation m14 :: "'a valn" where "m14 \<equiv> MapV (Inr (Inr m11))"
 
-abbreviation m22 :: "'a val2" where "m22 \<equiv> MapKey (undefined(m11 := Inr (IntV 4))) (TT, TT)"
+abbreviation m22 :: "'a val2" where "m22 \<equiv> MapKey (undefined(m11 := Inr (IntV0 4))) (TT, TT)"
 abbreviation m24 :: "'a valn" where "m24 \<equiv> MapV (Inr (Inl m22))"
 
-abbreviation m33 :: "'a val3" where "m33 \<equiv> MapKey (undefined(m22 := Inr (Inr (IntV 6)))) (TT, TT)"
+abbreviation m33 :: "'a val3" where "m33 \<equiv> MapKey (undefined(m22 := Inr (Inr (IntV0 6)))) (TT, TT)"
 abbreviation m34 :: "'a valn" where "m34 \<equiv> MapV (Inl m33)"
 
 abbreviation mg3 :: "'a val3" where "mg3 \<equiv> MapKey (undefined(m22 := Inr (Inl  m11))) (TMap TT TT, TT)"
 abbreviation mg4 :: "'a valn" where "mg4 \<equiv> MapV (Inl mg3)"
 
-abbreviation ms3 :: "'a val3" where "ms3 \<equiv> MapVal (undefined(Inr (Inr (IntV 3)) := m33)) (TT, (TMap TT  (TPrim TInt)))"
+abbreviation ms3 :: "'a val3" where "ms3 \<equiv> MapVal (undefined(Inr (Inr (IntV0 3)) := m33)) (TT, (TMap TT  (TPrim TInt)))"
 abbreviation ms4 :: "'a valn" where "ms4 \<equiv> MapV (Inl ms3)"
 
 
@@ -121,7 +121,7 @@ fun selectImplAux :: "'a::absval val3210 \<Rightarrow> 'a val3210 \<Rightarrow> 
 fun selectImpl :: "'a::absval valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn" where
   "selectImpl m k = val3ToValn (selectImplAux (toVal3210 m) (toVal3210 k))"
 
-lemma "selectImpl mg4 m24 = (MapV (Inr (Inr (MapKey (undefined(IntV 3 := IntV 2)) (TT, TT)))))" by simp
+lemma "selectImpl mg4 m24 = (MapV (Inr (Inr (MapKey (undefined(IntV0 3 := IntV0 2)) (TT, TT)))))" by simp
 
 
 subsection \<open>Helper Case Distinction\<close>
@@ -315,7 +315,7 @@ done
 
 subsubsection \<open>Proving well formdness of a simple map\<close>
 fun toVal0 :: "'a valn \<Rightarrow> 'a val0" where "toVal0 (LitV l) = LitV0 l" | "toVal0 _ = undefined"
-fun fAdd1 where "fAdd1 (IntV x) = (IntV (x+1))" | "fAdd1 _ = toVal0 (val_of_type (TT))"
+fun fAdd1 where "fAdd1 (IntV0 x) = (IntV0 (x+1))" | "fAdd1 _ = toVal0 (val_of_type (TT))"
 abbreviation mAdd1 :: "'a::absval val1" where "mAdd1 \<equiv> MapKey fAdd1 ((TPrim TInt), (TPrim TInt))"
 abbreviation vAdd1 :: "'a::absval valn" where "vAdd1 \<equiv> MapV (Inr (Inr mAdd1))"
 
@@ -342,7 +342,7 @@ qed
 lemma wfvotTT: "(type_of_val ((val_of_type TT)::'a::absval valn) = TT \<and> wf ((val_of_type TT)::'a::absval valn))"
 proof -
   obtain i where "val_of_type (TPrim TInt) = LitV (LInt i)"
-    by (metis (mono_tags, lifting) semantics.int_inverse_3 someI_ex
+    by (metis (mono_tags, lifting) int_inverse_3 someI_ex
         type_of_lit.simps(2) type_of_val.simps(1) val_of_type.simps)
   then show ?thesis
     by (metis
@@ -354,9 +354,9 @@ lemma H2:
   shows "type_of_val (selectImpl vAdd1 k) = (TPrim TInt)"
   apply (cases k rule: toVal3210.cases)
   apply (metis (no_types, lifting) fAdd1.elims selectImpl.simps selectImplAux.simps(4)
-      semantics.int_inverse_3 toVal0.simps(1) toVal3210.simps(1,3) type_of_lit.simps(2)
+      int_inverse_3 toVal0.simps(1) toVal3210.simps(1,3) type_of_lit.simps(2)
       type_of_val.simps(1) val3ToValn.simps(1) wfvotTT)
-  using wfvotTT semantics.tint_intv
+  using wfvotTT tint_intv
   apply (metis (no_types, lifting) fAdd1.simps(4) selectImpl.simps
       selectImplAux.simps(4) toVal0.elims toVal3210.simps(2,3) val.distinct(1,3)
       val3ToValn.simps(1))
@@ -410,7 +410,7 @@ begin
 
 fun toVal1 :: "'a valn \<Rightarrow> 'a val1" where "toVal1 (MapV (Inr (Inr m))) = m" | "toVal1 _ = undefined"
 abbreviation TMII where "TMII \<equiv> TMap (TPrim TInt) (TPrim TInt)"
-fun compint where "compint g f (IntV x) = g (f (IntV x))" | "compint _ _  _ = toVal0 (val_of_type (TT))"
+fun compint where "compint g f (IntV0 x) = g (f (IntV0 x))" | "compint _ _  _ = toVal0 (val_of_type (TT))"
 fun hof where 
   "hof (MapKey f (tk, tv)) =
     (if (tk, tv) = (TT, TT) \<and> wf (MapV (Inr (Inr (MapKey (f) (tk, tv)))))
@@ -1027,20 +1027,5 @@ lemma Ax2_wf_val:
   shows "x = y \<or> wf_select (wf_store m x v) y = wf_select m y"
   by (smt (verit, del_insts) ArrayAxStable Rep_wf_maps_inject id_apply
       map_fun_apply val.inj_map_strong wf_select_def wf_store.rep_eq)
-
-
-subsection \<open>Using wf type\<close>
-
-(* the absval_ty_fun using class seems to be fixed to the class *)
-instantiation unit :: absval begin
-  fun absval_ty_unit :: "unit \<Rightarrow> (tcon_id \<times> ty list)" where
-    "absval_ty_unit x = (''int_con'', [])"
-  instance .. end
-
-lemma "absval_ty () = (''int_con'', [])" by simp
-
-term red_expr
-interpretation semantics wf_select wf_store .
-term red_expr
 
 end

@@ -2,7 +2,6 @@ section \<open>Semantics of the AST\<close>
 
 theory Ast
   imports Main Semantics Lang BackedgeElim
-
 begin
 
 subsection \<open>AST definition\<close>
@@ -185,6 +184,9 @@ abbreviation red_bigblock_k_step :: "'p proc_context \<Rightarrow> var_context \
   ("_,_,_,_,_ \<turnstile>_ -n\<longrightarrow>^_/ _" [51,0,0,0,0] 81)
 where "red_bigblock_k_step M \<Lambda> \<Gamma> \<Omega> T c1 n c2 \<equiv> ((red_bigblock M \<Lambda> \<Gamma> \<Omega> T)^^n) c1 c2"
 
+end
+
+
 subsection \<open>Procedure Correctness\<close>
 
 text\<open>defining correctness of the AST\<close>
@@ -198,6 +200,9 @@ fun init_ast :: "ast \<Rightarrow> ('a, 'm) nstate \<Rightarrow> ('a, 'm) ast_co
     "init_ast [] ns1 = ((BigBlock None [] None None), KStop, Normal ns1)"
   | "init_ast (b#bbs) ns1 = (b, convert_list_to_cont ( bbs) KStop, Normal ns1)"
 
+
+context semantics begin
+
 definition ast_valid_configuration
   where "ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts bb cont state \<equiv>
          state \<noteq> Failure \<and> 
@@ -209,12 +214,14 @@ definition ast_proc_body_satisfies_spec :: "'p proc_context \<Rightarrow> var_co
           (\<forall> bb cont state. (rtranclp (red_bigblock M \<Lambda> \<Gamma> \<Omega> ast) (init_ast ast ns) (bb, cont, state)) \<longrightarrow> 
                     ast_valid_configuration \<Lambda> \<Gamma> \<Omega> posts bb cont state)"
 
+end
+
+
 fun proc_all_pres :: "ast procedure \<Rightarrow> expr list"
   where "proc_all_pres p = map fst (proc_pres p)"
 
 fun proc_checked_posts :: "ast procedure \<Rightarrow> expr list"
   where "proc_checked_posts p = map fst (filter (\<lambda>x. \<not> snd(x)) (proc_posts p))"
 
-end
 
 end

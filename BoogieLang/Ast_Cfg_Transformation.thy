@@ -37,6 +37,29 @@ inductive ast_cfg_rel :: "expr option \<Rightarrow> cmd list \<Rightarrow> bigbl
 
 subsection \<open>Miscellaneous helper lemmas\<close>
 
+text \<open>The following are simple helper lemmas used in the proofs that involve applying induction hypotheses to prove global correctness of loop-heads.\<close>
+
+lemma smaller_helper: "k < j \<Longrightarrow> k < (Suc j)"
+  by simp
+
+lemma less_trans_inv: "(y :: nat) < z \<Longrightarrow> x < y \<Longrightarrow> x < z"
+  using less_trans by simp
+
+lemma eq_to_succ: "x = y \<Longrightarrow> x < (Suc y)" by simp 
+
+lemma strictly_smaller_helper2: "j'' < j' \<Longrightarrow> j = Suc j' \<Longrightarrow> j'' < j"
+  by simp
+
+lemma strictly_smaller_helper3: "j'' < j' \<Longrightarrow> j''' < j'' \<Longrightarrow> j = Suc j' \<Longrightarrow> j''' < j"
+  by simp
+
+lemma strictly_smaller_helper4: "j' = Suc (Suc j'') \<Longrightarrow> k < j'' \<Longrightarrow> j = Suc j' \<Longrightarrow> k < j"
+  by simp
+
+lemma smaller_helper5: "j = Suc j1 \<Longrightarrow> j1 = Suc (Suc j2) \<Longrightarrow> j2 < j"
+  by simp
+
+
 context semantics begin
 
 lemma not_true_equals_false:
@@ -385,28 +408,6 @@ next
   from red_rest show ?thesis using final_config magic_reached concrete final_is_static_propagate 
     by (metis prod.inject relpowp_imp_rtranclp)
 qed 
-
-text \<open>The following are simple helper lemmas used in the proofs that involve applying induction hypotheses to prove global correctness of loop-heads.\<close>
-
-lemma smaller_helper: "k < j \<Longrightarrow> k < (Suc j)"
-  by simp
-
-lemma less_trans_inv: "(y :: nat) < z \<Longrightarrow> x < y \<Longrightarrow> x < z"
-  using less_trans by simp
-
-lemma eq_to_succ: "x = y \<Longrightarrow> x < (Suc y)" by simp 
-
-lemma strictly_smaller_helper2: "j'' < j' \<Longrightarrow> j = Suc j' \<Longrightarrow> j'' < j"
-  by simp
-
-lemma strictly_smaller_helper3: "j'' < j' \<Longrightarrow> j''' < j'' \<Longrightarrow> j = Suc j' \<Longrightarrow> j''' < j"
-  by simp
-
-lemma strictly_smaller_helper4: "j' = Suc (Suc j'') \<Longrightarrow> k < j'' \<Longrightarrow> j = Suc j' \<Longrightarrow> k < j"
-  by simp
-
-lemma smaller_helper5: "j = Suc j1 \<Longrightarrow> j1 = Suc (Suc j2) \<Longrightarrow> j2 < j"
-  by simp
 
 text \<open>The following are helper lemmas related to taking steps through assume cmds in a given ast- or cfg-trace.\<close>
 

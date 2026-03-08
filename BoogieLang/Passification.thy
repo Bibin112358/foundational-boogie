@@ -27,10 +27,14 @@ lemma dependent_ext:
   unfolding dependent_def
   by blast
 
+
 context semantics begin
 
 definition set_red_cmd :: "'p proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env \<Rightarrow> cmd \<Rightarrow> ('a, 'm) nstate set \<Rightarrow> ('a, 'm) state set"
   where "set_red_cmd M \<Lambda> \<Gamma> \<Omega> c N = {s. \<exists>n_s. n_s \<in> N \<and> M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>c, Normal n_s\<rangle> \<rightarrow> s}"
+
+end
+
 
 text \<open>\<^term>\<open>set_red_cmd\<close> lifts the command reduction to the reduction of a a set of input states \<close>
 
@@ -56,7 +60,7 @@ definition rel_const_correct_value :: "var_context \<Rightarrow> passive_rel \<R
   where "rel_const_correct_value \<Lambda> R ns = 
            (\<forall> x l. R x = Some (Inr l) \<longrightarrow> (lookup_var \<Lambda> ns x = Some (LitV l)))"
 
-definition rel_well_typed :: "var_context \<Rightarrow> rtype_env \<Rightarrow> passive_rel \<Rightarrow> ('a, 'm) nstate \<Rightarrow> bool"
+definition rel_well_typed :: "var_context \<Rightarrow> rtype_env \<Rightarrow> passive_rel \<Rightarrow> ('a::absval, 'm::mapval) nstate \<Rightarrow> bool"
   where "rel_well_typed \<Lambda> \<Omega> R ns = (
            (\<forall> x y. R x = Some (Inl y) \<longrightarrow> 
              (\<exists>v \<tau>. lookup_var \<Lambda> ns x = Some v \<and> lookup_var_ty \<Lambda> x = Some \<tau> \<and> type_of_val v = instantiate \<Omega> \<tau>)) \<and>
@@ -267,6 +271,8 @@ text \<open>\<^term>\<open>push_old_expr\<close> pushes "Old" as far as possible
 expression in the non-passified program (which may contain old expressions) with a passified expression.
 It will allow us to only have to relate expressions of the form "Old(Var x)" with "Var y".\<close>
 
+context semantics begin
+
 lemma push_old_true_same: "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, ns\<rangle> \<Down> v \<Longrightarrow> ns = ns'\<lparr>global_state := old_global_state ns'\<rparr> \<Longrightarrow> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>push_old_expr True e, ns'\<rangle> \<Down> v"
 and "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>es, ns\<rangle> [\<Down>] vs \<Longrightarrow> ns = ns'\<lparr>global_state := old_global_state ns'\<rparr> \<Longrightarrow> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>map (push_old_expr True) es, ns'\<rangle> [\<Down>] vs"
   by (induction arbitrary: ns' and ns' rule: red_expr_red_exprs.inducts, auto intro: red_expr_red_exprs.intros)
@@ -280,6 +286,9 @@ proof (induction rule: red_expr_red_exprs.inducts)
     apply (erule push_old_true_same)
     by simp
 qed (auto intro: red_expr_red_exprs.intros)
+
+end
+
 
 fun is_not_var :: "expr \<Rightarrow> bool"
   where 
@@ -342,6 +351,13 @@ method expr_rel_tac uses R_def R_old_def LocVar_assms =
                        "expr_rel ?R ?R_old ?loc_vars ?e1 ?e2" \<Rightarrow> rule \<bar>
                        "expr_list_rel ?R ?R_old ?loc_vars ?es1 ?es2" \<Rightarrow> rule \<bar> 
                        "_" \<Rightarrow> fail)+
+
+lemma rel_const_correct_to_value:"rel_const_correct \<Lambda> \<Omega> R ns1 \<Longrightarrow> rel_const_correct_value \<Lambda> R ns1"
+  unfolding rel_const_correct_def rel_const_correct_value_def
+  by simp
+
+
+context semantics begin
 
 lemma old_global_var_red:
   assumes "\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Old (Var x),ns\<rangle> \<Down> v" and "map_of (snd \<Lambda>) x = None"
@@ -460,9 +476,6 @@ next
     by (blast elim: cons_exp_elim2 intro: red_expr_red_exprs.intros)
 qed
 
-lemma rel_const_correct_to_value:"rel_const_correct \<Lambda> \<Omega> R ns1 \<Longrightarrow> rel_const_correct_value \<Lambda> R ns1"
-  unfolding rel_const_correct_def rel_const_correct_value_def
-  by simp
 
 lemma expr_rel_same_set:
   assumes "expr_rel R R_old (snd \<Lambda>) e1 e2" and 
@@ -474,6 +487,9 @@ lemma expr_rel_same_set:
   using assms expr_rel_same(1) unfolding nstate_rel_states_def nstate_old_rel_states_def   
   by (metis rel_const_correct_to_value)
 
+end
+
+
 subsection \<open>Properties on command reduction lifted to sets\<close>
 
 fun isPassive :: "cmd \<Rightarrow> bool"
@@ -482,6 +498,9 @@ fun isPassive :: "cmd \<Rightarrow> bool"
  | "isPassive (Havoc _) = False"
  | "isPassive (ProcCall _ _ _) = False"
  | "isPassive _ = True"
+
+
+context semantics begin
 
 lemma passive_state_same:
   assumes Apassive:"isPassive c" and Ared:"M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>c, Normal ns\<rangle> \<rightarrow> Normal ns'"
@@ -778,6 +797,9 @@ proof -
   thus "M,\<Lambda>',\<Gamma>,\<Omega> \<turnstile> \<langle>Assert e2,Normal u\<rangle> \<rightarrow> Failure" by (auto intro: RedAssertFail)
 qed
 
+end
+
+
 lemma havoc_nstate_rel:
   assumes Srel:"nstate_rel_states \<Lambda> \<Lambda>' R ns U"
   shows   "nstate_rel_states 
@@ -805,12 +827,6 @@ lemma havoc_non_empty:
   by (metis (mono_tags, lifting) dependent_def closed_set_ty_def empty_iff equals0I mem_Collect_eq update_var_same)
 
 subsection \<open>Command relation\<close>
-
-definition passive_sim 
-  where "passive_sim M \<Lambda> \<Lambda>' \<Gamma> \<Omega> cs s' R R_old U \<equiv> 
-              (\<forall>u \<in> U. \<exists>su. (M,\<Lambda>',\<Gamma>,\<Omega> \<turnstile> \<langle>cs, Normal u\<rangle> [\<rightarrow>] su) \<and> 
-                       (s' = Failure \<longrightarrow> su = Failure) \<and>
-                       (\<forall>ns'. s' = Normal ns' \<longrightarrow> (su = Normal u \<and> nstate_rel \<Lambda> \<Lambda>' R ns' u \<and> nstate_old_rel \<Lambda> \<Lambda>' R_old ns' u \<and> rel_well_typed \<Lambda> \<Omega> R ns')))"
 
 text \<open>The following inductive definition relates non-passive with passive commands\<close>
 
@@ -866,6 +882,25 @@ definition type_rel :: "var_context \<Rightarrow> var_context \<Rightarrow> (vna
                  (Inl y) \<Rightarrow>  lookup_var_ty \<Lambda> (fst t) = lookup_var_ty \<Lambda>' y 
                 | (Inr _) \<Rightarrow> True
                   ) Q"
+
+definition passive_lemma_assms :: "'struct_ty proc_context \<Rightarrow> var_context \<Rightarrow> var_context \<Rightarrow> 
+                   ('a::absval, 'm::mapval) fun_interp \<Rightarrow> rtype_env \<Rightarrow> vname list \<Rightarrow> passive_rel \<Rightarrow> passive_rel \<Rightarrow> 
+                  (('a, 'm) nstate) set \<Rightarrow> vname set \<Rightarrow> ('a, 'm) nstate \<Rightarrow> bool"
+  where "passive_lemma_assms M \<Lambda> \<Lambda>' \<Gamma> \<Omega> W R R_old U0 D0 ns = 
+          (nstate_rel_states \<Lambda> \<Lambda>' R ns U0 \<and> 
+           nstate_old_rel_states \<Lambda> \<Lambda>' R_old ns U0 \<and>
+          rel_well_typed \<Lambda> \<Omega> R ns \<and>
+          dependent \<Lambda>' \<Omega> U0 D0 \<and> (set W) \<inter> D0 = {} \<and>
+          U0 \<noteq> {})"
+
+
+context semantics begin
+
+definition passive_sim 
+  where "passive_sim M \<Lambda> \<Lambda>' \<Gamma> \<Omega> cs s' R R_old U \<equiv> 
+              (\<forall>u \<in> U. \<exists>su. (M,\<Lambda>',\<Gamma>,\<Omega> \<turnstile> \<langle>cs, Normal u\<rangle> [\<rightarrow>] su) \<and> 
+                       (s' = Failure \<longrightarrow> su = Failure) \<and>
+                       (\<forall>ns'. s' = Normal ns' \<longrightarrow> (su = Normal u \<and> nstate_rel \<Lambda> \<Lambda>' R ns' u \<and> nstate_old_rel \<Lambda> \<Lambda>' R_old ns' u \<and> rel_well_typed \<Lambda> \<Omega> R ns')))"
 
 text \<open>The following lemma is the key lemma that we use to prove a local block lemma in the 
 passification phase.\<close>
@@ -1215,16 +1250,6 @@ definition passive_block_conclusion
   where "passive_block_conclusion M \<Lambda> \<Lambda>' \<Gamma> \<Omega> U0 D1 R R_old cs2 s' = 
   (s' \<noteq> Magic \<longrightarrow> (\<exists> U1 \<subseteq> U0. U1 \<noteq> {} \<and> dependent \<Lambda>' \<Omega> U1 D1 \<and> passive_sim M \<Lambda> \<Lambda>' \<Gamma> \<Omega> cs2 s' R R_old U1))"
 
-definition passive_lemma_assms :: "'struct_ty proc_context \<Rightarrow> var_context \<Rightarrow> var_context \<Rightarrow> 
-                   ('a, 'm) fun_interp \<Rightarrow> rtype_env \<Rightarrow> vname list \<Rightarrow> passive_rel \<Rightarrow> passive_rel \<Rightarrow> 
-                  (('a, 'm) nstate) set \<Rightarrow> vname set \<Rightarrow> ('a, 'm) nstate \<Rightarrow> bool"
-  where "passive_lemma_assms M \<Lambda> \<Lambda>' \<Gamma> \<Omega> W R R_old U0 D0 ns = 
-          (nstate_rel_states \<Lambda> \<Lambda>' R ns U0 \<and> 
-           nstate_old_rel_states \<Lambda> \<Lambda>' R_old ns U0 \<and>
-          rel_well_typed \<Lambda> \<Omega> R ns \<and>
-          dependent \<Lambda>' \<Omega> U0 D0 \<and> (set W) \<inter> D0 = {} \<and>
-          U0 \<noteq> {})"
-
 lemma passification_block_lemma_compact:
   assumes 
           "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs1, Normal ns\<rangle> [\<rightarrow>] s'"
@@ -1255,11 +1280,14 @@ definition passive_sim_cfg_fail
   where "passive_sim_cfg_fail M \<Lambda>' \<Gamma> \<Omega> G u m_p \<equiv> 
               (\<exists> m_p'. (M,\<Lambda>',\<Gamma>,\<Omega>, G \<turnstile> (m_p, Normal u) -n\<rightarrow>* (m_p', Failure)))"
 
+end
+
+
 definition dependent_2
   where "dependent_2 \<Lambda>' \<Omega> U0 m = dependent \<Lambda>' \<Omega> U0 {y. y \<le> m}"
 
 definition passive_lemma_assms_2 :: "'struct_ty proc_context \<Rightarrow> var_context \<Rightarrow> var_context \<Rightarrow> 
-                   ('a, 'm) fun_interp \<Rightarrow> rtype_env \<Rightarrow> vname \<Rightarrow> passive_rel \<Rightarrow> passive_rel \<Rightarrow> 
+                   ('a::absval, 'm::mapval) fun_interp \<Rightarrow> rtype_env \<Rightarrow> vname \<Rightarrow> passive_rel \<Rightarrow> passive_rel \<Rightarrow> 
                   (('a, 'm) nstate) set \<Rightarrow> vname set \<Rightarrow> ('a, 'm) nstate \<Rightarrow> bool"
   where "passive_lemma_assms_2 M \<Lambda> \<Lambda>' \<Gamma> \<Omega> w_min R R_old U0 D0 ns = 
           (nstate_rel_states \<Lambda> \<Lambda>' R ns U0 \<and> 
@@ -1312,6 +1340,8 @@ next
   show "{} \<subseteq> {w. Max (set W) + 1 \<le> w} \<inter> set W" by simp
 qed
 
+
+context semantics begin
 
 text \<open>The following lemma is the key lemma that we use to prove the global block theorems in the
 passification phase.\<close>

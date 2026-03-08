@@ -6,8 +6,6 @@ begin
 
 subsection \<open>Picking an initial set of target states\<close>
 
-context semantics begin
-
 text \<open>The global block theorem for the entry block in the passification phase states the following:
 Given an initial source state s (in the non-passified program) and given a non-empty set of initial target
 states U (in the passive program) that are related to s (w.r.t. the initial variable relation), then
@@ -23,7 +21,7 @@ To obtain this result, we must instantiate U such that every state in U is a fea
 target state and satisfies all other properties. This subsection provides the definitions and lemmas
 to do so.\<close>
 
-fun initial_set :: "passive_rel \<Rightarrow> var_context \<Rightarrow> var_context \<Rightarrow> rtype_env \<Rightarrow> ('a, 'm) nstate \<Rightarrow> (('a, 'm) nstate) set"
+fun initial_set :: "passive_rel \<Rightarrow> var_context \<Rightarrow> var_context \<Rightarrow> rtype_env \<Rightarrow> ('a::absval, 'm::mapval) nstate \<Rightarrow> (('a, 'm) nstate) set"
   where "initial_set R \<Lambda> \<Lambda>' \<Omega> ns = 
               {u. state_typ_wf \<Omega> (local_state u) (snd \<Lambda>') \<and> state_typ_wf \<Omega> (global_state u) (fst \<Lambda>') \<and>
               (\<forall>x y. R x = Some (Inl y) \<longrightarrow> lookup_var \<Lambda> ns x = lookup_var \<Lambda>' u y) \<and> (\<forall> x y. map_of (fst \<Lambda>) x = Some y \<longrightarrow> (global_state u) x = (global_state ns) x) \<and>
@@ -34,7 +32,7 @@ text \<open>We instantiate U with \<^const>\<open>initial_set\<close>\<close>
 text \<open>Next we construct a state that is in the selected U to show that U is non-empty under certain assumptions (
 that we can prove when validating the passification phase) and that U satisfies the necessary properties.\<close>
 
-fun initial_state_local :: "rtype_env \<Rightarrow> passive_rel \<Rightarrow> var_context \<Rightarrow> var_context \<Rightarrow> ('a, 'm) nstate \<Rightarrow> ('a, 'm) named_state"
+fun initial_state_local :: "rtype_env \<Rightarrow> passive_rel \<Rightarrow> var_context \<Rightarrow> var_context \<Rightarrow> ('a::absval, 'm::mapval) nstate \<Rightarrow> ('a, 'm) named_state"
   where "initial_state_local \<Omega> R \<Lambda> \<Lambda>' ns x = 
          (case (map_of (snd \<Lambda>') x) of Some tw =>
            (if (\<exists>z. R z = Some (Inl x)) then 
@@ -44,7 +42,7 @@ fun initial_state_local :: "rtype_env \<Rightarrow> passive_rel \<Rightarrow> va
            )
           | None \<Rightarrow> None)"
 
-fun initial_state_global :: "rtype_env \<Rightarrow> passive_rel \<Rightarrow> var_context \<Rightarrow> var_context \<Rightarrow> ('a, 'm) nstate \<Rightarrow> ('a, 'm) named_state"
+fun initial_state_global :: "rtype_env \<Rightarrow> passive_rel \<Rightarrow> var_context \<Rightarrow> var_context \<Rightarrow> ('a::absval, 'm::mapval) nstate \<Rightarrow> ('a, 'm) named_state"
   where "initial_state_global \<Omega> R \<Lambda> \<Lambda>' ns x = 
            (case (map_of (fst \<Lambda>') x) of Some tw =>
            (if (\<exists>z. R z = Some (Inl x)) then 
@@ -84,10 +82,10 @@ qed
 text \<open>The following lemma shows the set we pick for U is non-empty under certain assumptions.\<close>
 lemma init_state_elem_init_set:
   assumes 
-          NonEmptyTypes:"\<And> t. closed t \<Longrightarrow> \<exists>v::('a, 'm) val. type_of_val v = t" and
+          NonEmptyTypes:"\<And> t. closed t \<Longrightarrow> \<exists>v::('a::absval, 'm::mapval) val. type_of_val v = t" and
           Closed:"\<And>y \<tau>. \<not>(\<exists> x. R x = Some (Inl y)) \<Longrightarrow> lookup_var_ty \<Lambda>' y = Some \<tau> \<Longrightarrow> closed (instantiate \<Omega> \<tau>)" and          
           RelTy:"\<And>x y. R x = Some (Inl y) \<Longrightarrow> lookup_var_ty \<Lambda> x = lookup_var_ty \<Lambda>' y" and
-          RelWt:"rel_well_typed \<Lambda> \<Omega> R ns" and
+          RelWt:"rel_well_typed \<Lambda> \<Omega> R (ns::('a, 'm) nstate)" and
           InjAssm:"inj_on_defined R" and
           GlobalsSame: "fst \<Lambda> = fst \<Lambda>'" and
           WellTyp: "(state_typ_wf \<Omega> (global_state ns) (fst \<Lambda>))" and
@@ -115,7 +113,7 @@ proof (simp only: initial_set.simps, rule, intro conjI)
       from this obtain x where "R x = Some (Inl y)" by auto
       hence LookupUY:"local_state ?u y = lookup_var \<Lambda> ns x"
         by (metis InjAssm LookupTyY initial_state_lookup localy lookup_var_decl_local_2 lookup_var_ty_decl_Some lookup_vdecls_ty_def map_option_is_None nstate.select_convs(3) option.discI)
-      from RelTy RelWt obtain v where
+      from RelTy RelWt obtain v::"('a::absval, 'm::mapval) val" where
               "lookup_var \<Lambda> ns x = Some v" and "type_of_val v = instantiate \<Omega> \<tau>"
         unfolding rel_well_typed_def using LookupTyY \<open>R x = Some (Inl y)\<close>
         by fastforce 
@@ -126,7 +124,7 @@ proof (simp only: initial_set.simps, rule, intro conjI)
         using localy lookup_vdecls_ty_map_of
         by fastforce        
       thus ?thesis using  False LookupTyY Closed val_of_type_correct NonEmptyTypes
-        by blast      
+        by blast
     qed
   qed
 next
@@ -172,10 +170,10 @@ next
 qed
 
 lemma init_set_non_empty:
-  assumes NonEmptyTypes:"\<And> t. closed t \<Longrightarrow> \<exists>v::('a, 'm) val. type_of_val v = t" and
+  assumes NonEmptyTypes:"\<And> t. closed t \<Longrightarrow> \<exists>v::('a::absval, 'm::mapval) val. type_of_val v = t" and
           Closed:"\<And>y \<tau>. \<not>(\<exists> x. R x = Some (Inl y)) \<Longrightarrow> lookup_var_ty \<Lambda>' y = Some \<tau> \<Longrightarrow> closed (instantiate \<Omega> \<tau>)" and          
           RelTy:"\<And>x y. R x = Some (Inl y) \<Longrightarrow> lookup_var_ty \<Lambda> x = lookup_var_ty \<Lambda>' y" and
-          RelWt:"rel_well_typed \<Lambda> \<Omega> R ns" and
+          RelWt:"rel_well_typed \<Lambda> \<Omega> R (ns::('a, 'm) nstate)" and
           InjAssm:"inj_on_defined R" and
           GlobalsSame: "fst \<Lambda> = fst \<Lambda>'" and
           WellTyp: "(state_typ_wf \<Omega> (global_state ns) (fst \<Lambda>))" and
@@ -187,7 +185,7 @@ lemma init_set_non_empty:
 
 text \<open>Next, we show that U has the remaining desired properties.\<close>
 
-lemma init_state_dependent:"dependent \<Lambda>' \<Omega> (initial_set R \<Lambda> \<Lambda>' \<Omega> ns) ((rel_range R) \<union> set (map fst (fst \<Lambda>)))" 
+lemma init_state_dependent:"dependent \<Lambda>' \<Omega> (initial_set R \<Lambda> \<Lambda>' \<Omega> (ns::('a::absval, 'm::mapval) nstate)) ((rel_range R) \<union> set (map fst (fst \<Lambda>)))" 
          (is "dependent \<Lambda>' \<Omega> ?U ((rel_range R) \<union> set (map fst (fst \<Lambda>))) ")
   unfolding dependent_def closed_set_ty_def
   proof (rule ballI, rule allI, rule allI, rule impI, rule conjI[OF _ impI[OF allI[OF impI]]])
@@ -548,6 +546,9 @@ proof (rule, rule)
     by (metis assms(2) set_zip_rightD zip_map_fst_snd)
 qed
 
+
+context semantics begin
+
 lemma axiom_assm_aux:
   assumes "axiom_assm \<Gamma> consts ns1 axioms" and
           "\<And> x y. map_of consts x = Some y \<Longrightarrow> (global_state ns1) x = (global_state ns2) x"
@@ -564,6 +565,9 @@ proof -
     apply assumption
     done
 qed
+
+end
+
 
 lemma helper_init_disj:
   assumes Max1:"\<forall>x. x \<in> xs \<longrightarrow> x \<le> n" and "\<forall>y. y \<in> ys \<longrightarrow> y \<le> m" and "n < w_max" and "m < w_max"
@@ -590,7 +594,5 @@ lemma prefix_map_of:
   shows "\<forall>x y. R2 x = Some y \<longrightarrow> R1 x = Some y"
   using assms
   by auto
-
-end
 
 end

@@ -145,9 +145,7 @@ lemma map_map:
   by auto
 
 
-context semantics begin
-
-definition state_well_typed :: "var_context \<Rightarrow> rtype_env \<Rightarrow> ('a, 'm) nstate \<Rightarrow> bool"
+definition state_well_typed :: "var_context \<Rightarrow> rtype_env \<Rightarrow> ('a::absval, 'm::mapval) nstate \<Rightarrow> bool"
   where "state_well_typed \<Lambda> \<Omega> ns \<equiv>
          state_typ_wf \<Omega> (local_state ns) (snd \<Lambda>) \<and>
          state_typ_wf \<Omega> (global_state ns) (fst \<Lambda>) \<and>
@@ -180,6 +178,8 @@ lemma old_global_switch_wt:
   by simp
 
 text \<open>Type preservation theorem\<close>
+
+context semantics begin
 
 theorem preservation:
   assumes 
@@ -302,6 +302,9 @@ next
     by (metis list.simps(9))
 qed
 
+end
+
+
 lemma instantiate_shift: "wf_ty (length \<Omega>) \<tau> \<Longrightarrow> instantiate (t#\<Omega>) (shiftT 1 0 \<tau>) = instantiate \<Omega> \<tau>"
   by (induction \<tau>) (auto simp add: list_all_iff)
   
@@ -343,6 +346,8 @@ proof (rule allI, rule allI, rule impI)
 qed
 
 text \<open>Type progress theorem\<close>
+
+context semantics begin
 
 theorem progress:
   assumes
@@ -678,7 +683,6 @@ proof -
   ultimately show ?thesis
     by auto
 qed
- 
 
 end
 

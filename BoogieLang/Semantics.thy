@@ -433,7 +433,13 @@ type_synonym 'struct_ty proc_context = "'struct_ty pdecl list"
 
 type_synonym ('a, 'm) cfg_config = "(node+unit) \<times> ('a, 'm) state"
 
+fun is_final_config :: "('a, 'm) cfg_config \<Rightarrow> bool"
+  where
+    "is_final_config (Inl n,_) = False"
+  | "is_final_config (Inr n,_) = True"
+
 subsection \<open>Expression reduction (big-step semantics)\<close>
+
 
 locale semantics =
   fixes map_select :: "('a::absval, 'm::mapval) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
@@ -634,11 +640,6 @@ inductive red_cfg :: "mbodyCFG proc_context \<Rightarrow> var_context \<Rightarr
   | RedMagic: "\<lbrakk>node_to_block(G) ! n = cs; M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs,Normal ns\<rangle> [\<rightarrow>] Magic \<rbrakk> \<Longrightarrow>
               M,\<Lambda>,\<Gamma>,\<Omega>,G  \<turnstile> (Inl n, Normal ns) -n\<rightarrow> (Inr (), Magic)"
 
-fun is_final_config :: "('a, 'm) cfg_config \<Rightarrow> bool"
-  where
-    "is_final_config (Inl n,_) = False"
-  | "is_final_config (Inr n,_) = True"
-
 inductive_cases RedNormalSucc_case: "M,\<Lambda>,\<Gamma>,G,\<Omega>  \<turnstile> (Inl n,s) -n\<rightarrow> (Inl n',s')"
 
 text \<open>Reflexive and transitive closure of CFG reduction\<close>
@@ -646,15 +647,18 @@ text \<open>Reflexive and transitive closure of CFG reduction\<close>
 abbreviation red_cfg_multi :: "mbodyCFG proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env \<Rightarrow> mbodyCFG \<Rightarrow> ('a, 'm) cfg_config \<Rightarrow> ('a, 'm) cfg_config \<Rightarrow> bool"
   ("_,_,_,_,_ \<turnstile>_ -n\<rightarrow>*/ _" [0,0,0] 81)
   where "red_cfg_multi M \<Lambda> \<Gamma> \<Omega> G \<equiv> rtranclp (red_cfg M \<Lambda> \<Gamma> \<Omega> G)"
-                                                 
+                 
 text \<open>N-step CFG reduction\<close>
 
 abbreviation red_cfg_k_step :: "mbodyCFG proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env \<Rightarrow> mbodyCFG \<Rightarrow> ('a, 'm) cfg_config \<Rightarrow> nat \<Rightarrow> ('a, 'm) cfg_config \<Rightarrow> bool"
   ("_,_,_,_,_ \<turnstile>_ -n\<rightarrow>^_/ _" [0,0,0,0] 81)
-where "red_cfg_k_step M \<Lambda> \<Gamma> \<Omega> G c1 n c2 \<equiv> ((red_cfg M \<Lambda> \<Gamma> \<Omega> G)^^n) c1 c2"
+  where "red_cfg_k_step M \<Lambda> \<Gamma> \<Omega> G c1 n c2 \<equiv> ((red_cfg M \<Lambda> \<Gamma> \<Omega> G)^^n) c1 c2"
+
+end  (* locale semantics = fixes map_select, map_store *)
+
 
 (* if inputs types are correct, then function reduces to a value of correct output type *)
-fun fun_interp_single_wf :: "nat \<times> ty list \<times> ty \<Rightarrow> (ty list \<Rightarrow> ('a, 'm) val list \<rightharpoonup> ('a, 'm) val) \<Rightarrow> bool"
+fun fun_interp_single_wf :: "nat \<times> ty list \<times> ty \<Rightarrow> (ty list \<Rightarrow> ('a::absval, 'm::mapval) val list \<rightharpoonup> ('a, 'm) val) \<Rightarrow> bool"
   where "fun_interp_single_wf(n_ty_params, args_ty, ret_ty) f =
          (\<forall> ts. (length ts = n_ty_params \<and> list_all closed ts) \<longrightarrow>  
                (\<forall> vs. length vs = length args_ty \<and>
@@ -663,7 +667,7 @@ fun fun_interp_single_wf :: "nat \<times> ty list \<times> ty \<Rightarrow> (ty 
  "
 
 (* if function reduces, then input types must have been correct *)
-fun fun_interp_single_wf_2 :: "nat \<times> ty list \<times> ty \<Rightarrow> (ty list \<Rightarrow> ('a, 'm) val list \<rightharpoonup> ('a, 'm) val) \<Rightarrow> bool"
+fun fun_interp_single_wf_2 :: "nat \<times> ty list \<times> ty \<Rightarrow> (ty list \<Rightarrow> ('a::absval, 'm::mapval) val list \<rightharpoonup> ('a, 'm) val) \<Rightarrow> bool"
   where "fun_interp_single_wf_2(n_ty_params, args_ty, ret_ty) f =
          (\<forall>ts vs v. (f ts vs = Some v \<longrightarrow> 
                        (type_of_val v = instantiate ts ret_ty \<and>
@@ -671,12 +675,12 @@ fun fun_interp_single_wf_2 :: "nat \<times> ty list \<times> ty \<Rightarrow> (t
                         map type_of_val vs = map (instantiate ts) args_ty))  )"
          
 
-definition fun_interp_wf :: "fdecls \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> bool"
+definition fun_interp_wf :: "fdecls \<Rightarrow> ('a::absval, 'm::mapval) fun_interp \<Rightarrow> bool"
   where "fun_interp_wf fds \<gamma>_interp = 
             (\<forall>fn fd. map_of fds fn = Some fd \<longrightarrow> 
                   (\<exists>f. \<gamma>_interp fn = Some f \<and> fun_interp_single_wf fd f \<and> fun_interp_single_wf_2 fd f))"
 
-definition state_typ_wf :: "rtype_env \<Rightarrow> ('a, 'm) named_state \<Rightarrow> vdecls \<Rightarrow> bool"
+definition state_typ_wf :: "rtype_env \<Rightarrow> ('a::absval, 'm::mapval) named_state \<Rightarrow> vdecls \<Rightarrow> bool"
   where "state_typ_wf \<Omega> ns vs = 
            (\<forall> v t. lookup_vdecls_ty vs v = Some t  \<longrightarrow> 
                           Option.map_option (\<lambda>v. type_of_val v) (ns(v)) = (Some (instantiate \<Omega> t)))"
@@ -709,6 +713,28 @@ qed
 
 subsection \<open>Procedure Correctness\<close>
 
+definition state_restriction :: "('a, 'm) named_state \<Rightarrow> vdecls \<Rightarrow> ('a, 'm) named_state"
+  where "state_restriction ns_orig vs x = 
+         (if map_of vs x \<noteq> None then ns_orig x else None)"
+
+definition nstate_global_restriction :: "('a, 'm) nstate \<Rightarrow> vdecls \<Rightarrow> ('a, 'm) nstate"
+  where "nstate_global_restriction ns vs = global_to_nstate (state_restriction (global_state ns) vs)"
+
+text \<open>The following condition specifies what must hold for the list of constants with a unique modifier.
+      The condition states that all corresponding values in the state must be distinct. Note that constants
+      without unique modifiers may have values that clash with unique constants, which is consistent with the 
+      verification condition generated by Boogie (status 21.10.2023).
+      Note that the verification condition only forces distinctness between values of unique constants of 
+      the \<^emph>\<open>same\<close> type. Here, we force distinctness between values of all unique constants. These two
+      definitions are equivalent, since values of different types are distinct in Boogie by default
+      (every value can have only one type as reflected by the function \<^const>\<open>type_of_val\<close>).\<close>
+
+definition unique_constants_distinct :: "('a, 'm) named_state \<Rightarrow> vname list \<Rightarrow> bool"
+  where "unique_constants_distinct ns xs \<longleftrightarrow> distinct (map (\<lambda>x. the (ns x)) xs)"
+
+
+context semantics begin
+
 definition valid_configuration 
   where "valid_configuration \<Lambda> \<Gamma> \<Omega> posts m' s' \<equiv> 
          s' \<noteq> Failure \<and> 
@@ -728,28 +754,10 @@ add an additional assumption here (proof generation does not support where-claus
 definition axioms_sat :: "var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> ('a, 'm) nstate \<Rightarrow> axiom list \<Rightarrow> bool"
   where "axioms_sat \<Lambda> \<Gamma> n_s as = list_all (expr_sat \<Lambda> \<Gamma> [] n_s) as"
 
-definition state_restriction :: "('a, 'm) named_state \<Rightarrow> vdecls \<Rightarrow> ('a, 'm) named_state"
-  where "state_restriction ns_orig vs x = 
-         (if map_of vs x \<noteq> None then ns_orig x else None)"
-
-definition nstate_global_restriction :: "('a, 'm) nstate \<Rightarrow> vdecls \<Rightarrow> ('a, 'm) nstate"
-  where "nstate_global_restriction ns vs = global_to_nstate (state_restriction (global_state ns) vs)"
-
 abbreviation axiom_assm
   where "axiom_assm \<Gamma> consts ns axioms \<equiv> 
      (axioms_sat(consts, []) \<Gamma>(nstate_global_restriction ns consts) axioms)"
 
-text \<open>The following condition specifies what must hold for the list of constants with a unique modifier.
-      The condition states that all corresponding values in the state must be distinct. Note that constants
-      without unique modifiers may have values that clash with unique constants, which is consistent with the 
-      verification condition generated by Boogie (status 21.10.2023).
-      Note that the verification condition only forces distinctness between values of unique constants of 
-      the \<^emph>\<open>same\<close> type. Here, we force distinctness between values of all unique constants. These two
-      definitions are equivalent, since values of different types are distinct in Boogie by default
-      (every value can have only one type as reflected by the function \<^const>\<open>type_of_val\<close>).\<close>
-
-definition unique_constants_distinct :: "('a, 'm) named_state \<Rightarrow> vname list \<Rightarrow> bool"
-  where "unique_constants_distinct ns xs \<longleftrightarrow> distinct (map (\<lambda>x. the (ns x)) xs)"
 
 fun proc_is_correct :: "fdecls \<Rightarrow> vdecls \<Rightarrow> vname list \<Rightarrow> vdecls \<Rightarrow> axiom list \<Rightarrow> 'struct_ty2 procedure \<Rightarrow>
                        ('struct_ty proc_context \<Rightarrow> var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env \<Rightarrow> expr list \<Rightarrow> expr list \<Rightarrow> 'struct_ty2 \<Rightarrow> ('a, 'm) nstate \<Rightarrow> bool) \<Rightarrow>

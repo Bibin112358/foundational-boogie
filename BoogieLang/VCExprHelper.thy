@@ -155,6 +155,8 @@ lemma condexp_vc_rel:
   using assms
   by (auto intro: RedCondExpTrue RedCondExpFalse)
 
+end
+
 subsection \<open>Closed types\<close>
 
 text \<open>We define a new data type to model the closed types. We (implicitly) instantiate the type sort 
@@ -219,14 +221,14 @@ definition val_of_closed_type ::"closed_ty \<Rightarrow> ('a::absval, 'm::mapval
    "val_of_closed_type t  = (val_of_type (closed_to_ty t))"
 
 lemma val_of_type_correct:
-  assumes "\<And> t. closed t \<Longrightarrow> \<exists>v::('a, 'm) val. type_of_val v = t" and
+  assumes "\<And> t. closed t \<Longrightarrow> \<exists>v::('a::absval, 'm::mapval) val. type_of_val v = t" and
          "closed t'"
   shows "type_of_val ((val_of_type t') :: ('a, 'm) val) = t'"
   by (metis (mono_tags, lifting) assms(1) assms(2) someI val_of_type.simps)
 
 lemma val_of_closed_type_correct: 
-  assumes "\<And> t. closed t \<Longrightarrow> \<exists>v::('a, 'm) val. type_of_val v = t"
-  shows "ty_to_closed (type_of_val (val_of_closed_type ct)) = ct"
+  assumes "\<And> t. closed t \<Longrightarrow> \<exists>v::('a::absval, 'm::mapval) val. type_of_val v = t"
+  shows "ty_to_closed (type_of_val ((val_of_closed_type ct)::('a::absval, 'm::mapval) val)) = ct"
   by (metis assms closed_closed_to_ty closed_inv1 val_of_closed_type_def val_of_type_correct)
 
 lemma type_of_val_instantiate:
@@ -237,6 +239,8 @@ shows "(type_of_val v) = (instantiate \<Omega> ty)"
   by (metis assms(1) assms(2) assms(3) closed_inv2)
 
 subsection \<open>Boogie-VC Quantifier relation\<close>
+
+context semantics begin
 
 text \<open>lifted implication simplification\<close>
 lemma imp_vc:
@@ -415,6 +419,8 @@ next
   thus ?thesis using \<open>\<not>P\<close> by auto
 qed
 
+end
+
 subsection \<open>Constructor and inverse functions\<close>
 
 text \<open>We use these constructor and inverse functions to instantiate parts of the VC.\<close>
@@ -591,7 +597,5 @@ lemma convert_type_of_val_vc:
 
 method var_type_axiom uses TypeEq = 
 ( (rule convert_type_of_val_vc[OF TypeEq], solves \<open>simp\<close>, solves \<open>simp\<close>))
-
-end
 
 end

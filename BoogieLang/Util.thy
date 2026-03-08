@@ -4,7 +4,6 @@ theory Util
 imports Semantics "HOL-Eisbach.Eisbach" "HOL-Eisbach.Eisbach_Tools"
 begin
 
-context semantics begin
 
 lemma finterp_extract_1: "fun_interp_wf fds \<Gamma> \<Longrightarrow> map_of fds fn = Some fd \<Longrightarrow> \<Gamma> fn = Some f \<Longrightarrow> 
   fun_interp_single_wf fd f"
@@ -16,6 +15,9 @@ lemma finterp_extract_2: "fun_interp_wf fds \<Gamma> \<Longrightarrow> map_of fd
 
 lemma finterp_member: "fun_interp_wf fds \<Gamma> \<Longrightarrow> map_of fds f = Some fd \<Longrightarrow> \<Gamma> f = Some (the (\<Gamma> f))"
   by (metis fun_interp_wf_def option.distinct(1) option.exhaust_sel)
+
+
+context semantics begin
 
 lemma assert_correct:
   "\<lbrakk>M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>Assert e, Normal n_s\<rangle> \<rightarrow> s; \<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>e, n_s\<rangle> \<Down> LitV (LBool True) \<rbrakk> \<Longrightarrow> s = Normal n_s"
@@ -37,6 +39,9 @@ lemma assert_true_cmds:
 "\<lbrakk> M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>(Assert (Lit (LBool True))) # cs, Normal ns\<rangle> [\<rightarrow>] s';
   M,\<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>cs, Normal ns\<rangle> [\<rightarrow>] s' \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
   by (auto intro: RedLit elim: assert_ml)
+
+end
+
 
 lemma imp_conj_assoc: "(A \<and> B) \<and> C \<longrightarrow> D \<Longrightarrow> A \<and> (B \<and> C) \<longrightarrow> D"
   by simp
@@ -62,6 +67,9 @@ method tryRepeatConjI = ((rule conjI)+ | tactic \<open>all_tac\<close>)
 lead to non-terminating tactics most likely due to \<Gamma> ''f'' appearing on both sides *)
 definition opaque_comp 
   where "opaque_comp f g x = f (g x)"
+
+
+context semantics begin
 
 lemma axioms_sat_mem: "a \<in> set(as) \<Longrightarrow> axioms_sat \<Lambda> \<Gamma> ns as \<Longrightarrow> \<Lambda>,\<Gamma>,[] \<turnstile> \<langle>a, ns\<rangle> \<Down> LitV (LBool (True))"
   by (simp add: axioms_sat_def expr_sat_def list_all_iff)
@@ -171,7 +179,10 @@ lemma havoc_cases_general:
     \<And>v ty c. lookup_var_decl \<Lambda> x = Some (ty, Some c) \<Longrightarrow> type_of_val v = instantiate \<Omega> ty \<Longrightarrow> (\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>c,(update_var \<Lambda> n_s x v)\<rangle> \<Down> BoolV False) \<Longrightarrow> s' = Magic \<Longrightarrow> P\<rbrakk> \<Longrightarrow> 
     P"
   by (erule red_cmd.cases; auto)
-  
+
+end
+
+
 (*
 lemma havoc_cases_2:
   "\<lbrakk>M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>Havoc x, s\<rangle> \<rightarrow> s';
@@ -203,7 +214,10 @@ lemma type_of_val_real_elim:
   apply (cases v)
    apply auto[3]
   by (metis prim_ty.distinct(3) prim_ty.distinct(5) type_of_lit.simps(1) type_of_lit.simps(2) unop_minus.cases)
- 
+
+
+context semantics begin
+
 lemma val_elim [elim!]:
  "\<lbrakk> \<Lambda>,\<Gamma>,\<Delta> \<turnstile> \<langle>Lit l, n_s\<rangle> \<Down> v'; (LitV l) = v' \<Longrightarrow> P \<rbrakk> \<Longrightarrow> P"
   by (erule red_expr.cases; simp)
@@ -349,6 +363,9 @@ lemma red_cfg_multi_backwards_step_no_succ:
  shows "s' \<noteq> Failure"
   oops
 
+end
+
+
 lemma member_elim: 
    "List.member (x#xs) y \<Longrightarrow> (x = y \<Longrightarrow> P x) \<Longrightarrow> (List.member xs y \<Longrightarrow> P y) \<Longrightarrow> P y"
   by (metis member_rec(1))
@@ -487,12 +504,18 @@ lemma helper_min:
   using assms
   by force
 
+
+context semantics begin
+
 lemma red_cmd_list_append:
   assumes "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs1,s\<rangle> [\<rightarrow>] s''" and
           "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs2,s''\<rangle> [\<rightarrow>] s'"
   shows "M,\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>cs1@cs2,s\<rangle> [\<rightarrow>] s'"
   using assms
   by (induction) (auto intro: red_cmd_list.RedCmdListCons)
+
+end
+
 
 lemma lookup_ty_pred:
   assumes "lookup_var_ty \<Lambda> x = Some \<tau>" and
@@ -532,6 +555,9 @@ lemma vars_min_helper:
   shows "\<forall>x. x \<in> set (map fst (params_vdecls_swap @ locals_vdecls_swap)) \<longrightarrow> m \<le> x"
   using assms
   by auto
+
+
+context semantics begin
 
 (* new version *)
 method reduce_expr_full = 
@@ -586,9 +612,10 @@ method handle_cmd_list_full uses v_assms =
    )+
 )
 
+end
+
+
 lemmas relpowp_E2_2 =
   relpowp_E2[of _ _ "(n', s')" "(n'',s'')", split_rule]
-
-end
 
 end

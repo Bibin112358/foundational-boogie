@@ -2,8 +2,6 @@ theory VCPhaseML
   imports Semantics Util VCHints VCExprHelper HelperML
 begin
 
-context semantics begin
-
 ML \<open>
 (** tactics for end-to-endproof**)
 
@@ -11,8 +9,17 @@ fun vc_fun_corres_tac ctxt corres_thm interp_thm fun_mem_thm context_mem_thm =
  let val corres_thm_inst = corres_thm OF [(@{thm finterp_extract_1} OF [interp_thm, fun_mem_thm, context_mem_thm])] in
    resolve_tac ctxt [corres_thm_inst] THEN_ALL_NEW  (asm_full_simp_tac ctxt)
  end
+
+fun quantifier_poly_tac quant_poly_thm ctxt =
+  resolve_tac ctxt [quant_poly_thm] THEN' 
+  asm_full_simp_tac ctxt THEN'
+(* in some cases need fastforce_tac ctxt [];, see monomorphize0.bpl *)
+  asm_full_simp_tac ctxt
+
 \<close>
 
+
+context semantics begin
 ML \<open>
 (** Tactics for quantifiers **)
 
@@ -29,13 +36,6 @@ fun exists_basic_tac ctxt =
     resolve_tac ctxt [@{thm exists_vc_rel_bool}],
     resolve_tac ctxt [@{thm exists_vc_rel_real}]
   ];
-
-fun quantifier_poly_tac quant_poly_thm ctxt =
-  resolve_tac ctxt [quant_poly_thm] THEN' 
-  asm_full_simp_tac ctxt THEN'
-(* in some cases need fastforce_tac ctxt [];, see monomorphize0.bpl *)
-  asm_full_simp_tac ctxt
-  
 
 (* we first repeat the basic tactic, since if there are only primitive type quantifiers, then there 
 are no type guards (and thus, imp_vc should not be applied) *)
@@ -59,6 +59,7 @@ fun exists_main_tac ctxt exists_poly_thm i =
       )
     )
 \<close>
+end
 
 ML \<open>
 (** Tactics for proving \<Gamma> \<turnstile> \<langle>e, ns\<rangle> \<Down> BoolV vc  **)
@@ -82,7 +83,11 @@ fun vc_expr_rel_select_final_tac ctxt red_expr_tac assms (t,i) =
     Const (@{const_name "HOL.eq"},_) $ _ $ _ => ((( asm_full_simp_tac (add_simps assms ctxt) |> SOLVED') i))
    | @{term "Trueprop"} $ t' => vc_expr_rel_select_final_tac ctxt red_expr_tac assms (t',i)
    | _ => red_expr_tac ctxt assms i
+\<close>
 
+context semantics begin
+
+ML \<open>
 fun red_var_tac ctxt assms del_thms  =
 resolve_tac ctxt [@{thm RedVar}] THEN' 
 (asm_full_simp_tac ((ctxt addsimps (@{thm lookup_full_ext_env_same} :: assms) delsimps (@{thm full_ext_env.simps} :: del_thms))) |> SOLVED')
@@ -137,7 +142,10 @@ resolve_tac ctxt [@{thm uminus_vc_rel}],
 (* we allow this tactic to not completely solve the goal, since it may simplify the tactics further (such as generating equalities) *)
 (CHANGED o b_prove_assert_expr_simple_tac ctxt assms [])
 ]
+\<close>
+end 
 
+ML \<open>
 fun b_vc_expr_rel_tac ctxt assms forall_and_exists_thm_tuple del_thms =
   REPEAT o SUBGOAL (vc_expr_rel_select_tac ctxt  (fn ctxt => fn assms => vc_expr_rel_red_tac ctxt assms forall_and_exists_thm_tuple del_thms) assms )
 
@@ -163,7 +171,7 @@ fun expr_hint_assert_tac (expr_hint:ExprHint option) vc =
 
 fun prove_axiom_vc_tac ctxt (expr_hint: ExprHint option) axiom_assm assms forall_and_exists_thm_tuple del_thms =
   expr_hint_assume_tac ctxt expr_hint THEN'
-  (resolve_tac ctxt [@{thm expr_to_vc} OF [axiom_assm] ]) THEN'
+  (resolve_tac ctxt [@{thm semantics.expr_to_vc} OF [axiom_assm] ]) THEN'
   b_vc_expr_rel_final_tac ctxt assms forall_and_exists_thm_tuple del_thms
 \<close>  
 
@@ -174,7 +182,7 @@ fun b_assume_base_tac ctxt inst_thm vc_elim expr_hint global_assms forall_and_ex
   (asm_full_simp_tac ctxt i) THEN
   (resolve_tac ctxt [vc_elim] i) THEN
   (expr_hint_assume_tac ctxt expr_hint i) THEN
-  (resolve_tac ctxt [@{thm expr_to_vc}] i) THEN
+  (resolve_tac ctxt [@{thm semantics.expr_to_vc}] i) THEN
   (assume_tac ctxt i) THEN
   (b_vc_expr_rel_tac ctxt global_assms forall_and_exists_thm_tuple [] i)
 
@@ -183,7 +191,7 @@ let
   val (red :: vc :: _) = #prems(focus)
   val ctxt = #context(focus)
 in
-  (b_assume_base_tac ctxt (@{thm assume_ml} OF [red]) (vc_elim vc) expr_hint global_assms forall_and_exists_thm_tuple i)
+  (b_assume_base_tac ctxt (@{thm semantics.assume_ml} OF [red]) (vc_elim vc) expr_hint global_assms forall_and_exists_thm_tuple i)
   handle THM _ => no_tac
 end
 
@@ -204,7 +212,7 @@ ML \<open>
 (** Tactics to deal with assert statements **)
 
 fun b_prove_assert_expr_tac ctxt vc_expr global_assms forall_and_exists_thm_tuple i =
-  (resolve_tac ctxt [@{thm vc_to_expr} OF [vc_expr]] i) THEN
+  (resolve_tac ctxt [@{thm semantics.vc_to_expr} OF [vc_expr]] i) THEN
   (b_vc_expr_rel_tac ctxt global_assms forall_and_exists_thm_tuple [] i)
 
 fun b_assert_base_tac ctxt inst_thm vc_expr global_assms forall_and_exists_thm_tuple ehint i =
@@ -220,7 +228,7 @@ let
   val (red :: vc :: _) = #prems(focus)
   val ctxt = #context(focus)
 in
- (b_assert_base_tac ctxt (@{thm assert_ml} OF [red]) (@{thm conjunct1} OF [vc]) global_assms forall_and_exists_thm_tuple ehint i) THEN
+ (b_assert_base_tac ctxt (@{thm semantics.assert_ml} OF [red]) (@{thm conjunct1} OF [vc]) global_assms forall_and_exists_thm_tuple ehint i) THEN
   (resolve_tac ctxt [(vc_elim OF [vc])] i)  
   handle THM _ => no_tac 
 end
@@ -235,13 +243,15 @@ let
   val (red :: vc :: _) = #prems(focus) 
   val ctxt = #context(focus)
 in
- (b_assert_base_tac ctxt (@{thm assert_ml} OF [red]) vc global_assms forall_and_exists_thm_tuple ehint i)
+ (b_assert_base_tac ctxt (@{thm semantics.assert_ml} OF [red]) vc global_assms forall_and_exists_thm_tuple ehint i)
   handle THM _ => no_tac 
 end
 
 fun b_assert_no_conj_tac ctxt global_assms forall_and_exists_thm_tuple ehint =
   (Subgoal.FOCUS (b_assert_no_conj_foc_tac global_assms forall_and_exists_thm_tuple ehint 1) ctxt 1)
 \<close>
+
+context semantics begin
 
 ML \<open>
 (** main tactic **)
