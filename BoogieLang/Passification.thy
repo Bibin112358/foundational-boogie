@@ -314,6 +314,12 @@ inductive expr_rel :: "passive_rel \<Rightarrow> passive_rel \<Rightarrow> vdecl
  | UnOp_Rel: "expr_rel R R_old loc_vars e1 e2 \<Longrightarrow> expr_rel R R_old loc_vars (UnOp uop e1) (UnOp uop e2)"
  | BinOp_Rel: "\<lbrakk> expr_rel R R_old loc_vars e11 e21; expr_rel R R_old loc_vars e12 e22 \<rbrakk> \<Longrightarrow> 
               expr_rel R R_old loc_vars (e11 \<guillemotleft>bop\<guillemotright> e12) (e21 \<guillemotleft>bop\<guillemotright> e22)"
+ | MapSelect_Rel: "\<lbrakk> expr_rel R R_old loc_vars m m'; expr_rel R R_old loc_vars k k' \<rbrakk> \<Longrightarrow> 
+              expr_rel R R_old loc_vars (MapSelect m k) (MapSelect m' k')"
+ | MapStore_Rel: "\<lbrakk> expr_rel R R_old loc_vars m m';
+                    expr_rel R R_old loc_vars k k';
+                    expr_rel R R_old loc_vars v v' \<rbrakk> \<Longrightarrow> 
+              expr_rel R R_old loc_vars (MapStore m k v) (MapStore m' k' v')"
  | FunExp_Rel: "\<lbrakk> expr_list_rel R R_old loc_vars args1 args2 \<rbrakk>  \<Longrightarrow> 
               expr_rel R R_old loc_vars (FunExp f ts args1) (FunExp f ts args2)"
  | CondExp_rel:
@@ -433,6 +439,12 @@ next
   then show ?case by (blast intro: red_expr_red_exprs.intros)
 next
   case (BinOp_Rel e11 e21 e12 e22 bop)
+  then show ?case by (blast intro: red_expr_red_exprs.intros)
+next
+  case (MapSelect_Rel)
+  then show ?case by (blast intro: red_expr_red_exprs.intros)
+next
+  case (MapStore_Rel)
   then show ?case by (blast intro: red_expr_red_exprs.intros)
 next
   case (FunExp_Rel args1 args2 f ts)
