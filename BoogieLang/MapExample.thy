@@ -1028,4 +1028,63 @@ lemma Ax2_wf_val:
   by (smt (verit, del_insts) ArrayAxStable Rep_wf_maps_inject id_apply
       map_fun_apply val.inj_map_strong wf_select_def wf_store.rep_eq)
 
+
+subsection \<open>Proof for VC Phase\<close>
+
+fun key_tyC where "key_tyC (TMapC tk _) = tk" | "key_tyC _ = undefined"
+fun val_tyC where "val_tyC (TMapC _ tv) = tv" | "val_tyC _ = undefined"
+lemma key_tyC_preserved: "\<forall>tk tv. key_tyC (TMapC tk tv) = tk" by simp
+lemma val_tyC_preserved: "\<forall>tk tv. val_tyC (TMapC tk tv) = tv" by simp
+
+lemma map_type_safe_wf:
+  shows "type_of_val (wf_select (MapV m) k) = val_ty (type_of_val (MapV m))"
+  apply transfer
+  using wf.simps wf_map_set_def by fastforce
+
+lemma map_select_type_safe: "\<forall>m  k.
+       let tk = vc_type_of_val k; tv = val_tyC (vc_type_of_val m)
+       in vc_type_of_val m = TMapC tk tv \<and> vc_type_of_val k = tk \<longrightarrow>
+          vc_type_of_val (wf_select m k) = tv"
+  apply (rule, case_tac m; simp) using map_type_safe_wf
+  by (metis mapval_ty_wf_maps.elims type_of_val.simps(3) val_ty.simps(1))
+
+lemma map_store_type_safe: "\<forall> m k v.
+       let tk = vc_type_of_val k; tv = vc_type_of_val v
+       in (vc_type_of_val m = TMapC tk tv \<and>
+           vc_type_of_val k = tk) \<and>
+          vc_type_of_val v = tv \<longrightarrow>
+          vc_type_of_val (wf_store m k v) =
+          TMapC tk tv"
+  apply (rule, case_tac m; simp)
+  apply transfer
+  using storePreserveTy
+  by (metis (no_types, lifting) ty_to_closed.simps(3) type_of_val.simps(3))
+
+
+lemma type_of_mapval_closed:
+  assumes "closed (type_of_val m)" "closed (type_of_val k)" "closed (type_of_val v)"
+  assumes "vc_type_of_val m = TMapC (vc_type_of_val k) (vc_type_of_val v)"
+  shows "type_of_val m = TMap (type_of_val k) (type_of_val v)"
+  by (metis assms(1,2,3,4) closed_inv2 closed_to_ty.simps(3) vc_type_of_val.simps)
+
+lemma map_update:
+  assumes "\<And>v::('a::absval, 'a wf_maps) val. closed (type_of_val v)"
+  shows "\<forall>(m::('a, 'a wf_maps) val) k v.
+       let tk = vc_type_of_val k; tv = vc_type_of_val v
+       in vc_type_of_val m = TMapC tk tv \<longrightarrow> wf_select (wf_store m k v) k = v"
+  by (meson Ax1 assms type_of_mapval_closed)
+
+
+subsection \<open>Proof for Locale Assumptions\<close>
+
+lemma locale_select: "\<And>m k tk tv. \<lbrakk>type_of_val m = TMap tk tv; type_of_val k = tk\<rbrakk>
+    \<Longrightarrow> type_of_val (wf_select m k) = tv"
+  by (metis map_type_safe_wf ty.simps(14,16) type_of_val.elims val_ty.simps(1))
+
+lemma locale_store: "\<And>m k v tk tv. \<lbrakk>type_of_val m = TMap tk tv; type_of_val k = tk; type_of_val v = tv \<rbrakk>
+    \<Longrightarrow> type_of_val (wf_store m k v) = TMap tk tv"
+  apply transfer
+  using storePreserveTy by metis
+
+
 end
