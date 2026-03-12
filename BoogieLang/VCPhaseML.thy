@@ -18,23 +18,21 @@ fun quantifier_poly_tac quant_poly_thm ctxt =
 
 \<close>
 
-
-context semantics begin
 ML \<open>
 (** Tactics for quantifiers **)
 
 fun forall_basic_tac ctxt =
   FIRST'[
-  resolve_tac ctxt [@{thm forall_vc_rel_int}],
-  resolve_tac ctxt [@{thm forall_vc_rel_bool}],
-  resolve_tac ctxt [@{thm forall_vc_rel_real}]
+  resolve_tac ctxt [Proof_Context.get_thm ctxt "forall_vc_rel_int"],
+  resolve_tac ctxt [Proof_Context.get_thm ctxt "forall_vc_rel_bool"],
+  resolve_tac ctxt [Proof_Context.get_thm ctxt "forall_vc_rel_real"]
   ];
 
 fun exists_basic_tac ctxt =
   FIRST'[
-    resolve_tac ctxt [@{thm exists_vc_rel_int}],
-    resolve_tac ctxt [@{thm exists_vc_rel_bool}],
-    resolve_tac ctxt [@{thm exists_vc_rel_real}]
+    resolve_tac ctxt [Proof_Context.get_thm ctxt "exists_vc_rel_int"],
+    resolve_tac ctxt [Proof_Context.get_thm ctxt "exists_vc_rel_bool"],
+    resolve_tac ctxt [Proof_Context.get_thm ctxt "exists_vc_rel_real"]
   ];
 
 (* we first repeat the basic tactic, since if there are only primitive type quantifiers, then there 
@@ -44,7 +42,7 @@ fun forall_main_tac ctxt forall_poly_thm i =
     ( (REPEAT_DETERM (forall_basic_tac ctxt i))  THEN (
        TRY
         (REPEAT_DETERM1 ((quantifier_poly_tac forall_poly_thm ctxt i) ORELSE (forall_basic_tac ctxt i)) THEN
-        ((resolve_tac ctxt [@{thm imp_vc}] i THEN 
+        ((resolve_tac ctxt [Proof_Context.get_thm ctxt "imp_vc"] i THEN 
           asm_full_simp_tac ctxt i) ORELSE all_tac))
       )
     )
@@ -54,12 +52,11 @@ fun exists_main_tac ctxt exists_poly_thm i =
     ( (REPEAT_DETERM (exists_basic_tac ctxt i))  THEN (
        TRY
         (REPEAT_DETERM1 ((quantifier_poly_tac exists_poly_thm ctxt i) ORELSE (exists_basic_tac ctxt i)) THEN
-        ((resolve_tac ctxt [@{thm conj_vc}] i THEN 
+        ((resolve_tac ctxt [Proof_Context.get_thm ctxt "conj_vc"] i THEN 
           asm_full_simp_tac ctxt i) ORELSE all_tac))
       )
     )
 \<close>
-end
 
 ML \<open>
 (** Tactics for proving \<Gamma> \<turnstile> \<langle>e, ns\<rangle> \<Down> BoolV vc  **)
@@ -85,65 +82,71 @@ fun vc_expr_rel_select_final_tac ctxt red_expr_tac assms (t,i) =
    | _ => red_expr_tac ctxt assms i
 \<close>
 
-context semantics begin
 
 ML \<open>
 fun red_var_tac ctxt assms del_thms  =
-resolve_tac ctxt [@{thm RedVar}] THEN' 
+resolve_tac ctxt [Proof_Context.get_thm ctxt "RedVar"] THEN' 
 (asm_full_simp_tac ((ctxt addsimps (@{thm lookup_full_ext_env_same} :: assms) delsimps (@{thm full_ext_env.simps} :: del_thms))) |> SOLVED')
 
 fun b_prove_assert_expr_simple_tac ctxt assms del_thms i =
 REPEAT ( (SUBGOAL (vc_expr_rel_select_tac ctxt
 (fn ctxt => fn assms => FIRST' [
 red_var_tac ctxt assms del_thms,
-resolve_tac ctxt [@{thm RedBVar}] THEN' (asm_full_simp_tac ((ctxt addsimps assms delsimps del_thms)) |> SOLVED'),
-resolve_tac ctxt [@{thm RedLit}],
-resolve_tac ctxt [@{thm RedBinOp}],
-resolve_tac ctxt [@{thm RedUnOp}],
-resolve_tac ctxt [@{thm RedFunOp}] THEN' (asm_full_simp_tac (ctxt addsimps assms delsimps del_thms) |> SOLVED'),
-resolve_tac ctxt [@{thm RedExpListNil}],
-resolve_tac ctxt [@{thm RedExpListCons}]
+resolve_tac ctxt [Proof_Context.get_thm ctxt "RedBVar"] THEN' (asm_full_simp_tac ((ctxt addsimps assms delsimps del_thms)) |> SOLVED'),
+resolve_tac ctxt [Proof_Context.get_thm ctxt "RedLit"],
+resolve_tac ctxt [Proof_Context.get_thm ctxt "RedBinOp"],
+resolve_tac ctxt [Proof_Context.get_thm ctxt "RedUnOp"],
+(*
+resolve_tac ctxt [Proof_Context.get_thm ctxt "RedMapSelect"]),
+resolve_tac ctxt [Proof_Context.get_thm ctxt "RedMapStore"],
+*)
+resolve_tac ctxt [Proof_Context.get_thm ctxt "RedFunOp"] THEN' (asm_full_simp_tac (ctxt addsimps assms delsimps del_thms) |> SOLVED'),
+resolve_tac ctxt [Proof_Context.get_thm ctxt "RedExpListNil"],
+resolve_tac ctxt [Proof_Context.get_thm ctxt "RedExpListCons"]
 ]) assms )
 ) i)
 
-fun vc_expr_rel_red_tac ctxt assms forall_and_exists_thm_tuple del_thms = 
+fun vc_expr_rel_red_tac ctxt assms forall_and_exists_thm_tuple del_thms =
 FIRST' [
 red_var_tac ctxt assms del_thms,
-(resolve_tac ctxt [@{thm RedBVar}] THEN' (asm_full_simp_tac (ctxt addsimps assms delsimps del_thms) |> SOLVED')),
-(resolve_tac ctxt [@{thm RedLit}]),
+(resolve_tac ctxt [Proof_Context.get_thm ctxt "RedBVar"] THEN' (asm_full_simp_tac (ctxt addsimps assms delsimps del_thms) |> SOLVED')),
+(resolve_tac ctxt [Proof_Context.get_thm ctxt "RedLit"]),
 (* maybe check whether goal has binop and only then try binop tactics *)
-(resolve_tac ctxt [@{thm conj_vc_rel}]),
-(resolve_tac ctxt [@{thm disj_vc_rel}]),
-(resolve_tac ctxt [@{thm imp_vc_rel}]),
-(resolve_tac ctxt [@{thm not_vc_rel}]),
-(resolve_tac ctxt [@{thm gt_vc_rel}]),
-(resolve_tac ctxt [@{thm ge_vc_rel}]),
-(resolve_tac ctxt [@{thm lt_vc_rel}]),
-(resolve_tac ctxt [@{thm le_vc_rel}]),
-(resolve_tac ctxt [@{thm eq_bool_vc_rel}]),
-(resolve_tac ctxt [@{thm eq_int_vc_rel}]),
-(resolve_tac ctxt [@{thm eq_real_vc_rel}]),
-(resolve_tac ctxt [@{thm eq_abs_vc_rel}]),
-(resolve_tac ctxt [@{thm iff_vc_rel}]),
-(resolve_tac ctxt [@{thm condexp_vc_rel}]),
-(resolve_tac ctxt [@{thm forallt_vc}]),
+(resolve_tac ctxt [Proof_Context.get_thm ctxt "conj_vc_rel"]),
+(resolve_tac ctxt [Proof_Context.get_thm ctxt "disj_vc_rel"]),
+(resolve_tac ctxt [Proof_Context.get_thm ctxt "imp_vc_rel"]),
+(resolve_tac ctxt [Proof_Context.get_thm ctxt "not_vc_rel"]),
+(resolve_tac ctxt [Proof_Context.get_thm ctxt "gt_vc_rel"]),
+(resolve_tac ctxt [Proof_Context.get_thm ctxt "ge_vc_rel"]),
+(resolve_tac ctxt [Proof_Context.get_thm ctxt "lt_vc_rel"]),
+(resolve_tac ctxt [Proof_Context.get_thm ctxt "le_vc_rel"]),
+(resolve_tac ctxt [Proof_Context.get_thm ctxt "eq_bool_vc_rel"]),
+(resolve_tac ctxt [Proof_Context.get_thm ctxt "eq_int_vc_rel"]),
+(resolve_tac ctxt [Proof_Context.get_thm ctxt "eq_real_vc_rel"]),
+(resolve_tac ctxt [Proof_Context.get_thm ctxt "eq_abs_vc_rel"]),
+(resolve_tac ctxt [Proof_Context.get_thm ctxt "iff_vc_rel"]),
+(resolve_tac ctxt [Proof_Context.get_thm ctxt "condexp_vc_rel"]),
+(resolve_tac ctxt [Proof_Context.get_thm ctxt "forallt_vc"]),
 (forall_main_tac ctxt (fst (forall_and_exists_thm_tuple))),
 (exists_main_tac ctxt (snd (forall_and_exists_thm_tuple))),
 
 (*
-resolve_tac ctxt [@{thm add_vc_rel}],
-resolve_tac ctxt [@{thm sub_vc_rel}],
-resolve_tac ctxt [@{thm mul_vc_rel}],
-resolve_tac ctxt [@{thm uminus_vc_rel}],
+resolve_tac ctxt [Proof_Context.get_thm ctxt "add_vc_rel"],
+resolve_tac ctxt [Proof_Context.get_thm ctxt "sub_vc_rel"],
+resolve_tac ctxt [Proof_Context.get_thm ctxt "mul_vc_rel"],
+resolve_tac ctxt [Proof_Context.get_thm ctxt "uminus_vc_rel"],
 *)
-(resolve_tac ctxt [@{thm RedFunOp}] THEN' (asm_full_simp_tac (ctxt addsimps assms delsimps del_thms) |> SOLVED')),
-(resolve_tac ctxt [@{thm RedExpListNil}]),
-(resolve_tac ctxt [@{thm RedExpListCons}]),
+
+(resolve_tac ctxt [Proof_Context.get_thm ctxt "RedMapSelect"]),
+(resolve_tac ctxt [Proof_Context.get_thm ctxt "RedMapStore"]),
+
+(resolve_tac ctxt [Proof_Context.get_thm ctxt "RedFunOp"] THEN' (asm_full_simp_tac (ctxt addsimps assms delsimps del_thms) |> SOLVED')),
+(resolve_tac ctxt [Proof_Context.get_thm ctxt "RedExpListNil"]),
+(resolve_tac ctxt [Proof_Context.get_thm ctxt "RedExpListCons"]),
 (* we allow this tactic to not completely solve the goal, since it may simplify the tactics further (such as generating equalities) *)
 (CHANGED o b_prove_assert_expr_simple_tac ctxt assms [])
 ]
 \<close>
-end 
 
 ML \<open>
 fun b_vc_expr_rel_tac ctxt assms forall_and_exists_thm_tuple del_thms =
@@ -171,7 +174,7 @@ fun expr_hint_assert_tac (expr_hint:ExprHint option) vc =
 
 fun prove_axiom_vc_tac ctxt (expr_hint: ExprHint option) axiom_assm assms forall_and_exists_thm_tuple del_thms =
   expr_hint_assume_tac ctxt expr_hint THEN'
-  (resolve_tac ctxt [@{thm semantics.expr_to_vc} OF [axiom_assm] ]) THEN'
+  (resolve_tac ctxt [Proof_Context.get_thm ctxt "expr_to_vc" OF [axiom_assm] ]) THEN'
   b_vc_expr_rel_final_tac ctxt assms forall_and_exists_thm_tuple del_thms
 \<close>  
 
@@ -182,7 +185,7 @@ fun b_assume_base_tac ctxt inst_thm vc_elim expr_hint global_assms forall_and_ex
   (asm_full_simp_tac ctxt i) THEN
   (resolve_tac ctxt [vc_elim] i) THEN
   (expr_hint_assume_tac ctxt expr_hint i) THEN
-  (resolve_tac ctxt [@{thm semantics.expr_to_vc}] i) THEN
+  (resolve_tac ctxt [Proof_Context.get_thm ctxt "expr_to_vc"] i) THEN
   (assume_tac ctxt i) THEN
   (b_vc_expr_rel_tac ctxt global_assms forall_and_exists_thm_tuple [] i)
 
@@ -191,7 +194,7 @@ let
   val (red :: vc :: _) = #prems(focus)
   val ctxt = #context(focus)
 in
-  (b_assume_base_tac ctxt (@{thm semantics.assume_ml} OF [red]) (vc_elim vc) expr_hint global_assms forall_and_exists_thm_tuple i)
+  (b_assume_base_tac ctxt (Proof_Context.get_thm ctxt "assume_ml" OF [red]) (vc_elim vc) expr_hint global_assms forall_and_exists_thm_tuple i)
   handle THM _ => no_tac
 end
 
@@ -212,7 +215,7 @@ ML \<open>
 (** Tactics to deal with assert statements **)
 
 fun b_prove_assert_expr_tac ctxt vc_expr global_assms forall_and_exists_thm_tuple i =
-  (resolve_tac ctxt [@{thm semantics.vc_to_expr} OF [vc_expr]] i) THEN
+  (resolve_tac ctxt [Proof_Context.get_thm ctxt "vc_to_expr" OF [vc_expr]] i) THEN
   (b_vc_expr_rel_tac ctxt global_assms forall_and_exists_thm_tuple [] i)
 
 fun b_assert_base_tac ctxt inst_thm vc_expr global_assms forall_and_exists_thm_tuple ehint i =
@@ -228,7 +231,7 @@ let
   val (red :: vc :: _) = #prems(focus)
   val ctxt = #context(focus)
 in
- (b_assert_base_tac ctxt (@{thm semantics.assert_ml} OF [red]) (@{thm conjunct1} OF [vc]) global_assms forall_and_exists_thm_tuple ehint i) THEN
+ (b_assert_base_tac ctxt (Proof_Context.get_thm ctxt "assert_ml" OF [red]) (Proof_Context.get_thm ctxt "conjunct1" OF [vc]) global_assms forall_and_exists_thm_tuple ehint i) THEN
   (resolve_tac ctxt [(vc_elim OF [vc])] i)  
   handle THM _ => no_tac 
 end
@@ -243,7 +246,7 @@ let
   val (red :: vc :: _) = #prems(focus) 
   val ctxt = #context(focus)
 in
- (b_assert_base_tac ctxt (@{thm semantics.assert_ml} OF [red]) vc global_assms forall_and_exists_thm_tuple ehint i)
+ (b_assert_base_tac ctxt (Proof_Context.get_thm ctxt "assert_ml" OF [red]) vc global_assms forall_and_exists_thm_tuple ehint i)
   handle THM _ => no_tac 
 end
 
@@ -251,38 +254,34 @@ fun b_assert_no_conj_tac ctxt global_assms forall_and_exists_thm_tuple ehint =
   (Subgoal.FOCUS (b_assert_no_conj_foc_tac global_assms forall_and_exists_thm_tuple ehint 1) ctxt 1)
 \<close>
 
-context semantics begin
-
 ML \<open>
 (** main tactic **)
 
 fun boogie_vc_tac ctxt _ _ ([]: (VcHint * (ExprHint option)) list) =
-  TRY (eresolve_tac ctxt [@{thm nil_cmd_elim}] 1 THEN asm_full_simp_tac ctxt 1)
+  TRY (eresolve_tac ctxt [Proof_Context.get_thm ctxt "nil_cmd_elim"] 1 THEN asm_full_simp_tac ctxt 1)
 | boogie_vc_tac ctxt global_assms forall_and_exists_thm_tuple (x::xs) = 
   (case x of
   (* assume statement normal *)
-    (AssumeConjR 0, ehint) => b_assume_simple_tac ctxt global_assms forall_and_exists_thm_tuple (fn (vc) => @{thm impE} OF [vc]) ehint 3
+    (AssumeConjR 0, ehint) => b_assume_simple_tac ctxt global_assms forall_and_exists_thm_tuple (fn (vc) => Proof_Context.get_thm ctxt "impE" OF [vc]) ehint 3
   | (AssumeConjR n, ehint) => 
      if n = 1 then
-        b_assume_simple_tac ctxt global_assms forall_and_exists_thm_tuple (fn (vc) => @{thm imp_conj_elim} OF [vc]) ehint 3
+        b_assume_simple_tac ctxt global_assms forall_and_exists_thm_tuple (fn (vc) => Proof_Context.get_thm ctxt "imp_conj_elim" OF [vc]) ehint 3
      else
        b_assume_conjr_tac ctxt global_assms forall_and_exists_thm_tuple ehint n
   (* assert statement normal *)
   | (AssertNoConj, ehint) => b_assert_no_conj_tac ctxt global_assms forall_and_exists_thm_tuple ehint
-  | (AssertConj, ehint) => b_assert_conj_tac ctxt global_assms forall_and_exists_thm_tuple (@{thm conj_elim_2}) ehint
-  | (AssertSub, ehint) => b_assert_conj_tac ctxt global_assms forall_and_exists_thm_tuple (@{thm conj_imp_elim}) ehint 
+  | (AssertConj, ehint) => b_assert_conj_tac ctxt global_assms forall_and_exists_thm_tuple (Proof_Context.get_thm ctxt "conj_elim_2") ehint
+  | (AssertSub, ehint) => b_assert_conj_tac ctxt global_assms forall_and_exists_thm_tuple (Proof_Context.get_thm ctxt "conj_imp_elim") ehint 
   (* special cases *)
-  | (AssumeFalse, _) => (eresolve_tac ctxt [@{thm assume_false_cmds}] 1) THEN (ALLGOALS (asm_full_simp_tac ctxt))
-  | (AssumeNot, ehint) => b_assume_simple_tac ctxt global_assms forall_and_exists_thm_tuple (fn (vc) => @{thm imp_not_elim} OF [vc]) ehint 0 THEN 
+  | (AssumeFalse, _) => (eresolve_tac ctxt [Proof_Context.get_thm ctxt "assume_false_cmds"] 1) THEN (ALLGOALS (asm_full_simp_tac ctxt))
+  | (AssumeNot, ehint) => b_assume_simple_tac ctxt global_assms forall_and_exists_thm_tuple (fn (vc) => Proof_Context.get_thm ctxt "imp_not_elim" OF [vc]) ehint 0 THEN 
       TRY (ALLGOALS (asm_full_simp_tac ctxt))
   | (AssertFalse, _) => SOLVED' (asm_full_simp_tac ctxt) 1
-  | (AssumeTrue, _) => (eresolve_tac ctxt [@{thm assume_true_cmds}] 1) THEN (asm_full_simp_tac ctxt 1) THEN
+  | (AssumeTrue, _) => (eresolve_tac ctxt [Proof_Context.get_thm ctxt "assume_true_cmds"] 1) THEN (asm_full_simp_tac ctxt 1) THEN
                   rotate_tac 1 1
-  | (AssertTrue, _) => (eresolve_tac ctxt [@{thm assert_true_cmds}] 1) THEN (rotate_tac 1 1)
+  | (AssertTrue, _) => (eresolve_tac ctxt [Proof_Context.get_thm ctxt "assert_true_cmds"] 1) THEN (rotate_tac 1 1)
   ) THEN
    boogie_vc_tac ctxt global_assms forall_and_exists_thm_tuple xs
 \<close>
-
-end
 
 end
