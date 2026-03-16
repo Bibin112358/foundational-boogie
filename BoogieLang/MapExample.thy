@@ -7,7 +7,7 @@ begin
 subsection \<open>Type Definition\<close>
 
 datatype ('k, 'p) L =
-  MapVal "'p \<Rightarrow> ('k, 'p) L" "ty \<times> ty" |  MapKey "'k \<Rightarrow> 'p" "ty \<times> ty"
+  MapVal "'p \<Rightarrow> ('k, 'p) L + 'p" "ty \<times> ty"
 
 (* user needs to instantiate how many nesting levels to support *)
 
@@ -23,7 +23,6 @@ type_synonym 'a val3210 = "'a val3 + 'a val210"
 type_synonym 'a val321 = "'a val3 + 'a val2 + 'a val1"
 type_synonym 'a valn = "('a, 'a val321) val"  (* do not inlcude val0! *)
 
-
 subsection \<open>Examples\<close>
 (* MapV examples *)
 value "IntV 2 :: unit valn"
@@ -31,25 +30,25 @@ value "IntV 2 :: unit valn"
 abbreviation IntV0 where "IntV0 i \<equiv> LitV0 (LInt i)"
 abbreviation TT where "TT \<equiv> TPrim TInt"  (* convenience for testing purposes *)
 
-abbreviation m11 :: "'a val1" where "m11 \<equiv> MapKey (undefined(IntV0 3 := IntV0 2)) (TT, TT)"
+abbreviation m11 :: "'a val1" where "m11 \<equiv> MapVal (undefined(IntV0 3 := Inr (IntV0 2))) (TT, TT)"
 abbreviation m14 :: "'a valn" where "m14 \<equiv> MapV (Inr (Inr m11))"
 
-abbreviation m22 :: "'a val2" where "m22 \<equiv> MapKey (undefined(m11 := Inr (IntV0 4))) (TT, TT)"
+abbreviation m22 :: "'a val2" where "m22 \<equiv> MapVal (undefined(Inl m11 := Inr (Inr (IntV0 4)))) (TT, TT)"
 abbreviation m24 :: "'a valn" where "m24 \<equiv> MapV (Inr (Inl m22))"
 
-abbreviation m33 :: "'a val3" where "m33 \<equiv> MapKey (undefined(m22 := Inr (Inr (IntV0 6)))) (TT, TT)"
+abbreviation m33 :: "'a val3" where "m33 \<equiv> MapVal (undefined(Inl m22 := Inr (Inr (Inr (IntV0 6))))) (TT, TT)"
 abbreviation m34 :: "'a valn" where "m34 \<equiv> MapV (Inl m33)"
 
-abbreviation mg3 :: "'a val3" where "mg3 \<equiv> MapKey (undefined(m22 := Inr (Inl  m11))) (TMap TT TT, TT)"
+abbreviation mg3 :: "'a val3" where "mg3 \<equiv> MapVal (undefined(Inl m22 := Inr (Inr (Inl  m11)))) (TMap TT TT, TT)"
 abbreviation mg4 :: "'a valn" where "mg4 \<equiv> MapV (Inl mg3)"
 
-abbreviation ms3 :: "'a val3" where "ms3 \<equiv> MapVal (undefined(Inr (Inr (IntV0 3)) := m33)) (TT, (TMap TT  (TPrim TInt)))"
+abbreviation ms3 :: "'a val3" where "ms3 \<equiv> MapVal (undefined(Inr (Inr (IntV0 3)) := Inl m33)) (TT, (TMap TT  (TPrim TInt)))"
 abbreviation ms4 :: "'a valn" where "ms4 \<equiv> MapV (Inl ms3)"
 
 
 subsection \<open>Type Of Val\<close>
 
-fun tyL where "tyL (MapVal _ (tk, tv)) = (tk, tv)" | "tyL (MapKey _ (tk, tv)) = (tk, tv)"
+fun tyL where "tyL (MapVal _ (tk, tv)) = (tk, tv)"
 
 fun ty321 :: "'a val3 + 'a val2 + 'a val1 \<Rightarrow> ty \<times> ty" where
     "ty321 (Inr (Inr m)) = tyL m"
@@ -78,8 +77,9 @@ fun count_level_map_ty :: "ty \<Rightarrow> nat" where
   | "count_level_map_ty _ = 0"
 
 fun wf_L where
-    "wf_L n (MapKey _ (tk, tv)) = ((count_level_map_ty tk = n-1) \<and> (count_level_map_ty tv \<le> n-1))"
-  | "wf_L n (MapVal _ (tk, tv)) = ((count_level_map_ty tk \<le> n-1) \<and> (count_level_map_ty tv = n))"
+  "wf_L n (MapVal _ (tk, tv)) = (
+    (count_level_map_ty tk \<le> n-1) \<and> (count_level_map_ty tv = n) \<or>
+    (count_level_map_ty tk = n-1) \<and> (count_level_map_ty tv \<le> n-1))"
 
 fun wf_ty :: "'a valn \<Rightarrow> bool" where
     "wf_ty (LitV v) = True"
@@ -110,18 +110,15 @@ fun val3ToValn :: "'a val3210 \<Rightarrow> 'a valn" where
 fun selectImplAux :: "'a::absval val3210 \<Rightarrow> 'a val3210 \<Rightarrow> 'a val3210" where
     "selectImplAux (Inr (Inr (Inr (LitV0 v)))) _ = (Inr (Inr (Inr undefined)))"
   | "selectImplAux (Inr (Inr (Inr (AbsV0 v)))) _ = (Inr (Inr (Inr undefined)))"
-  | "selectImplAux (Inr (Inr (Inl (MapVal m _)))) (Inr (Inr (Inr k))) = Inr (Inr (Inl (m k)))"
-  | "selectImplAux (Inr (Inr (Inl (MapKey m _)))) (Inr (Inr (Inr k))) = Inr (Inr (Inr (m k)))"
-  | "selectImplAux (Inr (Inl (MapVal m _))) (Inr (Inr k)) = Inr (Inl (m k))"
-  | "selectImplAux (Inr (Inl (MapKey m _))) (Inr (Inr (Inl k))) = Inr (Inr (m k))"
-  | "selectImplAux (Inl (MapVal m _)) (Inr k) = Inl (m k)"
-  | "selectImplAux (Inl (MapKey m _)) (Inr (Inl k)) = Inr (m k)"
+  | "selectImplAux (Inr (Inr (Inl (MapVal m _)))) (Inr (Inr (Inr k))) = Inr (Inr ( (m k)))"
+  | "selectImplAux (Inr (Inl (MapVal m _))) (Inr (Inr k)) = Inr ( (m k))"
+  | "selectImplAux (Inl (MapVal m _)) (Inr k) =  (m k)"
   | "selectImplAux m _ = toVal3210 (val_of_type (val_ty (type_of_val (val3ToValn m))))"
 
 fun selectImpl :: "'a::absval valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn" where
   "selectImpl m k = val3ToValn (selectImplAux (toVal3210 m) (toVal3210 k))"
 
-lemma "selectImpl mg4 m24 = (MapV (Inr (Inr (MapKey (undefined(IntV0 3 := IntV0 2)) (TT, TT)))))" by simp
+lemma "selectImpl mg4 m24 = m14" by simp
 
 
 subsection \<open>Helper Case Distinction\<close>
@@ -129,11 +126,8 @@ thm val3ToValn.cases
 lemma ValnCases:
 "(\<And>v. x = LitV v \<Longrightarrow> P) \<Longrightarrow>
 (\<And>v. x = AbsV v \<Longrightarrow> P) \<Longrightarrow>
-(\<And>f tk tv. x = MapV (Inr (Inr (MapKey f (tk, tv)))) \<Longrightarrow> P) \<Longrightarrow>
 (\<And>f tk tv. x = MapV (Inr (Inr (MapVal f (tk, tv)))) \<Longrightarrow> P) \<Longrightarrow>
-(\<And>f tk tv. x = MapV (Inr (Inl (MapKey f (tk, tv)))) \<Longrightarrow> P) \<Longrightarrow>
 (\<And>f tk tv. x = MapV (Inr (Inl (MapVal f (tk, tv)))) \<Longrightarrow> P) \<Longrightarrow>
-(\<And>f tk tv. x = MapV (Inl (MapKey f (tk, tv))) \<Longrightarrow> P) \<Longrightarrow>
 (\<And>f tk tv. x = MapV (Inl (MapVal f (tk, tv))) \<Longrightarrow> P) \<Longrightarrow> P"
   by (metis L.exhaust sumE surj_pair val.exhaust_sel)
 
@@ -190,18 +184,12 @@ subsection \<open>Store\<close>
 
 (* takes long time to proof, 25s *)
 fun storeImplAux :: "'a val3210 \<Rightarrow> 'a val3210 \<Rightarrow> 'a val3210 \<Rightarrow> 'a val3210" where
-    "storeImplAux (Inr (Inr (Inl (MapVal m t)))) (Inr (Inr (Inr k))) (Inr (Inr (Inl v)))
+    "storeImplAux (Inr (Inr (Inl (MapVal m t)))) (Inr (Inr (Inr k))) (Inr (Inr ( v)))
       = (Inr (Inr (Inl (MapVal (m(k := v)) t))))"
-  | "storeImplAux (Inr (Inr (Inl (MapKey m t)))) (Inr (Inr (Inr k))) (Inr (Inr (Inr v)))
-      = (Inr (Inr (Inl (MapKey (m(k := v)) t))))"
-  | "storeImplAux (Inr (Inl (MapVal m t))) (Inr (Inr k)) (Inr (Inl v))
+  | "storeImplAux (Inr (Inl (MapVal m t))) (Inr (Inr k)) (Inr ( v))
       = (Inr (Inl (MapVal (m(k := v)) t)))"
-  | "storeImplAux (Inr (Inl (MapKey m t))) (Inr (Inr (Inl k))) (Inr (Inr v))
-      = (Inr (Inl (MapKey (m(k := v)) t)))"
-  | "storeImplAux (Inl (MapVal m t)) (Inr k) (Inl v)
+  | "storeImplAux (Inl (MapVal m t)) (Inr k) ( v)
       = (Inl (MapVal (m(k := v)) t))"
-  | "storeImplAux (Inl (MapKey m t)) (Inr (Inl k)) (Inr v)
-      = (Inl (MapKey (m(k := v)) t))"
   | "storeImplAux x _ _ = x"
 
 fun storeImpl :: "'a::absval valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn \<Rightarrow> 'a valn" where
@@ -315,8 +303,8 @@ done
 
 subsubsection \<open>Proving well formdness of a simple map\<close>
 fun toVal0 :: "'a valn \<Rightarrow> 'a val0" where "toVal0 (LitV l) = LitV0 l" | "toVal0 _ = undefined"
-fun fAdd1 where "fAdd1 (IntV0 x) = (IntV0 (x+1))" | "fAdd1 _ = toVal0 (val_of_type (TT))"
-abbreviation mAdd1 :: "'a::absval val1" where "mAdd1 \<equiv> MapKey fAdd1 ((TPrim TInt), (TPrim TInt))"
+fun fAdd1 where "fAdd1 (IntV0 x) = Inr (IntV0 (x+1))" | "fAdd1 _ = Inr (toVal0 (val_of_type (TT)))"
+abbreviation mAdd1 :: "'a::absval val1" where "mAdd1 \<equiv> MapVal fAdd1 ((TPrim TInt), (TPrim TInt))"
 abbreviation vAdd1 :: "'a::absval valn" where "vAdd1 \<equiv> MapV (Inr (Inr mAdd1))"
 
 lemma "wf_ty vAdd1" by simp
@@ -353,19 +341,18 @@ qed
 lemma H2:
   shows "type_of_val (selectImpl vAdd1 k) = (TPrim TInt)"
   apply (cases k rule: toVal3210.cases)
-  apply (metis (no_types, lifting) fAdd1.elims selectImpl.simps selectImplAux.simps(4)
-      int_inverse_3 toVal0.simps(1) toVal3210.simps(1,3) type_of_lit.simps(2)
-      type_of_val.simps(1) val3ToValn.simps(1) wfvotTT)
+  apply (metis (no_types, lifting) fAdd1.elims int_inverse_3 selectImpl.simps selectImplAux.simps(3)
+      toVal0.simps(1) toVal3210.simps(1,3) type_of_lit.simps(2) type_of_val.simps(1) val3ToValn.simps(1)
+      wfvotTT)
   using wfvotTT tint_intv
-  apply (metis (no_types, lifting) fAdd1.simps(4) selectImpl.simps
-      selectImplAux.simps(4) toVal0.elims toVal3210.simps(2,3) val.distinct(1,3)
-      val3ToValn.simps(1))
+  apply (metis (no_types, opaque_lifting) fAdd1.simps(4) selectImpl.simps selectImplAux.simps(3)
+      toVal0.simps(1) toVal3210.simps(1,3) val3ToValn.simps(2) valBij valBij2)
     apply (metis VTAdd1 selectImpl.simps
-      selectImplAux.simps(22) toVal3210.simps(3) valBij2 wfvotTT)
+      selectImplAux.simps(11) toVal3210.simps(3) valBij2 wfvotTT)
    apply (metis VTAdd1 selectImpl.simps
-      selectImplAux.simps(21) toVal3210.simps(3,4) valBij2 wfvotTT)
+      selectImplAux.simps(10) toVal3210.simps(3,4) valBij2 wfvotTT)
    apply (metis VTAdd1 selectImpl.simps
-      selectImplAux.simps(20) toVal3210.simps(3,5) valBij2 wfvotTT)
+      selectImplAux.simps(9) toVal3210.simps(3,5) valBij2 wfvotTT)
   done
 
 lemma HH: "type_of_val (selectImpl vAdd1 k) = val_ty (type_of_val vAdd1)"
@@ -387,16 +374,14 @@ lemma vAdd1defualt: "(\<not>wf k \<or> type_of_val k \<noteq> key_ty (type_of_va
 
 lemma vAdd1wfSelect: "wf (selectImpl vAdd1 k)"
   apply (cases k rule: toVal3210.cases)
-  apply (metis (no_types, opaque_lifting) selectImpl.simps selectImplAux.simps(4) val0.exhaust
-      val3ToValn.simps(1,2,3) valBij wfAbsV wfLitV)
-  apply (metis fAdd1.simps(4) selectImpl.simps selectImplAux.simps(4) toVal0.elims toVal3210.simps(2,3)
-      val3ToValn.simps(1) wfLitV wfundef)
+  apply (metis H2 type_of_val_Int wfLitV)
+  apply (metis H2 type_of_val_Int wfLitV)
     apply (metis VTAdd1 selectImpl.simps
-      selectImplAux.simps(22) toVal3210.simps(3) valBij2 wfvotTT)
+      selectImplAux.simps(11) toVal3210.simps(3) valBij2 wfvotTT)
    apply (metis VTAdd1 selectImpl.simps
-      selectImplAux.simps(21) toVal3210.simps(3,4) valBij2 wfvotTT)
+      selectImplAux.simps(10) toVal3210.simps(3,4) valBij2 wfvotTT)
    apply (metis VTAdd1 selectImpl.simps
-      selectImplAux.simps(20) toVal3210.simps(3,5) valBij2 wfvotTT)
+      selectImplAux.simps(9) toVal3210.simps(3,5) valBij2 wfvotTT)
   done
 
 lemma wf_vAdd1: "wf vAdd1" using VTAdd1 HH vAdd1wfSelect wfMapV[of vAdd1] vAdd1defualt by fastforce
@@ -409,15 +394,18 @@ locale valoftype =
 begin
 
 fun toVal1 :: "'a valn \<Rightarrow> 'a val1" where "toVal1 (MapV (Inr (Inr m))) = m" | "toVal1 _ = undefined"
+fun val0Of10 :: "'a val10 \<Rightarrow> 'a val0" where "val0Of10 (Inr v0) = v0" | "val0Of10 _ = undefined"
 abbreviation TMII where "TMII \<equiv> TMap (TPrim TInt) (TPrim TInt)"
-fun compint where "compint g f (IntV0 x) = g (f (IntV0 x))" | "compint _ _  _ = toVal0 (val_of_type (TT))"
+fun compint where 
+    "compint g f (IntV0 x) =  (g (val0Of10 (f (IntV0 x))))"
+    | "compint g f _ =  Inr (toVal0 (val_of_type (TT)))"
 fun hof where 
-  "hof (MapKey f (tk, tv)) =
-    (if (tk, tv) = (TT, TT) \<and> wf (MapV (Inr (Inr (MapKey (f) (tk, tv)))))
-        then Inl (MapKey (compint fAdd1 f) (TT, TT))
-        else Inl (toVal1 (val_of_type (TMII))))"
-  | "hof _ = Inl (toVal1 (val_of_type (TMII)))"
-abbreviation hom :: "'a::absval val2" where "hom \<equiv> MapKey hof (TMII, TMII)"
+  "hof (Inl (MapVal f (tk, tv))) =
+    (if (tk, tv) = (TT, TT) \<and> wf (MapV (Inr (Inr (MapVal (f) (tk, tv)))))
+        then Inr (Inl (MapVal (compint fAdd1 f) (TT, TT)))
+        else Inr (Inl (toVal1 (val_of_type (TMII)))))"
+  | "hof _ = Inr (Inl (toVal1 (val_of_type (TMII))))"
+abbreviation hom :: "'a::absval val2" where "hom \<equiv> MapVal hof (TMII, TMII)"
 abbreviation homV :: "'a::absval valn" where "homV \<equiv> MapV (Inr (Inl hom))"
 
 lemma "wf_ty homV" by auto
@@ -431,7 +419,7 @@ lemma "type_of_val k = TMII \<longrightarrow> (\<exists>k'. k = MapV k')" apply 
 lemma kTMII:
   assumes "wf_ty k"
   assumes "type_of_val k = TMII"
-  shows "\<exists>f. k = MapV (Inr (Inr (MapKey f (TT, TT))))"
+  shows "\<exists>f. k = MapV (Inr (Inr (MapVal f (TT, TT))))"
 proof -
   have "count_level_map_ty (type_of_val k) = 1" using assms by simp
   then obtain k' where "toVal3210 k = Inr (Inr (Inl k'))" using C1Inrrl assms by blast
@@ -445,7 +433,7 @@ qed
 lemma homvotdef: "tyL (toVal1 (val_of_type (TMap TT TT))) = (TT, TT)" using VOT
   by (smt (verit) One_nat_def Suc_eq_plus1 closed.simps(2,4) count_level_map_ty.simps(1,3) kTMII
       le_eq_less_or_eq max_0_1(2) not_less_eq_eq numeral_Bit1 numeral_One plus_1_eq_Suc toVal1.simps(1)
-      tyL.simps(2) val.distinct(3) valid_mapty.elims(3) wf.simps wf_ty.elims(1) wf_ty.simps(2)
+      tyL.simps val.distinct(3) valid_mapty.elims(3) wf.simps wf_ty.elims(1) wf_ty.simps(2)
       zero_less_two)
 
 
@@ -463,8 +451,8 @@ lemma wff: "type_of_val (selectImpl homV k) = TMII"
 lemma validClosedTMII: "valid_mapty (TMap TT TT) \<and> closed (TMap TT TT)" by simp
 
 lemma compwf:
-  assumes "a = (MapV (Inr (Inr (MapKey f (TT, TT)))))"
-  assumes "b = (MapV (Inr (Inr (MapKey (compint fAdd1 f) (TT, TT)))))"
+  assumes "a = (MapV (Inr (Inr (MapVal f (TT, TT)))))"
+  assumes "b = (MapV (Inr (Inr (MapVal (compint fAdd1 f) (TT, TT)))))"
   assumes "wf a"
   shows "wf b"
 proof -
@@ -473,8 +461,10 @@ proof -
   have wf1: "\<forall>k. wf (selectImpl b k)"
     apply rule
     apply (case_tac k rule: toVal3210.cases; (simp add: assms))
-    apply (metis toVal3210.simps(1) val0.exhaust val3ToValn.simps(2) valBij2 wfAbsV
-        wfLitV)
+    apply (rename_tac v, case_tac v; (simp add: assms))
+    apply (metis val_of_type.simps votTTpreserved wfvotTT)
+    apply (metis fAdd1.elims val3ToValn.simps(1) votTTpreserved wfLitV wfvotTT)
+    apply (metis val_of_type.simps votTTpreserved wfvotTT)
     apply (metis toVal3210.simps(1) val0.exhaust val3ToValn.simps(2) valBij2 wfAbsV
         wfLitV)
     by (metis VTAdd1 vAdd1defualt vAdd1wfSelect valBij2 val_of_type.simps)+
@@ -523,17 +513,14 @@ qed
 
 lemma vhomVwfSelect: "wf (selectImpl homV k)"
   apply (cases k rule: toVal3210.cases; simp)
-    using valBij2 VOT validClosedTMII val_of_type.simps apply metis
-    using valBij2 VOT validClosedTMII val_of_type.simps apply metis
+  using VOT votTMIIpreserved apply auto[1]
+  using VOT votTMIIpreserved apply auto[1]
     apply (rename_tac m, case_tac m)
     using VOT validClosedTMII val_of_type.simps
-    apply (metis (no_types, lifting) hof.simps(2) kTMII toVal1.simps(1) val3ToValn.simps(3)
-        wf.simps wf_ty.simps(1,2))
-    using VOT compwf votTMIIpreserved apply fastforce
-    apply (metis (no_types, lifting) Eps_cong VOT valBij2 val_of_type.simps
-        validClosedTMII)
-    apply (metis (no_types, lifting) Eps_cong VOT valBij2 val_of_type.simps
-        validClosedTMII)
+    apply (simp add: valBij2)
+    using valoftype.compwf valoftype.intro votTMIIpreserved apply fastforce
+    apply (metis VOT valBij2 val_of_type.simps validClosedTMII)
+    apply (metis VOT valBij2 val_of_type.simps validClosedTMII)
     done
 
 lemma homVdef:
@@ -544,7 +531,7 @@ proof rule
     apply simp
     apply (cases k rule: ValnCases)
     apply (simp add: valBij2)
-    apply (simp add: valBij2)
+    using votTMIIpreserved apply auto[1]
     apply (simp add: votTMIIpreserved)
     using votTMIIpreserved apply force
     using votTMIIpreserved apply force
@@ -564,17 +551,18 @@ lemma wf_impl_wf_ty: "wf k \<Longrightarrow> wf_ty k" using wf.cases by force
 
 (* conclude Isabelle type from key of a select assuming wf and typed *)
 lemma
-  assumes "wf (MapV (Inl (MapKey f ty)))"
+  assumes "wf (MapV (Inl (MapVal f ty)))"
   assumes "wf k"
-  assumes "type_of_val k = key_ty (type_of_val (MapV (Inl (MapKey f ty))))"
-  shows "\<exists>k'. toVal3210 k = Inr (Inl k')"
+  assumes "type_of_val k = key_ty (type_of_val (MapV (Inl (MapVal f ty))))"
+  shows "\<exists>k'. toVal3210 k = Inr ( k')"
 proof -
-  have "count_level_map_ty (type_of_val (MapV (Inl (MapKey f ty)))) = 3"
+  have "count_level_map_ty (type_of_val (MapV (Inl (MapVal f ty)))) = 3"
     using InlC3 wf.simps assms(1) toVal3210.simps wf_impl_wf_ty by force
-  then have "count_level_map_ty (key_ty (type_of_val (MapV (Inl (MapKey f ty))))) = 2"
+  then have "count_level_map_ty (key_ty (type_of_val (MapV (Inl (MapVal f ty))))) \<le> 2"
     using assms(1) wf_L.elims(2) wf_impl_wf_ty by fastforce
-  then have "count_level_map_ty (type_of_val k) = 2" using assms by auto
-  then show ?thesis using C2Inrl using assms(2) wf_impl_wf_ty by auto
+  then have "count_level_map_ty (type_of_val k) \<le> 2" using assms by auto
+  then show ?thesis using assms(2) wf_impl_wf_ty
+    by (metis InlC3 One_nat_def Suc_1 Suc_n_not_le_n numeral_3_eq_3 old.sum.exhaust)
 qed
 
 
@@ -595,70 +583,79 @@ next
   then show ?thesis using assms by force
 next
   case (3 f tk tv)  (* M = MapV (Inr (Inr (MapKey f (tk, tv))))  *)
-  have C: "count_level_map_ty (type_of_val k) = 0  \<and>  count_level_map_ty (type_of_val v) \<le> 0"
-    using assms wf_impl_wf_ty "3" by fastforce
-  obtain k' where K: "toVal3210 k = Inr (Inr (Inr k'))"
-    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
-    by (cases k; simp)
-  obtain v' where V: "toVal3210 v = Inr (Inr (Inr v'))"
-    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
-    by (cases v; simp)
-  show ?thesis using assms wf_impl_wf_ty K V "3" by (simp add: toVal3210_inj valBij)
+  then show ?thesis proof (cases "(count_level_map_ty tv \<le> 0)")
+    case True
+    then have C: "count_level_map_ty (type_of_val k) = 0  \<and>  count_level_map_ty (type_of_val v) \<le> 0"
+      using assms wf_impl_wf_ty "3" by fastforce
+    obtain k' where K: "toVal3210 k = Inr (Inr (Inr k'))"
+      using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+      by (cases k; simp)
+    obtain v' where V: "toVal3210 v = Inr (Inr (Inr v'))"
+      using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+      by (cases v; simp)
+    show ?thesis using assms wf_impl_wf_ty K V "3" by (simp add: toVal3210_inj valBij)
+  next
+    case False  (* M = MapV (Inr (Inr (MapVal f (tk, tv)))) *)
+    then have C: "count_level_map_ty (type_of_val k) \<le> 0  \<and>  count_level_map_ty (type_of_val v) = 1"
+      using assms wf_impl_wf_ty "3" by fastforce
+    obtain k' where K: "toVal3210 k = Inr (Inr (Inr k'))"
+      using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+      by (cases k; simp)
+    obtain v' where V: "toVal3210 v = Inr (Inr (Inl v'))"
+      using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+      apply (cases v; simp) by fastforce
+    show ?thesis using assms wf_impl_wf_ty K V "3" by (simp add: toVal3210_inj valBij)
+  qed
 next
-  case (4 f tk tv)  (* M = MapV (Inr (Inr (MapVal f (tk, tv)))) *)
-  have C: "count_level_map_ty (type_of_val k) \<le> 0  \<and>  count_level_map_ty (type_of_val v) = 1"
-    using assms wf_impl_wf_ty "4" by fastforce
-  obtain k' where K: "toVal3210 k = Inr (Inr (Inr k'))"
-    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
-    by (cases k; simp)
-  obtain v' where V: "toVal3210 v = Inr (Inr (Inl v'))"
-    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
-    apply (cases v; simp) by fastforce
-  show ?thesis using assms wf_impl_wf_ty K V "4" by (simp add: toVal3210_inj valBij)
+  case (4 f tk tv)
+  then show ?thesis proof (cases "(count_level_map_ty tv \<le> 1)")
+    case True
+    then have C: "count_level_map_ty (type_of_val k) = 1  \<and>  count_level_map_ty (type_of_val v) \<le> 1"
+      using assms wf_impl_wf_ty "4" by fastforce
+    obtain k' where K: "toVal3210 k = Inr (Inr (Inl k'))"
+      using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+      apply (cases k; simp) by fastforce
+    obtain v' where V: "toVal3210 v = Inr (Inr v')"
+      using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+      apply (cases v; simp) by fastforce
+    show ?thesis using assms wf_impl_wf_ty K V "4" by (simp add: toVal3210_inj valBij)
+  next
+    case False
+    then have C: "count_level_map_ty (type_of_val k) \<le> 1  \<and>  count_level_map_ty (type_of_val v) = 2"
+      using assms wf_impl_wf_ty "4" by fastforce
+    obtain k' where K: "toVal3210 k = Inr (Inr k')"
+      using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+      apply (cases k; simp) by fastforce
+    obtain v' where V: "toVal3210 v = Inr (Inl v')"
+      using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+      apply (cases v; simp) by fastforce
+    show ?thesis using assms wf_impl_wf_ty K V "4" by (simp add: toVal3210_inj valBij)
+  qed
 next
   case (5 f tk tv)
-  have C: "count_level_map_ty (type_of_val k) = 1  \<and>  count_level_map_ty (type_of_val v) \<le> 1"
-    using assms wf_impl_wf_ty "5" by fastforce
-  obtain k' where K: "toVal3210 k = Inr (Inr (Inl k'))"
-    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
-    apply (cases k; simp) by fastforce
-  obtain v' where V: "toVal3210 v = Inr (Inr v')"
-    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
-    apply (cases v; simp) by fastforce
-  show ?thesis using assms wf_impl_wf_ty K V "5" by (simp add: toVal3210_inj valBij)
-next
-  case (6 f tk tv)
-  have C: "count_level_map_ty (type_of_val k) \<le> 1  \<and>  count_level_map_ty (type_of_val v) = 2"
-    using assms wf_impl_wf_ty "6" by fastforce
-  obtain k' where K: "toVal3210 k = Inr (Inr k')"
-    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
-    apply (cases k; simp) by fastforce
-  obtain v' where V: "toVal3210 v = Inr (Inl v')"
-    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
-    apply (cases v; simp) by fastforce
-  show ?thesis using assms wf_impl_wf_ty K V "6" by (simp add: toVal3210_inj valBij)
-next
-  case (7 f tk tv)
-  have C: "count_level_map_ty (type_of_val k) = 2  \<and>  count_level_map_ty (type_of_val v) \<le> 2"
-    using assms wf_impl_wf_ty "7" by fastforce
-  obtain k' where K: "toVal3210 k = Inr (Inl k')"
-    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
-    apply (cases k; simp) by fastforce
-  obtain v' where V: "toVal3210 v = Inr v'"
-    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
-    apply (cases v; simp) by fastforce
-  show ?thesis using assms wf_impl_wf_ty K V "7" by (simp add: toVal3210_inj valBij)
-next
-  case (8 f tk tv)
-  have C: "count_level_map_ty (type_of_val k) \<le> 2  \<and>  count_level_map_ty (type_of_val v) = 3"
-    using assms wf_impl_wf_ty "8" by fastforce
-  obtain k' where K: "toVal3210 k = Inr k'"
-    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
-    apply (cases k; simp) by fastforce
-  obtain v' where V: "toVal3210 v = Inl v'"
-    using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
-    apply (cases v; simp) by fastforce
-  show ?thesis using assms wf_impl_wf_ty K V "8" by (simp add: toVal3210_inj valBij)
+  then show ?thesis proof (cases "(count_level_map_ty tv \<le> 2)")
+    case True
+    then have C: "count_level_map_ty (type_of_val k) = 2  \<and>  count_level_map_ty (type_of_val v) \<le> 2"
+      using assms wf_impl_wf_ty "5" by fastforce
+    obtain k' where K: "toVal3210 k = Inr (Inl k')"
+      using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+      apply (cases k; simp) by fastforce
+    obtain v' where V: "toVal3210 v = Inr v'"
+      using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+      apply (cases v; simp) by fastforce
+    show ?thesis using assms wf_impl_wf_ty K V "5" by (simp add: toVal3210_inj valBij)
+  next
+    case False
+    then have C: "count_level_map_ty (type_of_val k) \<le> 2  \<and>  count_level_map_ty (type_of_val v) = 3"
+      using assms wf_impl_wf_ty "5" by fastforce
+    obtain k' where K: "toVal3210 k = Inr k'"
+      using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+      apply (cases k; simp) by fastforce
+    obtain v' where V: "toVal3210 v = Inl v'"
+      using assms wf_impl_wf_ty C3Inl C2Inrl C1Inrrl C0Inrrr C
+      apply (cases v; simp) by fastforce
+    show ?thesis using assms wf_impl_wf_ty K V "5" by (simp add: toVal3210_inj valBij)
+  qed
 qed
 
 
@@ -721,41 +718,6 @@ lemma extensionalityAux:
           qed
           ultimately show ?thesis using 1 MapVal \<open>m' = MapVal m'' tm\<close> \<open>n' = MapVal n'' tn\<close>
             using \<open>n = Inr (Inr n')\<close> by force
-        next
-          case (MapKey x21 x22)
-          (* This case is impossible because selectImplAux would return Inl for m and Inr for n *)
-          fix f k
-          have "selectImplAux (toVal3210 (MapV m)) (Inr (Inr (Inr k))) = Inr (Inr (Inl (m'' k)))"
-            using 1 MapVal by simp
-          moreover have "selectImplAux (toVal3210 (MapV n)) (Inr (Inr (Inr k))) = Inr (Inr (Inr (f k)))"
-            using MapKey toVal3210.simps
-            using MapKey \<open>n = Inr (Inr n')\<close> assms(3) calculation by force
-          ultimately show ?thesis using assms(3) sum.distinct(1) by simp
-        qed
-      next
-        case (MapKey m'' tm)
-        then show ?thesis
-        proof (cases n')
-          case (MapKey n'' tn)
-          have "tm = tn" using assms(4) 1 MapKey \<open>m' = MapKey m'' tm\<close> ty321.simps(1)
-            by (metis \<open>n = Inr (Inr n')\<close> prod.collapse ty.inject(4) tyL.simps(2) type_of_val.simps(3) mapval_ty_eq_ty321)
-          moreover have "m'' = n''"
-          proof (rule ext)
-            fix k show "m'' k = n'' k"
-              using assms(3) 1 MapKey \<open>m' = MapKey m'' tm\<close> \<open>n' = MapKey n'' tn\<close>
-              selectImplAux.simps(4) sum.inject(2) toVal3210.simps(3)
-              by (metis \<open>n = Inr (Inr n')\<close>)
-          qed
-          ultimately show ?thesis using 1 MapKey \<open>m' = MapKey m'' tm\<close> \<open>n' = MapKey n'' tn\<close>
-            using \<open>n = Inr (Inr n')\<close> by force
-        next
-          case (MapVal f tn)
-          fix k
-          have "selectImplAux (toVal3210 (MapV m)) (Inr (Inr (Inr k))) = Inr (Inr (Inr (m'' k)))" 
-            using 1 MapKey by simp
-          moreover have "selectImplAux (toVal3210 (MapV n)) (Inr (Inr (Inr k))) = Inr (Inr (Inl (f k)))"
-            using \<open>n = Inr (Inr n')\<close> MapVal by simp
-          ultimately show ?thesis using assms(3) sum.distinct(1) by auto
         qed
       qed
     qed
@@ -773,10 +735,7 @@ next
       by (metis wf_impl_wf_ty)
     then show ?thesis 
       using assms(3,4) 2 N apply (cases m'; cases n')
-      apply (auto simp: fun_eq_iff dest: spec[of _ "Inr (Inr _)"])
-      apply (metis Inl_Inr_False selectImplAux.simps(5,6) sum.sel(2))
-      apply (metis not_arg_cong_Inr old.sum.distinct(1) selectImplAux.simps(5,6))
-      by (metis old.sum.inject(2) selectImplAux.simps(6))
+      by (auto simp: fun_eq_iff dest: spec[of _ "Inr (Inr _)"])
   qed
 next
   case (3 m')
@@ -791,10 +750,7 @@ next
       by (metis wf_impl_wf_ty)
     then show ?thesis 
       using assms(3,4) 3 N apply (cases m'; cases n')
-      apply (auto simp: fun_eq_iff dest: spec[of _ "Inr _"])
-      apply (metis old.sum.distinct(1) selectImplAux.simps(7,8))
-      apply (metis selectImplAux.simps(7,8) sum.distinct(1))
-      by (metis selectImplAux.simps(8) sum.sel(2))
+      by (auto simp: fun_eq_iff dest: spec[of _ "Inr _"])
   qed
 qed
 
