@@ -6,9 +6,6 @@ begin
 
 subsection \<open>Values, State, Variable Context\<close>
 
-datatype ('k, 'p) L =
-  MapVal "'p \<Rightarrow> ('k, 'p) L" "ty \<times> ty" |  MapKey "'k \<Rightarrow> 'p" "ty \<times> ty"
-
 text \<open>The values (and as a result the semantics) are parametrized by the carrier type 'a for the 
 abstract values (values that have a type constructed via type constructors)
 TODO: explain Map Values
@@ -416,6 +413,12 @@ fun type_of_val :: "('a::absval, 'm::mapval) val \<Rightarrow> ty"
  | "type_of_val (AbsV v) = TCon (fst (absval_ty v)) (snd (absval_ty v))"
  | "type_of_val (MapV v) = TMap (fst (mapval_ty v)) (snd (mapval_ty v))"
 
+fun tmap_lvl :: "ty \<Rightarrow> nat" where
+    "tmap_lvl (TMap tk tv) = max (1 + tmap_lvl tk) (tmap_lvl tv)"
+  | "tmap_lvl (TCon _ ty_args) = 0"
+  | "tmap_lvl (TVar i) = 0"
+  | "tmap_lvl _ = 0"
+
 type_synonym rtype_env = "ty list"
 
 (* can only be used for instantiating closed types *)
@@ -440,12 +443,15 @@ fun is_final_config :: "('a, 'm) cfg_config \<Rightarrow> bool"
 
 subsection \<open>Expression reduction (big-step semantics)\<close>
 
-
 locale semantics =
   fixes map_select :: "('a::absval, 'm::mapval) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
   fixes map_store  :: "('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
-  fixes valid_mapty :: "ty \<Rightarrow> bool"
+  fixes maxmaplvl :: nat
+  assumes "\<And>v::('a, 'm) val. tmap_lvl (type_of_val v) \<le> maxmaplvl"
 begin
+
+abbreviation valid_closed
+  where "valid_closed t \<equiv> (closed t \<and> tmap_lvl t \<le> maxmaplvl)"
 
 inductive red_expr :: "var_context \<Rightarrow> ('a, 'm) fun_interp \<Rightarrow> rtype_env \<Rightarrow> expr \<Rightarrow> ('a, 'm) nstate \<Rightarrow> ('a, 'm) val \<Rightarrow> bool"
   ("_,_,_ \<turnstile> ((\<langle>_,_\<rangle>) \<Down> _)" [51,0,0,0,0] 81)
@@ -656,7 +662,6 @@ abbreviation red_cfg_k_step :: "mbodyCFG proc_context \<Rightarrow> var_context 
 
 end  (* locale semantics = fixes map_select, map_store *)
 
-
 (* if inputs types are correct, then function reduces to a value of correct output type *)
 fun fun_interp_single_wf :: "nat \<times> ty list \<times> ty \<Rightarrow> (ty list \<Rightarrow> ('a::absval, 'm::mapval) val list \<rightharpoonup> ('a, 'm) val) \<Rightarrow> bool"
   where "fun_interp_single_wf(n_ty_params, args_ty, ret_ty) f =
@@ -766,7 +771,7 @@ fun proc_is_correct :: "fdecls \<Rightarrow> vdecls \<Rightarrow> vname list \<R
     "proc_is_correct fun_decls constants unique_consts global_vars axioms proc proc_body_satisfies_spec_general =  
       (case proc_body(proc) of
         Some (locals, struct) \<Rightarrow> 
-          ( ( (\<forall>t. closed t \<longrightarrow> (\<exists>v. type_of_val (v :: ('a, 'm) val) = t)) \<and> (\<forall>v. closed (type_of_val (v :: ('a, 'm) val))) ) \<longrightarrow>
+          ( ( (\<forall>t. valid_closed t \<longrightarrow> (\<exists>v. type_of_val (v :: ('a, 'm) val) = t)) \<and> (\<forall>v. valid_closed (type_of_val (v :: ('a, 'm) val))) ) \<longrightarrow>
           (\<forall> \<Gamma>. fun_interp_wf fun_decls \<Gamma> \<longrightarrow>
           (
              (\<forall>\<Omega> gs ls. (list_all closed \<Omega> \<and> length \<Omega> = proc_ty_args proc) \<longrightarrow>        

@@ -12,7 +12,7 @@ datatype 'p L = FunL "'p \<Rightarrow> 'p L + 'p" ty ty
 datatype 'a val0 = LitV0 lit | AbsV0 (the_absv: 'a)
 type_synonym 'a val1 = "'a val0 L"
 type_synonym 'a val10 = "'a val1 + 'a val0"
-type_synonym 'a val2 = "'a val10 L"
+type_synonym 'a val2 = "('a val1 + 'a val0) L"
 type_synonym 'a val210 = "'a val2 + 'a val1 + 'a val0"
 type_synonym 'a val3 = "'a val210 L"
 type_synonym 'a val3210 = "'a val3 + 'a val210"
@@ -67,10 +67,6 @@ lemma mapval_ty_eq_ty321: "mapval_ty = ty321"
 
 fun key_ty where "key_ty (TMap tk _) = tk" | "key_ty _ = undefined"
 fun val_ty where "val_ty (TMap _ tv) = tv" | "val_ty _ = undefined"
-
-fun tmap_lvl :: "ty \<Rightarrow> nat" where
-    "tmap_lvl (TMap tk tv) = max (1 + tmap_lvl tk) (tmap_lvl tv)"
-  | "tmap_lvl _ = 0"
 
 primrec wf_L where
   "wf_L n (FunL _ tk tv) = (
@@ -182,11 +178,7 @@ inductive wf where
       (\<forall>k. type_of_val (selectImpl m k) = val_ty (type_of_val m))
       \<rbrakk> \<Longrightarrow> wf m"
 
-
-fun valid_mapty :: "ty \<Rightarrow> bool" where "valid_mapty t = (tmap_lvl t \<le> 3)"
-
-
-subsubsection "Bijection between tmap_lvl and sum type levels"
+subsubsection \<open>Bijection between tmaplvl and sum type levels\<close>
 
 lemma C0Inrrr:
   assumes "tmap_lvl (type_of_val v) = 0"
@@ -579,9 +571,9 @@ qed
 
 
 subsection \<open>Array Axiom Stable\<close>
-text \<open>Property to prove:
+(*text \<open>Property to prove:
   y \<noteq> x ==> (m[x] := v)[y] == m[y]
-  y \<noteq> x ==> select (store m x v) y = select m y\<close>
+  y \<noteq> x ==> select (store m x v) y = select m y\<close>*)
 
 lemma ArrayAxStable:
 (*  apparently not needed
@@ -599,7 +591,7 @@ lemma ArrayAxStable:
 
 
 subsection \<open>Array Axiom Extensionality\<close>
-text \<open>Property to prove: (\<forall>k. m[k] == n[k]) <==> Eq m n\<close>
+(*text \<open>Property to prove: (\<forall>k. m[k] == n[k]) <==> Eq m n\<close>*)
 
 subsubsection \<open>Extensionality\<close>
 lemma extensionalityAux:
@@ -713,7 +705,7 @@ proof -
 qed
 
 
-subsection \<open>Select & Store is closed under wf\<close>
+subsection \<open>Select and Store is closed under wf\<close>
 
 text \<open>Lemma for return value of invalid select\<close>
 lemma wf_undefined: "(wf (val3ToValn (Inr (Inr (Inr undefined)))))"
@@ -814,7 +806,7 @@ lemma "mapval_ty (Abs_wf_maps (Inr (Inr mAdd1))) = (TT, TT)"
 text \<open>type for well formed values\<close>
 type_synonym 'a wf_val = "('a, 'a wf_maps) val"
 
-text \<open>lift selectImpl & storeImpl\<close>
+text \<open>lift selectImpl and storeImpl\<close>
 setup_lifting type_definition_wf_maps
 
 lift_definition wf_select :: "'a::absval wf_val \<Rightarrow> 'a wf_val \<Rightarrow> 'a wf_val"
@@ -844,7 +836,7 @@ lift_definition type_of_wf_val :: "'a::absval wf_val \<Rightarrow> ty"
   is type_of_val .
 
 
-subsection \<open>Leammas hold for the new select & store\<close>
+subsection \<open>Leammas hold for the new select and store\<close>
 
 lemma wf_wf_val: "wf_wf x"
   apply (cases x)
@@ -881,7 +873,6 @@ lemma rel_val_cr_wf_implies_wf:
 
 (* 4. The Final Proofs *)
 lemma Ax1:
-  fixes m::"'a::absval wf_val"
   assumes "type_of_val m = TMap (type_of_val k) (type_of_val v)"
   shows "wf_select (wf_store m k v) k = v"
   using assms
@@ -955,6 +946,19 @@ lemma map_update:
 
 subsection \<open>Proof for Locale Assumptions\<close>
 
+lemma max_map_level:
+  assumes "wf v"
+  shows "tmap_lvl (type_of_val v) \<le> 3"
+  apply (cases v rule: ValnCases)
+  using assms wf_impl_wf_ty by fastforce+
+
+lemma max_map_level_wf:
+  shows "tmap_lvl (type_of_val (v::('a::absval, 'a wf_maps) val)) \<le> 3"
+  apply transfer
+  using max_map_level
+  by (metis eq_onp_top_eq_eq val.pred_rel wf_wf.abs_eq wf_wf_val)
+
+
 lemma locale_select: "\<And>m k tk tv. \<lbrakk>type_of_val m = TMap tk tv; type_of_val k = tk\<rbrakk>
     \<Longrightarrow> type_of_val (wf_select m k) = tv"
   by (metis map_type_safe_wf ty.simps(14,16) type_of_val.elims val_ty.simps(1))
@@ -964,5 +968,21 @@ lemma locale_store: "\<And>m k v tk tv. \<lbrakk>type_of_val m = TMap tk tv; typ
   apply transfer
   using storePreserveTy by metis
 
+lemma intintmap:
+  assumes "type_of_val m = TMap TT TT"
+  shows "\<exists>j. (wf_select m (IntV i)) = IntV j"
+  by (simp add: assms locale_select tint_intv)
+
+lemma inteq:
+  assumes "\<exists>i. x = IntV i" "\<exists>j. y = IntV j"
+  shows "(x = y) = (convert_val_to_int x = convert_val_to_int y)"
+  using assms(1,2) by force
+
+lemma int_inverse_0: "type_of_val k = TT \<Longrightarrow> (k = IntV i) = (convert_val_to_int k = i)"
+  using int_inverse_3 by auto
+
+lemmas map_helper =
+  locale_select locale_store intintmap inteq 
+    int_inverse_3 int_inverse_2 int_inverse_1 int_inverse_0 convert_val_to_int.simps
 
 end

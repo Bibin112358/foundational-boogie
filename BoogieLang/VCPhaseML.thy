@@ -2,8 +2,6 @@ theory VCPhaseML
   imports Semantics Util VCHints VCExprHelper HelperML MapExample PassificationEndToEnd Ast Ast_Cfg_Transformation BackedgeElim TypingML
 begin
 
-interpretation semantics wf_select wf_store .
-
 ML \<open>
 (** tactics for end-to-endproof**)
 
@@ -125,12 +123,12 @@ red_var_tac ctxt assms del_thms,
 (forall_main_tac ctxt (fst (forall_and_exists_thm_tuple))),
 (exists_main_tac ctxt (snd (forall_and_exists_thm_tuple))),
 
-(*
+
 resolve_tac ctxt [@{thm add_vc_rel}],
 resolve_tac ctxt [@{thm sub_vc_rel}],
 resolve_tac ctxt [@{thm mul_vc_rel}],
 resolve_tac ctxt [@{thm uminus_vc_rel}],
-*)
+
 
 (resolve_tac ctxt [@{thm RedMapSelect}]),
 (resolve_tac ctxt [@{thm RedMapStore}]),

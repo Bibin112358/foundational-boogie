@@ -1,6 +1,9 @@
 theory HelperML
-imports Main
+  imports Semantics Util VCHints VCExprHelper MapExample PassificationEndToEnd Ast Ast_Cfg_Transformation BackedgeElim TypingHelper
 begin
+
+interpretation semantics wf_select wf_store 3
+  using max_map_level_wf semantics.intro by blast
 
 ML\<open> (* taken from Cogent; add_simps adds simplification-rules into a given context. *)
 fun add_simps [] ctxt = ctxt

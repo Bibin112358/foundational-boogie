@@ -220,16 +220,21 @@ definition val_of_closed_type ::"closed_ty \<Rightarrow> ('a::absval, 'm::mapval
   where
    "val_of_closed_type t  = (val_of_type (closed_to_ty t))"
 
+context semantics begin
+
 lemma val_of_type_correct:
-  assumes "\<And> t. closed t \<Longrightarrow> \<exists>v::('a::absval, 'm::mapval) val. type_of_val v = t" and
-         "closed t'"
+  assumes "\<And> t. (valid_closed t) \<Longrightarrow> \<exists>v::('a::absval, 'm::mapval) val. type_of_val v = t" and
+         "valid_closed t'"
   shows "type_of_val ((val_of_type t') :: ('a, 'm) val) = t'"
-  by (metis (mono_tags, lifting) assms(1) assms(2) someI val_of_type.simps)
+  by (metis (mono_tags, lifting) assms someI val_of_type.simps)
 
 lemma val_of_closed_type_correct: 
-  assumes "\<And> t. closed t \<Longrightarrow> \<exists>v::('a::absval, 'm::mapval) val. type_of_val v = t"
+  assumes "\<And> t. (valid_closed t) \<Longrightarrow> \<exists>v::('a::absval, 'm::mapval) val. type_of_val v = t"
+  assumes "tmap_lvl (closed_to_ty ct) \<le> maxmaplvl"
   shows "ty_to_closed (type_of_val ((val_of_closed_type ct)::('a::absval, 'm::mapval) val)) = ct"
   by (metis assms closed_closed_to_ty closed_inv1 val_of_closed_type_def val_of_type_correct)
+
+end
 
 lemma type_of_val_instantiate:
 assumes "closed (instantiate \<Omega> ty)" and
@@ -586,8 +591,12 @@ lemma real_inverse_3:
 
 subsection \<open>Basic tactics\<close>
 
+context semantics begin
+
 method fun_output_axiom uses NonEmptyTypes =
 ( (auto simp add: Let_def split: option.split intro: val_of_closed_type_correct[OF NonEmptyTypes]) )
+
+end
 
 lemma convert_type_of_val_vc: 
   assumes "type_of_val v = t" and "closed t" and "ty_to_closed t = tc"

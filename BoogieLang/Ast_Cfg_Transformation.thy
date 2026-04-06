@@ -2179,8 +2179,8 @@ text \<open>The main lemma used to complete proof of the correctness of an \<^te
 lemma end_to_end_util2:
   assumes AExpanded: "\<And> \<Gamma> end_bb end_cont end_state ns (M::mbodyCFG proc_context).
            rtranclp (red_bigblock M \<Lambda> \<Gamma> [] ast) (init_ast ast ns) (end_bb, end_cont, end_state) \<Longrightarrow>
-           (\<And> v::('a, 'm) val. (closed ((type_of_val) v))) \<Longrightarrow>
-           (\<And> t. ((closed t) \<Longrightarrow> (\<exists> v::('a, 'm) val. (((type_of_val) v) = t)))) \<Longrightarrow>
+           (\<And> v::('a, 'm) val. (valid_closed ((type_of_val) v))) \<Longrightarrow>
+           (\<And> t. ((valid_closed t) \<Longrightarrow> (\<exists> v::('a, 'm) val. (((type_of_val) v) = t)))) \<Longrightarrow>
            (fun_interp_wf fun_decls \<Gamma>) \<Longrightarrow>
            (axiom_assm \<Gamma> constants (ns::(('a, 'm)nstate)) axioms) \<Longrightarrow>
            (expr_all_sat \<Lambda> \<Gamma> [] ns all_pres) \<Longrightarrow>
@@ -2203,7 +2203,7 @@ proof -
   proof( (simp only: proc_is_correct.simps), subst ABody, simp split: option.split, (rule allI | rule impI)+,
       unfold ast_proc_body_satisfies_spec_def,(rule allI | rule impI)+)  
     fix \<Gamma> \<Omega> gs ls end_bb end_cont end_state
-    assume Atyp:"(\<forall>t. closed t \<longrightarrow> (\<exists>v::('a, 'm) val. type_of_val v = t)) \<and> (\<forall>v::('a, 'm) val. closed (type_of_val v))" and
+    assume Atyp:"(\<forall>t. valid_closed t \<longrightarrow> (\<exists>v::('a, 'm) val. type_of_val v = t)) \<and> (\<forall>v::('a, 'm) val. valid_closed (type_of_val v))" and
       FunWf:"fun_interp_wf fun_decls \<Gamma>" and
       ARenv: "list_all closed \<Omega> \<and> length \<Omega> = proc_ty_args proc_ast" and
       WfGlobal: "state_typ_wf \<Omega> gs (constants @ global_vars)" and

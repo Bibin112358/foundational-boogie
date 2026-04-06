@@ -79,11 +79,13 @@ proof -
     by (metis (full_types, lifting) assms(2) tfl_some)    
 qed
 
+context semantics begin
+
 text \<open>The following lemma shows the set we pick for U is non-empty under certain assumptions.\<close>
 lemma init_state_elem_init_set:
   assumes 
-          NonEmptyTypes:"\<And> t. closed t \<Longrightarrow> \<exists>v::('a::absval, 'm::mapval) val. type_of_val v = t" and
-          Closed:"\<And>y \<tau>. \<not>(\<exists> x. R x = Some (Inl y)) \<Longrightarrow> lookup_var_ty \<Lambda>' y = Some \<tau> \<Longrightarrow> closed (instantiate \<Omega> \<tau>)" and          
+          NonEmptyTypes:"\<And> t. (valid_closed t) \<Longrightarrow> \<exists>v::('a::absval, 'm::mapval) val. type_of_val v = t" and
+          Closed:"\<And>y \<tau>. \<not>(\<exists> x. R x = Some (Inl y)) \<Longrightarrow> lookup_var_ty \<Lambda>' y = Some \<tau> \<Longrightarrow> valid_closed (instantiate \<Omega> \<tau>)" and          
           RelTy:"\<And>x y. R x = Some (Inl y) \<Longrightarrow> lookup_var_ty \<Lambda> x = lookup_var_ty \<Lambda>' y" and
           RelWt:"rel_well_typed \<Lambda> \<Omega> R (ns::('a, 'm) nstate)" and
           InjAssm:"inj_on_defined R" and
@@ -170,8 +172,8 @@ next
 qed
 
 lemma init_set_non_empty:
-  assumes NonEmptyTypes:"\<And> t. closed t \<Longrightarrow> \<exists>v::('a::absval, 'm::mapval) val. type_of_val v = t" and
-          Closed:"\<And>y \<tau>. \<not>(\<exists> x. R x = Some (Inl y)) \<Longrightarrow> lookup_var_ty \<Lambda>' y = Some \<tau> \<Longrightarrow> closed (instantiate \<Omega> \<tau>)" and          
+  assumes NonEmptyTypes:"\<And> t. (valid_closed t) \<Longrightarrow> \<exists>v::('a::absval, 'm::mapval) val. type_of_val v = t" and
+          Closed:"\<And>y \<tau>. \<not>(\<exists> x. R x = Some (Inl y)) \<Longrightarrow> lookup_var_ty \<Lambda>' y = Some \<tau> \<Longrightarrow> valid_closed (instantiate \<Omega> \<tau>)" and          
           RelTy:"\<And>x y. R x = Some (Inl y) \<Longrightarrow> lookup_var_ty \<Lambda> x = lookup_var_ty \<Lambda>' y" and
           RelWt:"rel_well_typed \<Lambda> \<Omega> R (ns::('a, 'm) nstate)" and
           InjAssm:"inj_on_defined R" and
@@ -182,6 +184,8 @@ lemma init_set_non_empty:
           ConstsDisj2:"set (map fst (fst \<Lambda>')) \<inter> set (map fst (snd \<Lambda>')) = {}"
   shows "initial_set R \<Lambda> \<Lambda>' \<Omega> ns \<noteq> {}"
   using assms init_state_elem_init_set by blast
+
+end
 
 text \<open>Next, we show that U has the remaining desired properties.\<close>
 

@@ -1449,8 +1449,8 @@ subsection \<open>Helper lemma for final end-to-end theorem\<close>
 lemma end_to_end_util:
   assumes AExpanded:"\<And> \<Gamma> m' s' ns M.
            M,\<Lambda>,\<Gamma>,[],cfg_body  \<turnstile> (Inl n, Normal ns) -n\<rightarrow>* (m', s') \<Longrightarrow>
-           (\<And> v::('a, 'm) val. (closed (type_of_val v))) \<Longrightarrow>
-           (\<And> t. ((closed t) \<Longrightarrow> (\<exists> v::('a, 'm) val. ((type_of_val v) = t)))) \<Longrightarrow>
+           (\<And> v::('a, 'm) val. (valid_closed (type_of_val v))) \<Longrightarrow>
+           (\<And> t. (valid_closed t \<Longrightarrow> (\<exists> v::('a, 'm) val. ((type_of_val v) = t)))) \<Longrightarrow>
            (fun_interp_wf fun_decls \<Gamma>) \<Longrightarrow>
            (axiom_assm \<Gamma> constants (ns::(('a, 'm)nstate)) axioms) \<Longrightarrow>
            (expr_all_sat \<Lambda> \<Gamma> [] ns all_pres) \<Longrightarrow>
@@ -1476,7 +1476,7 @@ proof -
   proof( (simp only: proc_is_correct.simps), subst ABody, simp split: option.split, (rule allI | rule impI)+,
          unfold proc_body_satisfies_spec_def,(rule allI | rule impI)+)  
     fix \<Gamma> \<Omega> gs ls m' s' 
-    assume Atyp:"(\<forall>t. closed t \<longrightarrow> (\<exists>v::('a, 'm) val. type_of_val v = t)) \<and> (\<forall>v::('a, 'm) val. closed (type_of_val v))" and
+    assume Atyp:"(\<forall>t. valid_closed t \<longrightarrow> (\<exists>v::('a, 'm) val. type_of_val v = t)) \<and> (\<forall>v::('a, 'm) val. valid_closed (type_of_val v))" and
            FunWf:"fun_interp_wf fun_decls \<Gamma>" and
            ARenv: "list_all closed \<Omega> \<and> length \<Omega> = proc_ty_args proc" and
            WfGlobal: "state_typ_wf \<Omega> gs (constants @ global_vars)" and
@@ -1526,7 +1526,6 @@ proof -
       by simp
   qed
 qed
-
 
 end
 
