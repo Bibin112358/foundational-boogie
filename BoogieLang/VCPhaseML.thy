@@ -1,5 +1,5 @@
 theory VCPhaseML                                      
-  imports Semantics Util VCHints VCExprHelper HelperML MapExample PassificationEndToEnd Ast Ast_Cfg_Transformation BackedgeElim TypingML
+  imports HelperML
 begin
 
 ML \<open>
