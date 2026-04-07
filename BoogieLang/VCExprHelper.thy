@@ -340,7 +340,7 @@ lemma exists_vc_rel_real:
 
 (** general types **)
 lemma forall_vc_type:
-  assumes closedTypeOfVal:"\<And> v::('a, 'm) val. closed (type_of_val v)" and
+  assumes closedTypeOfVal:"\<And> v::('a, 'm) val. valid_closed (type_of_val v)" and
    closedInstTy:"closed (instantiate \<Omega> ty)" and
    vcTypeFalse:"\<And> i. \<not> (P i) \<Longrightarrow> vc_type_of_val i = ty_to_closed (instantiate \<Omega> ty)" and
    body: "\<And> i. type_of_val i = instantiate \<Omega> ty \<Longrightarrow> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, full_ext_env ns i\<rangle> \<Down> BoolV (P i)"
@@ -363,7 +363,7 @@ next
 qed
 
 lemma exists_vc_type:
-  assumes closedTypeOfVal:"\<And> v::('a, 'm) val. closed (type_of_val v)" and
+  assumes closedTypeOfVal:"\<And> v::('a, 'm) val. valid_closed (type_of_val v)" and
    closedInstTy:"closed (instantiate \<Omega> ty)" and
    vcTypeTrue:"\<And> i. (P i) \<Longrightarrow> vc_type_of_val i = ty_to_closed (instantiate \<Omega> ty)" and
    body: "\<And> i. type_of_val i = instantiate \<Omega> ty \<Longrightarrow> \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>e, full_ext_env ns i\<rangle> \<Down> BoolV (P i)"
