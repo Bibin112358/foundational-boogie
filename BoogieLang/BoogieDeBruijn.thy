@@ -224,6 +224,14 @@ lemma msubst_ty_unop [simp]: "msubst_ty_expr ts (UnOp uop e) = UnOp uop (msubst_
 lemma msubst_ty_binop [simp]: "msubst_ty_expr ts (e1 \<guillemotleft>bop\<guillemotright> e2) = (msubst_ty_expr ts e1) \<guillemotleft>bop\<guillemotright> (msubst_ty_expr ts e2)"
   by (induction ts arbitrary: e1 e2; auto)
 
+(*
+lemma msubst_ty_mapselect [simp]: "msubst_ty_expr ts (MapSelect m k) = MapSelect (msubst_ty_expr ts m) (msubst_ty_expr ts k)"
+  by (induction ts arbitrary: m k; auto)
+
+lemma msubst_ty_mapstore [simp]: "msubst_ty_expr ts (MapStore m k v) = MapStore (msubst_ty_expr ts m) (msubst_ty_expr ts k) (msubst_ty_expr ts v)"
+  by (induction ts arbitrary: m k v; auto)
+*)
+
 lemma msubst_ty_funexp [simp]: 
 "msubst_ty_expr ts (FunExp f ty_args args) = (FunExp f (map (msubstT ts) ty_args) (map (msubst_ty_expr ts) args))"
   by (induction ts arbitrary: ty_args args; auto)

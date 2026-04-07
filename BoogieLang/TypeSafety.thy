@@ -226,6 +226,24 @@ next
   from this obtain v1 v2 where 
      E:"binop_eval_val bop v1 v2 = Some v" by auto
   thus ?case using  \<open>binop_poly_type bop\<close> binop_poly_type_correct by fastforce
+(*next
+  case (TypMapSelect \<Delta> me tk tv ke r)
+  from this obtain mv kv where 
+     " \<Lambda>, \<Gamma>, \<Omega> \<turnstile> \<langle>me, n_s\<rangle> \<Down> mv" and " \<Lambda>, \<Gamma>, \<Omega> \<turnstile> \<langle>ke, n_s\<rangle> \<Down> kv" and 
+     E:"map_select mv kv = r"
+    by auto
+  then show ?case using  instantiate_msubst_opt  sorry
+   (* by (smt (verit) TypMapSelect.IH(2,4) TypMapSelect.prems(1,3,4,5,6) Wf_F Wf_\<Gamma>
+        instantiate.simps(4) nstate.fold_congs(2) semantics_axioms semantics_def
+        wf_expr.simps(6))*)
+  (*moreover from this have T1:"type_of_val mv = TMap tk tv" and 
+    T2:"type_of_val kv = tk" using TypMapSelect by auto
+  ultimately show ?case using \<open>(left_ty, right_ty) \<in> targs\<close> \<open>binop_type bop = Some (targs, ret_ty)\<close> binop_type_correct      
+    using TypBinOpMono.hyps(2) 
+    by fastforce*)
+next
+  case (TypMapStore \<Delta> me tk tv ke r)
+  then show ?case  sorry*)
 next
   case (TypFunExp f n_ty_params args_ty ret_ty ty_params args \<Delta>)
   from this obtain vargs fi where
@@ -414,6 +432,12 @@ next
   show ?case
     apply (cases bop; rule exI; rule RedBinOp[OF RedLeft RedRight])
     using \<open>binop_poly_type bop\<close> by auto
+(*next
+  case (TypMapSelect \<Delta> me tk tv ke r)
+  then show ?case  sorry
+next
+  case (TypMapStore \<Delta> me tk tv ke r)
+  then show ?case  sorry*)
 next
   case (TypFunExp f n_ty_params args_ty ret_ty ty_params args \<Delta>)
   have "\<exists>vargs. \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>args, n_s\<rangle> [\<Down>] vargs" 
