@@ -1,0 +1,385 @@
+%
+\begin{isabellebody}%
+\setisabellecontext{VCPhaseML}%
+%
+\isadelimtheory
+%
+\endisadelimtheory
+%
+\isatagtheory
+\isakeywordONE{theory}\isamarkupfalse%
+\ VCPhaseML\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \isanewline
+\ \ \isakeywordTWO{imports}\ Semantics\ Util\ VCHints\ VCExprHelper\ HelperML\ MapExample\ PassificationEndToEnd\ Ast\ Ast{\isacharunderscore}{\kern0pt}Cfg{\isacharunderscore}{\kern0pt}Transformation\ BackedgeElim\ TypingML\isanewline
+\isakeywordTWO{begin}%
+\endisatagtheory
+{\isafoldtheory}%
+%
+\isadelimtheory
+\isanewline
+%
+\endisadelimtheory
+\isanewline
+\isakeywordONE{interpretation}\isamarkupfalse%
+\ semantics\ wf{\isacharunderscore}{\kern0pt}select\ wf{\isacharunderscore}{\kern0pt}store%
+\isadelimproof
+\ %
+\endisadelimproof
+%
+\isatagproof
+\isakeywordONE{{\isachardot}{\kern0pt}}\isamarkupfalse%
+%
+\endisatagproof
+{\isafoldproof}%
+%
+\isadelimproof
+%
+\endisadelimproof
+\isanewline
+%
+\isadelimML
+\isanewline
+%
+\endisadelimML
+%
+\isatagML
+\isakeywordONE{ML}\isamarkupfalse%
+\ {\isacartoucheopen}\isanewline
+{\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}{\isacharasterisk}{\kern0pt}\ tactics\ for\ end{\isacharminus}{\kern0pt}to{\isacharminus}{\kern0pt}endproof{\isacharasterisk}{\kern0pt}{\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\isanewline
+fun\ vc{\isacharunderscore}{\kern0pt}fun{\isacharunderscore}{\kern0pt}corres{\isacharunderscore}{\kern0pt}tac\ ctxt\ corres{\isacharunderscore}{\kern0pt}thm\ interp{\isacharunderscore}{\kern0pt}thm\ fun{\isacharunderscore}{\kern0pt}mem{\isacharunderscore}{\kern0pt}thm\ context{\isacharunderscore}{\kern0pt}mem{\isacharunderscore}{\kern0pt}thm\ {\isacharequal}{\kern0pt}\isanewline
+\ let\ val\ corres{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}inst\ {\isacharequal}{\kern0pt}\ corres{\isacharunderscore}{\kern0pt}thm\ OF\ {\isacharbrackleft}{\kern0pt}{\isacharparenleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ finterp{\isacharunderscore}{\kern0pt}extract{\isacharunderscore}{\kern0pt}{\isadigit{1}}{\isacharbraceright}{\kern0pt}\ OF\ {\isacharbrackleft}{\kern0pt}interp{\isacharunderscore}{\kern0pt}thm{\isacharcomma}{\kern0pt}\ fun{\isacharunderscore}{\kern0pt}mem{\isacharunderscore}{\kern0pt}thm{\isacharcomma}{\kern0pt}\ context{\isacharunderscore}{\kern0pt}mem{\isacharunderscore}{\kern0pt}thm{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharbrackright}{\kern0pt}\ in\isanewline
+\ \ \ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}corres{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}inst{\isacharbrackright}{\kern0pt}\ THEN{\isacharunderscore}{\kern0pt}ALL{\isacharunderscore}{\kern0pt}NEW\ \ {\isacharparenleft}{\kern0pt}asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ ctxt{\isacharparenright}{\kern0pt}\isanewline
+\ end\isanewline
+{\isacartoucheclose}\isanewline
+\isanewline
+\isakeywordONE{ML}\isamarkupfalse%
+\ {\isacartoucheopen}\isanewline
+{\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}{\isacharasterisk}{\kern0pt}\ Tactics\ for\ quantifiers\ {\isacharasterisk}{\kern0pt}{\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\isanewline
+fun\ forall{\isacharunderscore}{\kern0pt}basic{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharequal}{\kern0pt}\isanewline
+\ \ FIRST{\isacharprime}{\kern0pt}{\isacharbrackleft}{\kern0pt}\isanewline
+\ \ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ forall{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}int{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+\ \ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ forall{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}bool{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+\ \ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ forall{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}real{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}\isanewline
+\ \ {\isacharbrackright}{\kern0pt}{\isacharsemicolon}{\kern0pt}\isanewline
+\isanewline
+fun\ exists{\isacharunderscore}{\kern0pt}basic{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharequal}{\kern0pt}\isanewline
+\ \ FIRST{\isacharprime}{\kern0pt}{\isacharbrackleft}{\kern0pt}\isanewline
+\ \ \ \ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ exists{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}int{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+\ \ \ \ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ exists{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}bool{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+\ \ \ \ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ exists{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}real{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}\isanewline
+\ \ {\isacharbrackright}{\kern0pt}{\isacharsemicolon}{\kern0pt}\isanewline
+\isanewline
+fun\ quantifier{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}tac\ quant{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}thm\ ctxt\ {\isacharequal}{\kern0pt}\isanewline
+\ \ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}quant{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}thm{\isacharbrackright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\ \isanewline
+\ \ asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ ctxt\ THEN{\isacharprime}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ in\ some\ cases\ need\ fastforce{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharsemicolon}{\kern0pt}{\isacharcomma}{\kern0pt}\ see\ monomorphize{\isadigit{0}}{\isachardot}{\kern0pt}bpl\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ ctxt\isanewline
+\ \ \isanewline
+\isanewline
+{\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ we\ first\ repeat\ the\ basic\ tactic{\isacharcomma}{\kern0pt}\ since\ if\ there\ are\ only\ primitive\ type\ quantifiers{\isacharcomma}{\kern0pt}\ then\ there\ \isanewline
+are\ no\ type\ guards\ {\isacharparenleft}{\kern0pt}and\ thus{\isacharcomma}{\kern0pt}\ imp{\isacharunderscore}{\kern0pt}vc\ should\ not\ be\ applied{\isacharparenright}{\kern0pt}\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+fun\ forall{\isacharunderscore}{\kern0pt}main{\isacharunderscore}{\kern0pt}tac\ ctxt\ forall{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}thm\ i\ {\isacharequal}{\kern0pt}\ \isanewline
+\ \ CHANGED\isanewline
+\ \ \ \ {\isacharparenleft}{\kern0pt}\ {\isacharparenleft}{\kern0pt}REPEAT{\isacharunderscore}{\kern0pt}DETERM\ {\isacharparenleft}{\kern0pt}forall{\isacharunderscore}{\kern0pt}basic{\isacharunderscore}{\kern0pt}tac\ ctxt\ i{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ \ THEN\ {\isacharparenleft}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ TRY\isanewline
+\ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}REPEAT{\isacharunderscore}{\kern0pt}DETERM{\isadigit{1}}\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}quantifier{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}tac\ forall{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}thm\ ctxt\ i{\isacharparenright}{\kern0pt}\ ORELSE\ {\isacharparenleft}{\kern0pt}forall{\isacharunderscore}{\kern0pt}basic{\isacharunderscore}{\kern0pt}tac\ ctxt\ i{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ THEN\isanewline
+\ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ imp{\isacharunderscore}{\kern0pt}vc{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}\ i\ THEN\ \isanewline
+\ \ \ \ \ \ \ \ \ \ asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ ctxt\ i{\isacharparenright}{\kern0pt}\ ORELSE\ all{\isacharunderscore}{\kern0pt}tac{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ {\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ {\isacharparenright}{\kern0pt}\isanewline
+\isanewline
+fun\ exists{\isacharunderscore}{\kern0pt}main{\isacharunderscore}{\kern0pt}tac\ ctxt\ exists{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}thm\ i\ {\isacharequal}{\kern0pt}\ \isanewline
+\ \ CHANGED\isanewline
+\ \ \ \ {\isacharparenleft}{\kern0pt}\ {\isacharparenleft}{\kern0pt}REPEAT{\isacharunderscore}{\kern0pt}DETERM\ {\isacharparenleft}{\kern0pt}exists{\isacharunderscore}{\kern0pt}basic{\isacharunderscore}{\kern0pt}tac\ ctxt\ i{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ \ THEN\ {\isacharparenleft}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ TRY\isanewline
+\ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}REPEAT{\isacharunderscore}{\kern0pt}DETERM{\isadigit{1}}\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}quantifier{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}tac\ exists{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}thm\ ctxt\ i{\isacharparenright}{\kern0pt}\ ORELSE\ {\isacharparenleft}{\kern0pt}exists{\isacharunderscore}{\kern0pt}basic{\isacharunderscore}{\kern0pt}tac\ ctxt\ i{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ THEN\isanewline
+\ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ conj{\isacharunderscore}{\kern0pt}vc{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}\ i\ THEN\ \isanewline
+\ \ \ \ \ \ \ \ \ \ asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ ctxt\ i{\isacharparenright}{\kern0pt}\ ORELSE\ all{\isacharunderscore}{\kern0pt}tac{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ {\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ {\isacharparenright}{\kern0pt}\isanewline
+{\isacartoucheclose}\isanewline
+\isanewline
+\isakeywordONE{ML}\isamarkupfalse%
+\ {\isacartoucheopen}\isanewline
+{\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}{\isacharasterisk}{\kern0pt}\ Tactics\ for\ proving\ {\isasymGamma}\ {\isasymturnstile}\ {\isasymlangle}e{\isacharcomma}{\kern0pt}\ ns{\isasymrangle}\ {\isasymDown}\ BoolV\ vc\ \ {\isacharasterisk}{\kern0pt}{\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\isanewline
+{\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ TODO{\isacharcolon}{\kern0pt}\ this\ particular\ tactic\ could\ be\ implemented\ more\ efficiently\ by\ just\ checking\ if\ the\ list\ has\ two\ elements\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+fun\ tac{\isacharunderscore}{\kern0pt}more{\isacharunderscore}{\kern0pt}than{\isacharunderscore}{\kern0pt}{\isadigit{1}}{\isacharunderscore}{\kern0pt}goal\ tac\ {\isacharequal}{\kern0pt}\isanewline
+\ \ tactic{\isacharunderscore}{\kern0pt}ngoals\ {\isacharparenleft}{\kern0pt}fn\ i\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ if\ i\ {\isachargreater}{\kern0pt}\ {\isadigit{1}}\ then\ tac\ else\ no{\isacharunderscore}{\kern0pt}tac{\isacharparenright}{\kern0pt}\isanewline
+\isanewline
+{\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ Hack{\isacharcolon}{\kern0pt}\ apply\ simplification\ only\ if\ goal\ is\ an\ equality\ and\ there\ are\ at\ least\ {\isadigit{2}}\ subgoals\ \isanewline
+\ \ \ \ \ \ \ \ \ this\ is\ to\ avoid\ applying\ simplification\ in\ cases\ where\ we\ do\ not\ want\ to{\isacharcomma}{\kern0pt}\ but\ is\ brittle\ \isanewline
+\ \ \ \ \ \ \ \ \ and\ should\ be\ made\ cleaner\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+fun\ vc{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}select{\isacharunderscore}{\kern0pt}tac\ ctxt\ red{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}tac\ assms\ {\isacharparenleft}{\kern0pt}t{\isacharcomma}{\kern0pt}i{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\isanewline
+\ \ case\ {\isacharparenleft}{\kern0pt}Logic{\isachardot}{\kern0pt}strip{\isacharunderscore}{\kern0pt}assums{\isacharunderscore}{\kern0pt}concl\ t{\isacharparenright}{\kern0pt}\ of\isanewline
+\ \ \ \ Const\ {\isacharparenleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}const{\isacharunderscore}{\kern0pt}name\ {\isachardoublequote}{\kern0pt}HOL{\isachardot}{\kern0pt}eq{\isachardoublequote}{\kern0pt}{\isacharbraceright}{\kern0pt}{\isacharcomma}{\kern0pt}{\isacharunderscore}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isachardollar}{\kern0pt}\ {\isacharunderscore}{\kern0pt}\ {\isachardollar}{\kern0pt}\ {\isacharunderscore}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ {\isacharparenleft}{\kern0pt}tac{\isacharunderscore}{\kern0pt}more{\isacharunderscore}{\kern0pt}than{\isacharunderscore}{\kern0pt}{\isadigit{1}}{\isacharunderscore}{\kern0pt}goal\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}\ asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ {\isacharparenleft}{\kern0pt}add{\isacharunderscore}{\kern0pt}simps\ assms\ ctxt{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}{\isachargreater}{\kern0pt}\ SOLVED{\isacharprime}{\kern0pt}{\isacharparenright}{\kern0pt}\ i{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ {\isacharbar}{\kern0pt}\ {\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}term\ {\isachardoublequote}{\kern0pt}Trueprop{\isachardoublequote}{\kern0pt}{\isacharbraceright}{\kern0pt}\ {\isachardollar}{\kern0pt}\ t{\isacharprime}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ vc{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}select{\isacharunderscore}{\kern0pt}tac\ ctxt\ red{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}tac\ assms\ {\isacharparenleft}{\kern0pt}t{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}i{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ {\isacharbar}{\kern0pt}\ {\isacharunderscore}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ red{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}tac\ ctxt\ assms\ i\isanewline
+\isanewline
+{\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ here\ do\ not\ use\ the\ hack{\isacharcomma}{\kern0pt}\ should\ work\ for\ cases\ where\ directly\ call\ this\ and\ only\ have\ a\ single\ subgoal\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+fun\ vc{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}select{\isacharunderscore}{\kern0pt}final{\isacharunderscore}{\kern0pt}tac\ ctxt\ red{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}tac\ assms\ {\isacharparenleft}{\kern0pt}t{\isacharcomma}{\kern0pt}i{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\isanewline
+\ \ case\ {\isacharparenleft}{\kern0pt}Logic{\isachardot}{\kern0pt}strip{\isacharunderscore}{\kern0pt}assums{\isacharunderscore}{\kern0pt}concl\ t{\isacharparenright}{\kern0pt}\ of\isanewline
+\ \ \ \ Const\ {\isacharparenleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}const{\isacharunderscore}{\kern0pt}name\ {\isachardoublequote}{\kern0pt}HOL{\isachardot}{\kern0pt}eq{\isachardoublequote}{\kern0pt}{\isacharbraceright}{\kern0pt}{\isacharcomma}{\kern0pt}{\isacharunderscore}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isachardollar}{\kern0pt}\ {\isacharunderscore}{\kern0pt}\ {\isachardollar}{\kern0pt}\ {\isacharunderscore}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}\ asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ {\isacharparenleft}{\kern0pt}add{\isacharunderscore}{\kern0pt}simps\ assms\ ctxt{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}{\isachargreater}{\kern0pt}\ SOLVED{\isacharprime}{\kern0pt}{\isacharparenright}{\kern0pt}\ i{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ {\isacharbar}{\kern0pt}\ {\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}term\ {\isachardoublequote}{\kern0pt}Trueprop{\isachardoublequote}{\kern0pt}{\isacharbraceright}{\kern0pt}\ {\isachardollar}{\kern0pt}\ t{\isacharprime}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ vc{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}select{\isacharunderscore}{\kern0pt}final{\isacharunderscore}{\kern0pt}tac\ ctxt\ red{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}tac\ assms\ {\isacharparenleft}{\kern0pt}t{\isacharprime}{\kern0pt}{\isacharcomma}{\kern0pt}i{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ {\isacharbar}{\kern0pt}\ {\isacharunderscore}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ red{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}tac\ ctxt\ assms\ i\isanewline
+\isanewline
+fun\ red{\isacharunderscore}{\kern0pt}var{\isacharunderscore}{\kern0pt}tac\ ctxt\ assms\ del{\isacharunderscore}{\kern0pt}thms\ \ {\isacharequal}{\kern0pt}\isanewline
+resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ RedVar{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\ \isanewline
+{\isacharparenleft}{\kern0pt}asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}ctxt\ addsimps\ {\isacharparenleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ lookup{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}ext{\isacharunderscore}{\kern0pt}env{\isacharunderscore}{\kern0pt}same{\isacharbraceright}{\kern0pt}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ assms{\isacharparenright}{\kern0pt}\ delsimps\ {\isacharparenleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ full{\isacharunderscore}{\kern0pt}ext{\isacharunderscore}{\kern0pt}env{\isachardot}{\kern0pt}simps{\isacharbraceright}{\kern0pt}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ del{\isacharunderscore}{\kern0pt}thms{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}{\isachargreater}{\kern0pt}\ SOLVED{\isacharprime}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\isanewline
+fun\ b{\isacharunderscore}{\kern0pt}prove{\isacharunderscore}{\kern0pt}assert{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}simple{\isacharunderscore}{\kern0pt}tac\ ctxt\ assms\ del{\isacharunderscore}{\kern0pt}thms\ i\ {\isacharequal}{\kern0pt}\isanewline
+REPEAT\ {\isacharparenleft}{\kern0pt}\ {\isacharparenleft}{\kern0pt}SUBGOAL\ {\isacharparenleft}{\kern0pt}vc{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}select{\isacharunderscore}{\kern0pt}tac\ ctxt\isanewline
+{\isacharparenleft}{\kern0pt}fn\ ctxt\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ fn\ assms\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ FIRST{\isacharprime}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}\isanewline
+red{\isacharunderscore}{\kern0pt}var{\isacharunderscore}{\kern0pt}tac\ ctxt\ assms\ del{\isacharunderscore}{\kern0pt}thms{\isacharcomma}{\kern0pt}\isanewline
+resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ RedBVar{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\ {\isacharparenleft}{\kern0pt}asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}ctxt\ addsimps\ assms\ delsimps\ del{\isacharunderscore}{\kern0pt}thms{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}{\isachargreater}{\kern0pt}\ SOLVED{\isacharprime}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ RedLit{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ RedBinOp{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ RedUnOp{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ RedFunOp{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\ {\isacharparenleft}{\kern0pt}asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ {\isacharparenleft}{\kern0pt}ctxt\ addsimps\ assms\ delsimps\ del{\isacharunderscore}{\kern0pt}thms{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}{\isachargreater}{\kern0pt}\ SOLVED{\isacharprime}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ RedExpListNil{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ RedExpListCons{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}\isanewline
+{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}\ assms\ {\isacharparenright}{\kern0pt}\isanewline
+{\isacharparenright}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\isanewline
+\isanewline
+fun\ vc{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}red{\isacharunderscore}{\kern0pt}tac\ ctxt\ assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ del{\isacharunderscore}{\kern0pt}thms\ {\isacharequal}{\kern0pt}\ \isanewline
+FIRST{\isacharprime}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}\isanewline
+red{\isacharunderscore}{\kern0pt}var{\isacharunderscore}{\kern0pt}tac\ ctxt\ assms\ del{\isacharunderscore}{\kern0pt}thms{\isacharcomma}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ RedBVar{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\ {\isacharparenleft}{\kern0pt}asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ {\isacharparenleft}{\kern0pt}ctxt\ addsimps\ assms\ delsimps\ del{\isacharunderscore}{\kern0pt}thms{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}{\isachargreater}{\kern0pt}\ SOLVED{\isacharprime}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ RedLit{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ maybe\ check\ whether\ goal\ has\ binop\ and\ only\ then\ try\ binop\ tactics\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ conj{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}rel{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ disj{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}rel{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ imp{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}rel{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ not{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}rel{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ gt{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}rel{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ ge{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}rel{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ lt{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}rel{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ le{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}rel{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ eq{\isacharunderscore}{\kern0pt}bool{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}rel{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ eq{\isacharunderscore}{\kern0pt}int{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}rel{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ eq{\isacharunderscore}{\kern0pt}real{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}rel{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ eq{\isacharunderscore}{\kern0pt}abs{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}rel{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ iff{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}rel{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ condexp{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}rel{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ forallt{\isacharunderscore}{\kern0pt}vc{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}forall{\isacharunderscore}{\kern0pt}main{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharparenleft}{\kern0pt}fst\ {\isacharparenleft}{\kern0pt}forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}exists{\isacharunderscore}{\kern0pt}main{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharparenleft}{\kern0pt}snd\ {\isacharparenleft}{\kern0pt}forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+\isanewline
+\isanewline
+resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ add{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}rel{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ sub{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}rel{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ mul{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}rel{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ uminus{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}rel{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+\isanewline
+\isanewline
+{\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ RedMapSelect{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ RedMapStore{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+\isanewline
+{\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ RedFunOp{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\ {\isacharparenleft}{\kern0pt}asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ {\isacharparenleft}{\kern0pt}ctxt\ addsimps\ assms\ delsimps\ del{\isacharunderscore}{\kern0pt}thms{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}{\isachargreater}{\kern0pt}\ SOLVED{\isacharprime}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ RedExpListNil{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ RedExpListCons{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ we\ allow\ this\ tactic\ to\ not\ completely\ solve\ the\ goal{\isacharcomma}{\kern0pt}\ since\ it\ may\ simplify\ the\ tactics\ further\ {\isacharparenleft}{\kern0pt}such\ as\ generating\ equalities{\isacharparenright}{\kern0pt}\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}CHANGED\ o\ b{\isacharunderscore}{\kern0pt}prove{\isacharunderscore}{\kern0pt}assert{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}simple{\isacharunderscore}{\kern0pt}tac\ ctxt\ assms\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+{\isacharbrackright}{\kern0pt}\isanewline
+\isanewline
+fun\ b{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}tac\ ctxt\ assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ del{\isacharunderscore}{\kern0pt}thms\ {\isacharequal}{\kern0pt}\isanewline
+\ \ REPEAT\ o\ SUBGOAL\ {\isacharparenleft}{\kern0pt}vc{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}select{\isacharunderscore}{\kern0pt}tac\ ctxt\ \ {\isacharparenleft}{\kern0pt}fn\ ctxt\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ fn\ assms\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ vc{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}red{\isacharunderscore}{\kern0pt}tac\ ctxt\ assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ del{\isacharunderscore}{\kern0pt}thms{\isacharparenright}{\kern0pt}\ assms\ {\isacharparenright}{\kern0pt}\isanewline
+\isanewline
+fun\ b{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}final{\isacharunderscore}{\kern0pt}tac\ ctxt\ assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ del{\isacharunderscore}{\kern0pt}thms\ {\isacharequal}{\kern0pt}\isanewline
+\ \ REPEAT\ o\ SUBGOAL\ {\isacharparenleft}{\kern0pt}vc{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}select{\isacharunderscore}{\kern0pt}final{\isacharunderscore}{\kern0pt}tac\ ctxt\ \ {\isacharparenleft}{\kern0pt}fn\ ctxt\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ fn\ assms\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ vc{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}red{\isacharunderscore}{\kern0pt}tac\ ctxt\ assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ del{\isacharunderscore}{\kern0pt}thms{\isacharparenright}{\kern0pt}\ assms\ {\isacharparenright}{\kern0pt}\isanewline
+\isanewline
+{\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ rewrite\ VC\ based\ on\ expression\ hint\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\isanewline
+{\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ if\ goal\ is\ given\ by\ vc{\isacharcomma}{\kern0pt}\ potentially\ rewrite\ goal\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+fun\ expr{\isacharunderscore}{\kern0pt}hint{\isacharunderscore}{\kern0pt}assume{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharparenleft}{\kern0pt}expr{\isacharunderscore}{\kern0pt}hint{\isacharcolon}{\kern0pt}ExprHint\ option{\isacharparenright}{\kern0pt}\ i\ {\isacharequal}{\kern0pt}\isanewline
+\ \ {\isacharparenleft}{\kern0pt}case\ expr{\isacharunderscore}{\kern0pt}hint\ of\isanewline
+\ \ \ \ {\isacharparenleft}{\kern0pt}SOME\ {\isacharparenleft}{\kern0pt}RewriteVC\ thms{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ DETERM\ {\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ thms\ i{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ {\isacharbar}{\kern0pt}\ {\isacharunderscore}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ all{\isacharunderscore}{\kern0pt}tac\isanewline
+\ \ {\isacharparenright}{\kern0pt}{\isacharsemicolon}{\kern0pt}\isanewline
+\isanewline
+{\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ given\ theorem\ vc{\isacharcomma}{\kern0pt}\ potentially\ return\ another\ theorem\ that\ is\ implied\ by\ it\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+fun\ expr{\isacharunderscore}{\kern0pt}hint{\isacharunderscore}{\kern0pt}assert{\isacharunderscore}{\kern0pt}tac\ {\isacharparenleft}{\kern0pt}expr{\isacharunderscore}{\kern0pt}hint{\isacharcolon}{\kern0pt}ExprHint\ option{\isacharparenright}{\kern0pt}\ vc\ {\isacharequal}{\kern0pt}\isanewline
+\ \ {\isacharparenleft}{\kern0pt}case\ expr{\isacharunderscore}{\kern0pt}hint\ of\isanewline
+\ \ \ \ {\isacharparenleft}{\kern0pt}SOME\ {\isacharparenleft}{\kern0pt}RewriteVC\ thms{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ OF{\isacharunderscore}{\kern0pt}first\ thms\ vc\isanewline
+\ \ \ \ {\isacharbar}{\kern0pt}\ {\isacharunderscore}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ SOME\ {\isacharparenleft}{\kern0pt}vc{\isacharparenright}{\kern0pt}\isanewline
+\ \ {\isacharparenright}{\kern0pt}{\isacharsemicolon}{\kern0pt}\isanewline
+\isanewline
+\isanewline
+fun\ prove{\isacharunderscore}{\kern0pt}axiom{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharparenleft}{\kern0pt}expr{\isacharunderscore}{\kern0pt}hint{\isacharcolon}{\kern0pt}\ ExprHint\ option{\isacharparenright}{\kern0pt}\ axiom{\isacharunderscore}{\kern0pt}assm\ assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ del{\isacharunderscore}{\kern0pt}thms\ {\isacharequal}{\kern0pt}\isanewline
+\ \ expr{\isacharunderscore}{\kern0pt}hint{\isacharunderscore}{\kern0pt}assume{\isacharunderscore}{\kern0pt}tac\ ctxt\ expr{\isacharunderscore}{\kern0pt}hint\ THEN{\isacharprime}{\kern0pt}\isanewline
+\ \ {\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ expr{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}vc{\isacharbraceright}{\kern0pt}\ OF\ {\isacharbrackleft}{\kern0pt}axiom{\isacharunderscore}{\kern0pt}assm{\isacharbrackright}{\kern0pt}\ {\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\isanewline
+\ \ b{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}final{\isacharunderscore}{\kern0pt}tac\ ctxt\ assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ del{\isacharunderscore}{\kern0pt}thms\isanewline
+{\isacartoucheclose}\ \ \isanewline
+\isanewline
+\isakeywordONE{ML}\isamarkupfalse%
+\ {\isacartoucheopen}\isanewline
+{\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}{\isacharasterisk}{\kern0pt}\ Tactics\ to\ deal\ with\ assume\ statements\ {\isacharasterisk}{\kern0pt}{\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+fun\ b{\isacharunderscore}{\kern0pt}assume{\isacharunderscore}{\kern0pt}base{\isacharunderscore}{\kern0pt}tac\ ctxt\ inst{\isacharunderscore}{\kern0pt}thm\ vc{\isacharunderscore}{\kern0pt}elim\ expr{\isacharunderscore}{\kern0pt}hint\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ i\ {\isacharequal}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}inst{\isacharunderscore}{\kern0pt}thm{\isacharbrackright}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\ THEN\ \isanewline
+\ \ {\isacharparenleft}{\kern0pt}asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ ctxt\ i{\isacharparenright}{\kern0pt}\ THEN\isanewline
+\ \ {\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}vc{\isacharunderscore}{\kern0pt}elim{\isacharbrackright}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\ THEN\isanewline
+\ \ {\isacharparenleft}{\kern0pt}expr{\isacharunderscore}{\kern0pt}hint{\isacharunderscore}{\kern0pt}assume{\isacharunderscore}{\kern0pt}tac\ ctxt\ expr{\isacharunderscore}{\kern0pt}hint\ i{\isacharparenright}{\kern0pt}\ THEN\isanewline
+\ \ {\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ expr{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}vc{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\ THEN\isanewline
+\ \ {\isacharparenleft}{\kern0pt}assume{\isacharunderscore}{\kern0pt}tac\ ctxt\ i{\isacharparenright}{\kern0pt}\ THEN\isanewline
+\ \ {\isacharparenleft}{\kern0pt}b{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}tac\ ctxt\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\isanewline
+\isanewline
+fun\ b{\isacharunderscore}{\kern0pt}assume{\isacharunderscore}{\kern0pt}foc{\isacharunderscore}{\kern0pt}tac\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ vc{\isacharunderscore}{\kern0pt}elim\ expr{\isacharunderscore}{\kern0pt}hint\ i\ {\isacharparenleft}{\kern0pt}focus{\isacharcolon}{\kern0pt}\ Subgoal{\isachardot}{\kern0pt}focus{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\isanewline
+let\isanewline
+\ \ val\ {\isacharparenleft}{\kern0pt}red\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ vc\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isacharunderscore}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ {\isacharhash}{\kern0pt}prems{\isacharparenleft}{\kern0pt}focus{\isacharparenright}{\kern0pt}\isanewline
+\ \ val\ ctxt\ {\isacharequal}{\kern0pt}\ {\isacharhash}{\kern0pt}context{\isacharparenleft}{\kern0pt}focus{\isacharparenright}{\kern0pt}\isanewline
+in\isanewline
+\ \ {\isacharparenleft}{\kern0pt}b{\isacharunderscore}{\kern0pt}assume{\isacharunderscore}{\kern0pt}base{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharparenleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ assume{\isacharunderscore}{\kern0pt}ml{\isacharbraceright}{\kern0pt}\ OF\ {\isacharbrackleft}{\kern0pt}red{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}vc{\isacharunderscore}{\kern0pt}elim\ vc{\isacharparenright}{\kern0pt}\ expr{\isacharunderscore}{\kern0pt}hint\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ i{\isacharparenright}{\kern0pt}\isanewline
+\ \ handle\ THM\ {\isacharunderscore}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ no{\isacharunderscore}{\kern0pt}tac\isanewline
+end\isanewline
+\isanewline
+fun\ b{\isacharunderscore}{\kern0pt}assume{\isacharunderscore}{\kern0pt}simple{\isacharunderscore}{\kern0pt}tac\ ctxt\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ vc{\isacharunderscore}{\kern0pt}elim\ expr{\isacharunderscore}{\kern0pt}hint\ n{\isacharunderscore}{\kern0pt}assms{\isacharunderscore}{\kern0pt}rem\ {\isacharequal}{\kern0pt}\isanewline
+\ \ {\isacharparenleft}{\kern0pt}Subgoal{\isachardot}{\kern0pt}FOCUS\ {\isacharparenleft}{\kern0pt}b{\isacharunderscore}{\kern0pt}assume{\isacharunderscore}{\kern0pt}foc{\isacharunderscore}{\kern0pt}tac\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ vc{\isacharunderscore}{\kern0pt}elim\ expr{\isacharunderscore}{\kern0pt}hint\ {\isadigit{1}}{\isacharparenright}{\kern0pt}\ ctxt\ {\isadigit{1}}{\isacharparenright}{\kern0pt}\ THEN\ \ \ \isanewline
+\ \ \ remove{\isacharunderscore}{\kern0pt}n{\isacharunderscore}{\kern0pt}assms\ n{\isacharunderscore}{\kern0pt}assms{\isacharunderscore}{\kern0pt}rem\ {\isadigit{1}}\isanewline
+\isanewline
+\isanewline
+fun\ b{\isacharunderscore}{\kern0pt}assume{\isacharunderscore}{\kern0pt}conjr{\isacharunderscore}{\kern0pt}tac\ ctxt\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ expr{\isacharunderscore}{\kern0pt}hint\ n\ {\isacharequal}{\kern0pt}\isanewline
+\ \ let\ val\ vc{\isacharunderscore}{\kern0pt}elim\ {\isacharequal}{\kern0pt}\ \isanewline
+\ \ \ \ fn\ {\isacharparenleft}{\kern0pt}vc{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ {\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ imp{\isacharunderscore}{\kern0pt}conj{\isacharunderscore}{\kern0pt}elim{\isacharbraceright}{\kern0pt}\ OF\ {\isacharbrackleft}{\kern0pt}{\isacharparenleft}{\kern0pt}apply{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}n{\isacharunderscore}{\kern0pt}times\ vc\ {\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ imp{\isacharunderscore}{\kern0pt}conj{\isacharunderscore}{\kern0pt}imp{\isacharbraceright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}n{\isacharminus}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharbrackright}{\kern0pt}\isanewline
+\ \ in\isanewline
+\ \ \ \ {\isacharparenleft}{\kern0pt}b{\isacharunderscore}{\kern0pt}assume{\isacharunderscore}{\kern0pt}simple{\isacharunderscore}{\kern0pt}tac\ ctxt\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ vc{\isacharunderscore}{\kern0pt}elim\ expr{\isacharunderscore}{\kern0pt}hint\ {\isadigit{3}}{\isacharparenright}{\kern0pt}\isanewline
+\ \ end\isanewline
+{\isacartoucheclose}\isanewline
+\isanewline
+\isakeywordONE{ML}\isamarkupfalse%
+\ {\isacartoucheopen}\isanewline
+{\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}{\isacharasterisk}{\kern0pt}\ Tactics\ to\ deal\ with\ assert\ statements\ {\isacharasterisk}{\kern0pt}{\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\isanewline
+fun\ b{\isacharunderscore}{\kern0pt}prove{\isacharunderscore}{\kern0pt}assert{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}tac\ ctxt\ vc{\isacharunderscore}{\kern0pt}expr\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ i\ {\isacharequal}{\kern0pt}\isanewline
+\ \ {\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ vc{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}expr{\isacharbraceright}{\kern0pt}\ OF\ {\isacharbrackleft}{\kern0pt}vc{\isacharunderscore}{\kern0pt}expr{\isacharbrackright}{\kern0pt}{\isacharbrackright}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\ THEN\isanewline
+\ \ {\isacharparenleft}{\kern0pt}b{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}tac\ ctxt\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\isanewline
+\isanewline
+fun\ b{\isacharunderscore}{\kern0pt}assert{\isacharunderscore}{\kern0pt}base{\isacharunderscore}{\kern0pt}tac\ ctxt\ inst{\isacharunderscore}{\kern0pt}thm\ vc{\isacharunderscore}{\kern0pt}expr\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ ehint\ i\ {\isacharequal}{\kern0pt}\isanewline
+\ \ {\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}inst{\isacharunderscore}{\kern0pt}thm{\isacharbrackright}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\ THEN\isanewline
+\ \ {\isacharparenleft}{\kern0pt}let\ val\ vc{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}new{\isacharunderscore}{\kern0pt}option\ {\isacharequal}{\kern0pt}\ expr{\isacharunderscore}{\kern0pt}hint{\isacharunderscore}{\kern0pt}assert{\isacharunderscore}{\kern0pt}tac\ ehint\ vc{\isacharunderscore}{\kern0pt}expr\ in\ \isanewline
+\ \ case\ vc{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}new{\isacharunderscore}{\kern0pt}option\ of\ \isanewline
+\ \ \ \ \ SOME\ vc{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}new\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ b{\isacharunderscore}{\kern0pt}prove{\isacharunderscore}{\kern0pt}assert{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}tac\ ctxt\ vc{\isacharunderscore}{\kern0pt}expr{\isacharunderscore}{\kern0pt}new\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ i\isanewline
+\ \ {\isacharbar}{\kern0pt}\ \ NONE\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ no{\isacharunderscore}{\kern0pt}tac\isanewline
+\ \ end{\isacharparenright}{\kern0pt}\isanewline
+\ \isanewline
+fun\ b{\isacharunderscore}{\kern0pt}assert{\isacharunderscore}{\kern0pt}conj{\isacharunderscore}{\kern0pt}foc{\isacharunderscore}{\kern0pt}tac\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ vc{\isacharunderscore}{\kern0pt}elim\ ehint\ i\ {\isacharparenleft}{\kern0pt}focus{\isacharcolon}{\kern0pt}\ Subgoal{\isachardot}{\kern0pt}focus{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\isanewline
+let\ \isanewline
+\ \ val\ {\isacharparenleft}{\kern0pt}red\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ vc\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isacharunderscore}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ {\isacharhash}{\kern0pt}prems{\isacharparenleft}{\kern0pt}focus{\isacharparenright}{\kern0pt}\isanewline
+\ \ val\ ctxt\ {\isacharequal}{\kern0pt}\ {\isacharhash}{\kern0pt}context{\isacharparenleft}{\kern0pt}focus{\isacharparenright}{\kern0pt}\isanewline
+in\isanewline
+\ {\isacharparenleft}{\kern0pt}b{\isacharunderscore}{\kern0pt}assert{\isacharunderscore}{\kern0pt}base{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharparenleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ assert{\isacharunderscore}{\kern0pt}ml{\isacharbraceright}{\kern0pt}\ OF\ {\isacharbrackleft}{\kern0pt}red{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ conjunct{\isadigit{1}}{\isacharbraceright}{\kern0pt}\ OF\ {\isacharbrackleft}{\kern0pt}vc{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ ehint\ i{\isacharparenright}{\kern0pt}\ THEN\isanewline
+\ \ {\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharparenleft}{\kern0pt}vc{\isacharunderscore}{\kern0pt}elim\ OF\ {\isacharbrackleft}{\kern0pt}vc{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharbrackright}{\kern0pt}\ i{\isacharparenright}{\kern0pt}\ \ \isanewline
+\ \ handle\ THM\ {\isacharunderscore}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ no{\isacharunderscore}{\kern0pt}tac\ \isanewline
+end\isanewline
+\isanewline
+fun\ b{\isacharunderscore}{\kern0pt}assert{\isacharunderscore}{\kern0pt}conj{\isacharunderscore}{\kern0pt}tac\ ctxt\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ vc{\isacharunderscore}{\kern0pt}elim\ ehint\ {\isacharequal}{\kern0pt}\isanewline
+\ \ {\isacharparenleft}{\kern0pt}Subgoal{\isachardot}{\kern0pt}FOCUS\ {\isacharparenleft}{\kern0pt}b{\isacharunderscore}{\kern0pt}assert{\isacharunderscore}{\kern0pt}conj{\isacharunderscore}{\kern0pt}foc{\isacharunderscore}{\kern0pt}tac\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ vc{\isacharunderscore}{\kern0pt}elim\ ehint\ {\isadigit{1}}{\isacharparenright}{\kern0pt}\ ctxt\ {\isadigit{1}}{\isacharparenright}{\kern0pt}\ \ THEN\isanewline
+\ \ eresolve{\isadigit{0}}{\isacharunderscore}{\kern0pt}tac\ {\isacharbrackleft}{\kern0pt}thin{\isacharunderscore}{\kern0pt}rl{\isacharbrackright}{\kern0pt}\ {\isadigit{1}}\ THEN\isanewline
+\ \ eresolve{\isadigit{0}}{\isacharunderscore}{\kern0pt}tac\ {\isacharbrackleft}{\kern0pt}thin{\isacharunderscore}{\kern0pt}rl{\isacharbrackright}{\kern0pt}\ {\isadigit{1}}\isanewline
+\isanewline
+fun\ b{\isacharunderscore}{\kern0pt}assert{\isacharunderscore}{\kern0pt}no{\isacharunderscore}{\kern0pt}conj{\isacharunderscore}{\kern0pt}foc{\isacharunderscore}{\kern0pt}tac\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ ehint\ i\ {\isacharparenleft}{\kern0pt}focus{\isacharcolon}{\kern0pt}\ Subgoal{\isachardot}{\kern0pt}focus{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\isanewline
+let\ \isanewline
+\ \ val\ {\isacharparenleft}{\kern0pt}red\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ vc\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isacharunderscore}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ {\isacharhash}{\kern0pt}prems{\isacharparenleft}{\kern0pt}focus{\isacharparenright}{\kern0pt}\ \isanewline
+\ \ val\ ctxt\ {\isacharequal}{\kern0pt}\ {\isacharhash}{\kern0pt}context{\isacharparenleft}{\kern0pt}focus{\isacharparenright}{\kern0pt}\isanewline
+in\isanewline
+\ {\isacharparenleft}{\kern0pt}b{\isacharunderscore}{\kern0pt}assert{\isacharunderscore}{\kern0pt}base{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharparenleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ assert{\isacharunderscore}{\kern0pt}ml{\isacharbraceright}{\kern0pt}\ OF\ {\isacharbrackleft}{\kern0pt}red{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}\ vc\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ ehint\ i{\isacharparenright}{\kern0pt}\isanewline
+\ \ handle\ THM\ {\isacharunderscore}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ no{\isacharunderscore}{\kern0pt}tac\ \isanewline
+end\isanewline
+\isanewline
+fun\ b{\isacharunderscore}{\kern0pt}assert{\isacharunderscore}{\kern0pt}no{\isacharunderscore}{\kern0pt}conj{\isacharunderscore}{\kern0pt}tac\ ctxt\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ ehint\ {\isacharequal}{\kern0pt}\isanewline
+\ \ {\isacharparenleft}{\kern0pt}Subgoal{\isachardot}{\kern0pt}FOCUS\ {\isacharparenleft}{\kern0pt}b{\isacharunderscore}{\kern0pt}assert{\isacharunderscore}{\kern0pt}no{\isacharunderscore}{\kern0pt}conj{\isacharunderscore}{\kern0pt}foc{\isacharunderscore}{\kern0pt}tac\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ ehint\ {\isadigit{1}}{\isacharparenright}{\kern0pt}\ ctxt\ {\isadigit{1}}{\isacharparenright}{\kern0pt}\isanewline
+{\isacartoucheclose}\isanewline
+\isanewline
+\isakeywordONE{ML}\isamarkupfalse%
+\ {\isacartoucheopen}\isanewline
+{\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}{\isacharasterisk}{\kern0pt}\ main\ tactic\ {\isacharasterisk}{\kern0pt}{\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\isanewline
+fun\ boogie{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharunderscore}{\kern0pt}\ {\isacharunderscore}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isacharparenleft}{\kern0pt}VcHint\ {\isacharasterisk}{\kern0pt}\ {\isacharparenleft}{\kern0pt}ExprHint\ option{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ list{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\isanewline
+\ \ TRY\ {\isacharparenleft}{\kern0pt}eresolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ nil{\isacharunderscore}{\kern0pt}cmd{\isacharunderscore}{\kern0pt}elim{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}\ {\isadigit{1}}\ THEN\ asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isadigit{1}}{\isacharparenright}{\kern0pt}\isanewline
+{\isacharbar}{\kern0pt}\ boogie{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}tac\ ctxt\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ {\isacharparenleft}{\kern0pt}x{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}xs{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ \isanewline
+\ \ {\isacharparenleft}{\kern0pt}case\ x\ of\isanewline
+\ \ {\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ assume\ statement\ normal\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ {\isacharparenleft}{\kern0pt}AssumeConjR\ {\isadigit{0}}{\isacharcomma}{\kern0pt}\ ehint{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ b{\isacharunderscore}{\kern0pt}assume{\isacharunderscore}{\kern0pt}simple{\isacharunderscore}{\kern0pt}tac\ ctxt\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ {\isacharparenleft}{\kern0pt}fn\ {\isacharparenleft}{\kern0pt}vc{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ {\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ impE{\isacharbraceright}{\kern0pt}\ OF\ {\isacharbrackleft}{\kern0pt}vc{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}\ ehint\ {\isadigit{3}}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isacharparenleft}{\kern0pt}AssumeConjR\ n{\isacharcomma}{\kern0pt}\ ehint{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ \isanewline
+\ \ \ \ \ if\ n\ {\isacharequal}{\kern0pt}\ {\isadigit{1}}\ then\isanewline
+\ \ \ \ \ \ \ \ b{\isacharunderscore}{\kern0pt}assume{\isacharunderscore}{\kern0pt}simple{\isacharunderscore}{\kern0pt}tac\ ctxt\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ {\isacharparenleft}{\kern0pt}fn\ {\isacharparenleft}{\kern0pt}vc{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ {\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ imp{\isacharunderscore}{\kern0pt}conj{\isacharunderscore}{\kern0pt}elim{\isacharbraceright}{\kern0pt}\ OF\ {\isacharbrackleft}{\kern0pt}vc{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}\ ehint\ {\isadigit{3}}\isanewline
+\ \ \ \ \ else\isanewline
+\ \ \ \ \ \ \ b{\isacharunderscore}{\kern0pt}assume{\isacharunderscore}{\kern0pt}conjr{\isacharunderscore}{\kern0pt}tac\ ctxt\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ ehint\ n\isanewline
+\ \ {\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ assert\ statement\ normal\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isacharparenleft}{\kern0pt}AssertNoConj{\isacharcomma}{\kern0pt}\ ehint{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ b{\isacharunderscore}{\kern0pt}assert{\isacharunderscore}{\kern0pt}no{\isacharunderscore}{\kern0pt}conj{\isacharunderscore}{\kern0pt}tac\ ctxt\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ ehint\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isacharparenleft}{\kern0pt}AssertConj{\isacharcomma}{\kern0pt}\ ehint{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ b{\isacharunderscore}{\kern0pt}assert{\isacharunderscore}{\kern0pt}conj{\isacharunderscore}{\kern0pt}tac\ ctxt\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ {\isacharparenleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ conj{\isacharunderscore}{\kern0pt}elim{\isacharunderscore}{\kern0pt}{\isadigit{2}}{\isacharbraceright}{\kern0pt}{\isacharparenright}{\kern0pt}\ ehint\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isacharparenleft}{\kern0pt}AssertSub{\isacharcomma}{\kern0pt}\ ehint{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ b{\isacharunderscore}{\kern0pt}assert{\isacharunderscore}{\kern0pt}conj{\isacharunderscore}{\kern0pt}tac\ ctxt\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ {\isacharparenleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ conj{\isacharunderscore}{\kern0pt}imp{\isacharunderscore}{\kern0pt}elim{\isacharbraceright}{\kern0pt}{\isacharparenright}{\kern0pt}\ ehint\ \isanewline
+\ \ {\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ special\ cases\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isacharparenleft}{\kern0pt}AssumeFalse{\isacharcomma}{\kern0pt}\ {\isacharunderscore}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ {\isacharparenleft}{\kern0pt}eresolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ assume{\isacharunderscore}{\kern0pt}false{\isacharunderscore}{\kern0pt}cmds{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}\ {\isadigit{1}}{\isacharparenright}{\kern0pt}\ THEN\ {\isacharparenleft}{\kern0pt}ALLGOALS\ {\isacharparenleft}{\kern0pt}asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ ctxt{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isacharparenleft}{\kern0pt}AssumeNot{\isacharcomma}{\kern0pt}\ ehint{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ b{\isacharunderscore}{\kern0pt}assume{\isacharunderscore}{\kern0pt}simple{\isacharunderscore}{\kern0pt}tac\ ctxt\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ {\isacharparenleft}{\kern0pt}fn\ {\isacharparenleft}{\kern0pt}vc{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ {\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ imp{\isacharunderscore}{\kern0pt}not{\isacharunderscore}{\kern0pt}elim{\isacharbraceright}{\kern0pt}\ OF\ {\isacharbrackleft}{\kern0pt}vc{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}\ ehint\ {\isadigit{0}}\ THEN\ \isanewline
+\ \ \ \ \ \ TRY\ {\isacharparenleft}{\kern0pt}ALLGOALS\ {\isacharparenleft}{\kern0pt}asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ ctxt{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isacharparenleft}{\kern0pt}AssertFalse{\isacharcomma}{\kern0pt}\ {\isacharunderscore}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ SOLVED{\isacharprime}{\kern0pt}\ {\isacharparenleft}{\kern0pt}asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ ctxt{\isacharparenright}{\kern0pt}\ {\isadigit{1}}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isacharparenleft}{\kern0pt}AssumeTrue{\isacharcomma}{\kern0pt}\ {\isacharunderscore}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ {\isacharparenleft}{\kern0pt}eresolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ assume{\isacharunderscore}{\kern0pt}true{\isacharunderscore}{\kern0pt}cmds{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}\ {\isadigit{1}}{\isacharparenright}{\kern0pt}\ THEN\ {\isacharparenleft}{\kern0pt}asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isadigit{1}}{\isacharparenright}{\kern0pt}\ THEN\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ rotate{\isacharunderscore}{\kern0pt}tac\ {\isadigit{1}}\ {\isadigit{1}}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isacharparenleft}{\kern0pt}AssertTrue{\isacharcomma}{\kern0pt}\ {\isacharunderscore}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ {\isacharparenleft}{\kern0pt}eresolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ assert{\isacharunderscore}{\kern0pt}true{\isacharunderscore}{\kern0pt}cmds{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}\ {\isadigit{1}}{\isacharparenright}{\kern0pt}\ THEN\ {\isacharparenleft}{\kern0pt}rotate{\isacharunderscore}{\kern0pt}tac\ {\isadigit{1}}\ {\isadigit{1}}{\isacharparenright}{\kern0pt}\isanewline
+\ \ {\isacharparenright}{\kern0pt}\ THEN\isanewline
+\ \ \ boogie{\isacharunderscore}{\kern0pt}vc{\isacharunderscore}{\kern0pt}tac\ ctxt\ global{\isacharunderscore}{\kern0pt}assms\ forall{\isacharunderscore}{\kern0pt}and{\isacharunderscore}{\kern0pt}exists{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tuple\ xs\isanewline
+{\isacartoucheclose}%
+\endisatagML
+{\isafoldML}%
+%
+\isadelimML
+%
+\endisadelimML
+\isanewline
+%
+\isadelimtheory
+\isanewline
+%
+\endisadelimtheory
+%
+\isatagtheory
+\isakeywordTWO{end}\isamarkupfalse%
+%
+\endisatagtheory
+{\isafoldtheory}%
+%
+\isadelimtheory
+%
+\endisadelimtheory
+%
+\end{isabellebody}%
+\endinput
+%:%file=~/eth/master-thesis/bibin-foundational-boogie/BoogieLang/VCPhaseML.thy%:%
+%:%10=1%:%
+%:%11=1%:%
+%:%12=2%:%
+%:%13=3%:%
+%:%18=3%:%
+%:%21=4%:%
+%:%22=5%:%
+%:%23=5%:%
+%:%25=5%:%
+%:%29=5%:%
+%:%37=5%:%
+%:%40=6%:%
+%:%45=7%:%
+%:%46=7%:%
+%:%53=14%:%
+%:%54=15%:%
+%:%55=16%:%
+%:%56=16%:%
+%:%101=61%:%
+%:%102=62%:%
+%:%103=63%:%
+%:%104=63%:%
+%:%213=172%:%
+%:%214=173%:%
+%:%215=174%:%
+%:%216=174%:%
+%:%247=205%:%
+%:%248=206%:%
+%:%249=207%:%
+%:%250=207%:%
+%:%291=248%:%
+%:%292=249%:%
+%:%293=250%:%
+%:%294=250%:%
+%:%329=278%:%
+%:%332=279%:%
+%:%337=280%:%

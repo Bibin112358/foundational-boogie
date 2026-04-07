@@ -1,0 +1,80 @@
+%
+\begin{isabellebody}%
+\setisabellecontext{VCHints}%
+%
+\isadelimtheory
+%
+\endisadelimtheory
+%
+\isatagtheory
+\isakeywordONE{theory}\isamarkupfalse%
+\ VCHints\isanewline
+\isakeywordTWO{imports}\ Main\isanewline
+\isakeywordTWO{begin}%
+\endisatagtheory
+{\isafoldtheory}%
+%
+\isadelimtheory
+\isanewline
+%
+\endisadelimtheory
+%
+\isadelimML
+\isanewline
+%
+\endisadelimML
+%
+\isatagML
+\isakeywordONE{ML}\isamarkupfalse%
+\ {\isacartoucheopen}\isanewline
+datatype\ VcHint\ {\isacharequal}{\kern0pt}\ \isanewline
+\ \ AssumeConjR\ of\ int\ {\isacharbar}{\kern0pt}\isanewline
+\ \ AssumeTrue\ {\isacharbar}{\kern0pt}\isanewline
+\ \ AssumeFalse\ {\isacharbar}{\kern0pt}\isanewline
+\ \ AssumeNot\ {\isacharbar}{\kern0pt}\ \isanewline
+\ \ AssertConj\ {\isacharbar}{\kern0pt}\ \isanewline
+\ \ AssertNoConj\ {\isacharbar}{\kern0pt}\ \isanewline
+\ \ AssertSub\ {\isacharbar}{\kern0pt}\isanewline
+\ \ AssertTrue\ {\isacharbar}{\kern0pt}\isanewline
+\ \ AssertFalse\isanewline
+\isanewline
+datatype\ ExprHint\ {\isacharequal}{\kern0pt}\isanewline
+\ \ RewriteVC\ of\ {\isacharparenleft}{\kern0pt}thm\ list{\isacharparenright}{\kern0pt}\isanewline
+{\isacartoucheclose}%
+\endisatagML
+{\isafoldML}%
+%
+\isadelimML
+\isanewline
+%
+\endisadelimML
+%
+\isadelimtheory
+\isanewline
+%
+\endisadelimtheory
+%
+\isatagtheory
+\isakeywordTWO{end}\isamarkupfalse%
+%
+\endisatagtheory
+{\isafoldtheory}%
+%
+\isadelimtheory
+%
+\endisadelimtheory
+%
+\end{isabellebody}%
+\endinput
+%:%file=~/eth/master-thesis/bibin-foundational-boogie/BoogieLang/VCHints.thy%:%
+%:%10=1%:%
+%:%11=1%:%
+%:%12=2%:%
+%:%13=3%:%
+%:%18=3%:%
+%:%23=4%:%
+%:%28=5%:%
+%:%29=5%:%
+%:%48=19%:%
+%:%53=20%:%
+%:%58=21%:%

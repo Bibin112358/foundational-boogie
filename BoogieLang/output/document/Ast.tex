@@ -1,0 +1,537 @@
+%
+\begin{isabellebody}%
+\setisabellecontext{Ast}%
+%
+\isadelimdocument
+%
+\endisadelimdocument
+%
+\isatagdocument
+%
+\isamarkupsection{Semantics of the AST%
+}
+\isamarkuptrue%
+%
+\endisatagdocument
+{\isafolddocument}%
+%
+\isadelimdocument
+%
+\endisadelimdocument
+%
+\isadelimtheory
+%
+\endisadelimtheory
+%
+\isatagtheory
+\isakeywordONE{theory}\isamarkupfalse%
+\ Ast\isanewline
+\ \ \isakeywordTWO{imports}\ Main\ Semantics\ Lang\ BackedgeElim\isanewline
+\isakeywordTWO{begin}%
+\endisatagtheory
+{\isafoldtheory}%
+%
+\isadelimtheory
+%
+\endisadelimtheory
+%
+\isadelimdocument
+%
+\endisadelimdocument
+%
+\isatagdocument
+%
+\isamarkupsubsection{AST definition%
+}
+\isamarkuptrue%
+%
+\endisatagdocument
+{\isafolddocument}%
+%
+\isadelimdocument
+%
+\endisadelimdocument
+\isakeywordONE{type{\isacharunderscore}{\kern0pt}synonym}\isamarkupfalse%
+\ name\ {\isacharequal}{\kern0pt}\ string\isanewline
+\isakeywordONE{type{\isacharunderscore}{\kern0pt}synonym}\isamarkupfalse%
+\ label\ {\isacharequal}{\kern0pt}\ string\isanewline
+\isakeywordONE{type{\isacharunderscore}{\kern0pt}synonym}\isamarkupfalse%
+\ guard\ {\isacharequal}{\kern0pt}\ expr\isanewline
+\isakeywordONE{type{\isacharunderscore}{\kern0pt}synonym}\isamarkupfalse%
+\ invariant\ {\isacharequal}{\kern0pt}\ expr\isanewline
+\isanewline
+\isakeywordONE{datatype}\isamarkupfalse%
+\ transfer{\isacharunderscore}{\kern0pt}cmd\isanewline
+\ {\isacharequal}{\kern0pt}\ Goto\ label\isanewline
+\ {\isacharbar}{\kern0pt}\ Return\isanewline
+\isanewline
+\isakeywordONE{datatype}\isamarkupfalse%
+\ parsed{\isacharunderscore}{\kern0pt}structured{\isacharunderscore}{\kern0pt}cmd\isanewline
+\ {\isacharequal}{\kern0pt}\ ParsedIf\ {\isachardoublequoteopen}guard\ option{\isachardoublequoteclose}\ {\isachardoublequoteopen}bigblock\ list{\isachardoublequoteclose}\ {\isachardoublequoteopen}bigblock\ list{\isachardoublequoteclose}\isanewline
+\ {\isacharbar}{\kern0pt}\ ParsedWhile\ {\isachardoublequoteopen}guard\ option{\isachardoublequoteclose}\ {\isachardoublequoteopen}invariant\ list{\isachardoublequoteclose}\ {\isachardoublequoteopen}bigblock\ list{\isachardoublequoteclose}\isanewline
+\ {\isacharbar}{\kern0pt}\ ParsedBreak\ nat\isanewline
+\ {\isacharbar}{\kern0pt}\ WhileWrapper\ parsed{\isacharunderscore}{\kern0pt}structured{\isacharunderscore}{\kern0pt}cmd\isanewline
+\isanewline
+\isakeywordTWO{and}\ bigblock\ \isanewline
+\ {\isacharequal}{\kern0pt}\ BigBlock\ {\isachardoublequoteopen}name\ option{\isachardoublequoteclose}\ {\isachardoublequoteopen}cmd\ list{\isachardoublequoteclose}\ {\isachardoublequoteopen}parsed{\isacharunderscore}{\kern0pt}structured{\isacharunderscore}{\kern0pt}cmd\ option{\isachardoublequoteclose}\ {\isachardoublequoteopen}transfer{\isacharunderscore}{\kern0pt}cmd\ option{\isachardoublequoteclose}%
+\begin{isamarkuptext}%
+A Boogie statement represented as an AST is a list of \isa{\isatconst{bigblock}}%
+\end{isamarkuptext}\isamarkuptrue%
+\isakeywordONE{type{\isacharunderscore}{\kern0pt}synonym}\isamarkupfalse%
+\ ast\ {\isacharequal}{\kern0pt}\ {\isachardoublequoteopen}bigblock\ list{\isachardoublequoteclose}%
+\isadelimdocument
+%
+\endisadelimdocument
+%
+\isatagdocument
+%
+\isamarkupsubsection{AST semantics%
+}
+\isamarkuptrue%
+%
+\endisatagdocument
+{\isafolddocument}%
+%
+\isadelimdocument
+%
+\endisadelimdocument
+%
+\begin{isamarkuptext}%
+We define a continuation-based small-step semantics.%
+\end{isamarkuptext}\isamarkuptrue%
+\isakeywordONE{datatype}\isamarkupfalse%
+\ cont\ \isanewline
+\ {\isacharequal}{\kern0pt}\ KStop\ \isanewline
+\ {\isacharbar}{\kern0pt}\ KSeq\ {\isachardoublequoteopen}bigblock{\isachardoublequoteclose}\ cont\isanewline
+\ {\isacharbar}{\kern0pt}\ KEndBlock\ cont\ \isanewline
+\isanewline
+\isakeywordONE{type{\isacharunderscore}{\kern0pt}synonym}\isamarkupfalse%
+\ {\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharparenright}{\kern0pt}\ ast{\isacharunderscore}{\kern0pt}config\ {\isacharequal}{\kern0pt}\ {\isachardoublequoteopen}bigblock\ {\isacharasterisk}{\kern0pt}\ cont\ {\isacharasterisk}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharparenright}{\kern0pt}\ state{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordONE{fun}\isamarkupfalse%
+\ convert{\isacharunderscore}{\kern0pt}list{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}cont\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}bigblock\ list\ {\isasymRightarrow}\ cont\ {\isasymRightarrow}\ cont{\isachardoublequoteclose}\ \isakeywordTWO{where}\isanewline
+\ \ \ \ {\isachardoublequoteopen}convert{\isacharunderscore}{\kern0pt}list{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}cont\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ cont{\isadigit{0}}\ {\isacharequal}{\kern0pt}\ cont{\isadigit{0}}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}convert{\isacharunderscore}{\kern0pt}list{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}cont\ {\isacharparenleft}{\kern0pt}x{\isacharhash}{\kern0pt}xs{\isacharparenright}{\kern0pt}\ cont{\isadigit{0}}\ {\isacharequal}{\kern0pt}\ KSeq\ x\ {\isacharparenleft}{\kern0pt}convert{\isacharunderscore}{\kern0pt}list{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}cont\ xs\ cont{\isadigit{0}}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}%
+\begin{isamarkuptext}%
+auxillary function to find the label a Goto statement is referring to%
+\end{isamarkuptext}\isamarkuptrue%
+\isakeywordONE{fun}\isamarkupfalse%
+\ find{\isacharunderscore}{\kern0pt}label\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}label\ {\isasymRightarrow}\ bigblock\ list\ {\isasymRightarrow}\ cont\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}bigblock\ {\isacharasterisk}{\kern0pt}\ cont{\isacharparenright}{\kern0pt}\ option{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ \isakeywordTWO{where}\isanewline
+\ \ \ \ {\isachardoublequoteopen}find{\isacharunderscore}{\kern0pt}label\ lbl\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ cont\ {\isacharequal}{\kern0pt}\ None{\isachardoublequoteclose}\ \isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}find{\isacharunderscore}{\kern0pt}label\ lbl\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ cmds\ None\ None{\isacharparenright}{\kern0pt}\ {\isacharhash}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}\ cont\ {\isacharequal}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}if\ {\isacharparenleft}{\kern0pt}Some\ lbl\ {\isacharequal}{\kern0pt}\ bb{\isacharunderscore}{\kern0pt}name{\isacharparenright}{\kern0pt}\ then\ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ cmds\ None\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ cont{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ else\ {\isacharparenleft}{\kern0pt}None{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ \isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}find{\isacharunderscore}{\kern0pt}label\ lbl\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ cmds\ None\ None{\isacharparenright}{\kern0pt}\ {\isacharhash}{\kern0pt}\ bbs{\isacharparenright}{\kern0pt}\ cont\ {\isacharequal}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}if\ {\isacharparenleft}{\kern0pt}Some\ lbl\ {\isacharequal}{\kern0pt}\ bb{\isacharunderscore}{\kern0pt}name{\isacharparenright}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ then\ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ cmds\ None\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}convert{\isacharunderscore}{\kern0pt}list{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}cont\ {\isacharparenleft}{\kern0pt}\ bbs{\isacharparenright}{\kern0pt}\ cont{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ else\ {\isacharparenleft}{\kern0pt}find{\isacharunderscore}{\kern0pt}label\ lbl\ bbs\ cont{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ \isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}find{\isacharunderscore}{\kern0pt}label\ lbl\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ cmds\ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}ParsedIf\ guard\ then{\isacharunderscore}{\kern0pt}bbs\ else{\isacharunderscore}{\kern0pt}bbs{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ None{\isacharparenright}{\kern0pt}\ {\isacharhash}{\kern0pt}\ bbs{\isacharparenright}{\kern0pt}\ cont\ {\isacharequal}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}if\ {\isacharparenleft}{\kern0pt}Some\ lbl\ {\isacharequal}{\kern0pt}\ bb{\isacharunderscore}{\kern0pt}name{\isacharparenright}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ then\ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ cmds\ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}ParsedIf\ guard\ then{\isacharunderscore}{\kern0pt}bbs\ else{\isacharunderscore}{\kern0pt}bbs{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}convert{\isacharunderscore}{\kern0pt}list{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}cont\ {\isacharparenleft}{\kern0pt}\ bbs{\isacharparenright}{\kern0pt}\ cont{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ else\ {\isacharparenleft}{\kern0pt}if\ {\isacharparenleft}{\kern0pt}find{\isacharunderscore}{\kern0pt}label\ lbl\ then{\isacharunderscore}{\kern0pt}bbs\ cont\ {\isasymnoteq}\ None{\isacharparenright}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ then\ {\isacharparenleft}{\kern0pt}find{\isacharunderscore}{\kern0pt}label\ lbl\ {\isacharparenleft}{\kern0pt}then{\isacharunderscore}{\kern0pt}bbs\ {\isacharat}{\kern0pt}\ bbs{\isacharparenright}{\kern0pt}\ cont{\isacharparenright}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ else\ {\isacharparenleft}{\kern0pt}find{\isacharunderscore}{\kern0pt}label\ lbl\ {\isacharparenleft}{\kern0pt}else{\isacharunderscore}{\kern0pt}bbs\ {\isacharat}{\kern0pt}\ bbs{\isacharparenright}{\kern0pt}\ cont{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ \isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}find{\isacharunderscore}{\kern0pt}label\ lbl\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ cmds\ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}ParsedWhile\ guard\ invariants\ body{\isacharunderscore}{\kern0pt}bbs{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ None{\isacharparenright}{\kern0pt}\ {\isacharhash}{\kern0pt}\ bbs{\isacharparenright}{\kern0pt}\ cont\ {\isacharequal}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}if\ {\isacharparenleft}{\kern0pt}Some\ lbl\ {\isacharequal}{\kern0pt}\ bb{\isacharunderscore}{\kern0pt}name{\isacharparenright}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ then\ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ cmds\ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}ParsedWhile\ guard\ invariants\ body{\isacharunderscore}{\kern0pt}bbs{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}convert{\isacharunderscore}{\kern0pt}list{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}cont\ {\isacharparenleft}{\kern0pt}\ bbs{\isacharparenright}{\kern0pt}\ cont{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ else\ {\isacharparenleft}{\kern0pt}if\ {\isacharparenleft}{\kern0pt}find{\isacharunderscore}{\kern0pt}label\ lbl\ body{\isacharunderscore}{\kern0pt}bbs\ cont\ {\isasymnoteq}\ None{\isacharparenright}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ then\ {\isacharparenleft}{\kern0pt}find{\isacharunderscore}{\kern0pt}label\ lbl\ body{\isacharunderscore}{\kern0pt}bbs\ {\isacharparenleft}{\kern0pt}convert{\isacharunderscore}{\kern0pt}list{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}cont\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}bbs{\isacharparenright}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbrackleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ None\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}ParsedWhile\ guard\ invariants\ body{\isacharunderscore}{\kern0pt}bbs{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ None{\isacharparenright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}\ cont{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ else\ {\isacharparenleft}{\kern0pt}find{\isacharunderscore}{\kern0pt}label\ lbl\ bbs\ cont{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ \ \isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}find{\isacharunderscore}{\kern0pt}label\ lbl\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ cmds\ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}ParsedBreak\ n{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ None{\isacharparenright}{\kern0pt}\ {\isacharhash}{\kern0pt}\ bbs{\isacharparenright}{\kern0pt}\ cont\ {\isacharequal}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}if\ {\isacharparenleft}{\kern0pt}Some\ lbl\ {\isacharequal}{\kern0pt}\ bb{\isacharunderscore}{\kern0pt}name{\isacharparenright}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ then\ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ cmds\ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}ParsedBreak\ n{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}convert{\isacharunderscore}{\kern0pt}list{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}cont\ {\isacharparenleft}{\kern0pt}\ bbs{\isacharparenright}{\kern0pt}\ cont{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ else\ {\isacharparenleft}{\kern0pt}find{\isacharunderscore}{\kern0pt}label\ lbl\ bbs\ cont{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ \isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}find{\isacharunderscore}{\kern0pt}label\ lbl\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ cmds\ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}WhileWrapper\ while{\isacharunderscore}{\kern0pt}loop{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ None{\isacharparenright}{\kern0pt}\ {\isacharhash}{\kern0pt}\ bbs{\isacharparenright}{\kern0pt}\ cont\ {\isacharequal}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ find{\isacharunderscore}{\kern0pt}label\ lbl\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ cmds\ {\isacharparenleft}{\kern0pt}Some\ while{\isacharunderscore}{\kern0pt}loop{\isacharparenright}{\kern0pt}\ None{\isacharparenright}{\kern0pt}\ {\isacharhash}{\kern0pt}\ bbs{\isacharparenright}{\kern0pt}\ cont{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}find{\isacharunderscore}{\kern0pt}label\ lbl\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ cmds\ None\ {\isacharparenleft}{\kern0pt}Some\ transfer{\isacharunderscore}{\kern0pt}stmt{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharhash}{\kern0pt}\ bbs{\isacharparenright}{\kern0pt}\ cont\ {\isacharequal}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}if\ {\isacharparenleft}{\kern0pt}Some\ lbl\ {\isacharequal}{\kern0pt}\ bb{\isacharunderscore}{\kern0pt}name{\isacharparenright}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ then\ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ cmds\ None\ {\isacharparenleft}{\kern0pt}Some\ transfer{\isacharunderscore}{\kern0pt}stmt{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}convert{\isacharunderscore}{\kern0pt}list{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}cont\ {\isacharparenleft}{\kern0pt}\ bbs{\isacharparenright}{\kern0pt}\ cont{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ else\ {\isacharparenleft}{\kern0pt}find{\isacharunderscore}{\kern0pt}label\ lbl\ bbs\ cont{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}find{\isacharunderscore}{\kern0pt}label\ lbl\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ cmds\ {\isacharparenleft}{\kern0pt}Some\ s{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Some\ t{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharhash}{\kern0pt}\ bbs{\isacharparenright}{\kern0pt}\ cont\ {\isacharequal}{\kern0pt}\ None{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordONE{fun}\isamarkupfalse%
+\ get{\isacharunderscore}{\kern0pt}state\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharparenright}{\kern0pt}\ ast{\isacharunderscore}{\kern0pt}config\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharparenright}{\kern0pt}\ state{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{where}\isanewline
+\ \ \ \ {\isachardoublequoteopen}get{\isacharunderscore}{\kern0pt}state\ {\isacharparenleft}{\kern0pt}bb{\isacharcomma}{\kern0pt}\ cont{\isacharcomma}{\kern0pt}\ s{\isadigit{1}}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ s{\isadigit{1}}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordONE{fun}\isamarkupfalse%
+\ is{\isacharunderscore}{\kern0pt}final\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharparenright}{\kern0pt}\ ast{\isacharunderscore}{\kern0pt}config\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isanewline
+\ \ \isakeywordTWO{where}\isanewline
+\ \ \ \ {\isachardoublequoteopen}is{\isacharunderscore}{\kern0pt}final\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ None\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ KStop{\isacharcomma}{\kern0pt}\ s{\isadigit{1}}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ True{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}is{\isacharunderscore}{\kern0pt}final\ other\ {\isacharequal}{\kern0pt}\ False{\isachardoublequoteclose}%
+\begin{isamarkuptext}%
+Small-step semantics%
+\end{isamarkuptext}\isamarkuptrue%
+\isakeywordONE{context}\isamarkupfalse%
+\ semantics\ \isakeywordTWO{begin}\isanewline
+\isanewline
+\isakeywordONE{inductive}\isamarkupfalse%
+\ red{\isacharunderscore}{\kern0pt}bigblock\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}p\ proc{\isacharunderscore}{\kern0pt}context\ {\isasymRightarrow}\ var{\isacharunderscore}{\kern0pt}context\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharparenright}{\kern0pt}\ fun{\isacharunderscore}{\kern0pt}interp\ {\isasymRightarrow}\ rtype{\isacharunderscore}{\kern0pt}env\ \ {\isasymRightarrow}\ ast\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharparenright}{\kern0pt}\ ast{\isacharunderscore}{\kern0pt}config\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharparenright}{\kern0pt}\ ast{\isacharunderscore}{\kern0pt}config\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ \isanewline
+\ \ {\isacharparenleft}{\kern0pt}{\isachardoublequoteopen}{\isacharunderscore}{\kern0pt}{\isacharcomma}{\kern0pt}{\isacharunderscore}{\kern0pt}{\isacharcomma}{\kern0pt}{\isacharunderscore}{\kern0pt}{\isacharcomma}{\kern0pt}{\isacharunderscore}{\kern0pt}{\isacharcomma}{\kern0pt}{\isacharunderscore}{\kern0pt}\ {\isasymturnstile}\ {\isacharparenleft}{\kern0pt}{\isasymlangle}{\isacharunderscore}{\kern0pt}{\isasymrangle}\ {\isasymlongrightarrow}{\isacharslash}{\kern0pt}\ {\isacharunderscore}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ {\isacharbrackleft}{\kern0pt}{\isadigit{5}}{\isadigit{1}}{\isacharcomma}{\kern0pt}{\isadigit{0}}{\isacharcomma}{\kern0pt}{\isadigit{0}}{\isacharcomma}{\kern0pt}{\isadigit{0}}{\isacharbrackright}{\kern0pt}\ {\isadigit{8}}{\isadigit{1}}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \isakeywordTWO{for}\ M\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}p\ proc{\isacharunderscore}{\kern0pt}context{\isachardoublequoteclose}\ \isakeywordTWO{and}\ {\isasymLambda}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ var{\isacharunderscore}{\kern0pt}context\ \isakeywordTWO{and}\ {\isasymGamma}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharparenright}{\kern0pt}\ fun{\isacharunderscore}{\kern0pt}interp{\isachardoublequoteclose}\ \isakeywordTWO{and}\ {\isasymOmega}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ rtype{\isacharunderscore}{\kern0pt}env\ \isakeywordTWO{and}\ T\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ ast\isanewline
+\ \ \isakeywordTWO{where}\isanewline
+\ \ \ \ RedSimpleCmds{\isacharcolon}{\kern0pt}\ \isanewline
+\ \ \ \ {\isachardoublequoteopen}{\isasymlbrakk}{\isacharparenleft}{\kern0pt}M{\isacharcomma}{\kern0pt}{\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}\ {\isasymturnstile}\ {\isasymlangle}cs{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isasymrangle}\ {\isacharbrackleft}{\kern0pt}{\isasymrightarrow}{\isacharbrackright}{\kern0pt}\ s{\isadigit{1}}{\isacharparenright}{\kern0pt}\ {\isasymand}\ {\isacharparenleft}{\kern0pt}cs\ {\isasymnoteq}\ Nil{\isacharparenright}{\kern0pt}\ {\isasymrbrakk}\ \isanewline
+\ \ \ \ \ \ {\isasymLongrightarrow}\ M{\isacharcomma}{\kern0pt}{\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}{\isacharcomma}{\kern0pt}T\ {\isasymturnstile}\ {\isasymlangle}{\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ cs\ str{\isacharunderscore}{\kern0pt}cmd\ tr{\isacharunderscore}{\kern0pt}cmd{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ cont{\isadigit{0}}{\isacharcomma}{\kern0pt}\ Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isasymrangle}\ {\isasymlongrightarrow}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ str{\isacharunderscore}{\kern0pt}cmd\ tr{\isacharunderscore}{\kern0pt}cmd{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ cont{\isadigit{0}}{\isacharcomma}{\kern0pt}\ s{\isadigit{1}}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ \ \isanewline
+\isanewline
+\ \ {\isacharbar}{\kern0pt}\ RedFailure{\isacharunderscore}{\kern0pt}or{\isacharunderscore}{\kern0pt}Magic{\isacharcolon}{\kern0pt}\ \isanewline
+\ \ \ \ {\isachardoublequoteopen}{\isasymlbrakk}\ {\isacharparenleft}{\kern0pt}s{\isadigit{1}}\ {\isacharequal}{\kern0pt}\ Magic{\isacharparenright}{\kern0pt}\ {\isasymor}\ {\isacharparenleft}{\kern0pt}s{\isadigit{1}}\ {\isacharequal}{\kern0pt}\ Failure{\isacharparenright}{\kern0pt}{\isacharsemicolon}{\kern0pt}\ {\isasymnot}\ {\isacharparenleft}{\kern0pt}is{\isacharunderscore}{\kern0pt}final\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ str{\isacharunderscore}{\kern0pt}cmd\ tr{\isacharunderscore}{\kern0pt}cmd{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ cont{\isadigit{0}}{\isacharcomma}{\kern0pt}\ s{\isadigit{1}}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ \ {\isasymrbrakk}\ \isanewline
+\ \ \ \ \ \ {\isasymLongrightarrow}\ M{\isacharcomma}{\kern0pt}{\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}{\isacharcomma}{\kern0pt}T\ {\isasymturnstile}\ {\isasymlangle}{\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ str{\isacharunderscore}{\kern0pt}cmd\ tr{\isacharunderscore}{\kern0pt}cmd{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ cont{\isadigit{0}}{\isacharcomma}{\kern0pt}\ s{\isadigit{1}}{\isacharparenright}{\kern0pt}{\isasymrangle}\ {\isasymlongrightarrow}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ None\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ KStop{\isacharcomma}{\kern0pt}\ s{\isadigit{1}}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\ \ {\isacharbar}{\kern0pt}\ RedSkip{\isacharcolon}{\kern0pt}\ \isanewline
+\ \ \ \ {\isachardoublequoteopen}M{\isacharcomma}{\kern0pt}{\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}{\isacharcomma}{\kern0pt}T\ {\isasymturnstile}\ {\isasymlangle}{\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ None\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}KSeq\ b\ cont{\isadigit{0}}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isasymrangle}\ {\isasymlongrightarrow}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}b{\isacharcomma}{\kern0pt}\ cont{\isadigit{0}}{\isacharcomma}{\kern0pt}\ Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\ \ {\isacharbar}{\kern0pt}\ RedSkipEndBlock{\isacharcolon}{\kern0pt}\ \isanewline
+\ \ \ \ {\isachardoublequoteopen}M{\isacharcomma}{\kern0pt}{\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}{\isacharcomma}{\kern0pt}T\ {\isasymturnstile}\ {\isasymlangle}{\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ None\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ \ {\isacharparenleft}{\kern0pt}KEndBlock\ cont{\isadigit{0}}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ \ Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isasymrangle}\ {\isasymlongrightarrow}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ None\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ cont{\isadigit{0}}{\isacharcomma}{\kern0pt}\ Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\ \ {\isacharbar}{\kern0pt}\ RedReturn{\isacharcolon}{\kern0pt}\ \isanewline
+\ \ \ \ {\isachardoublequoteopen}M{\isacharcomma}{\kern0pt}{\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}{\isacharcomma}{\kern0pt}T\ {\isasymturnstile}\ {\isasymlangle}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ None\ {\isacharparenleft}{\kern0pt}Some\ Return{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ cont{\isadigit{0}}{\isacharcomma}{\kern0pt}\ Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isasymrangle}\ {\isasymlongrightarrow}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ None\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ KStop{\isacharcomma}{\kern0pt}\ Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\ \ {\isacharbar}{\kern0pt}\ RedParsedIfTrue{\isacharcolon}{\kern0pt}\ \isanewline
+\ \ \ \ {\isachardoublequoteopen}{\isasymlbrakk}{\isasymAnd}\ b{\isachardot}{\kern0pt}\ bb{\isacharunderscore}{\kern0pt}guard\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Some\ b{\isacharparenright}{\kern0pt}\ {\isasymLongrightarrow}\ \ {\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}\ {\isasymturnstile}\ {\isasymlangle}b{\isacharcomma}{\kern0pt}\ n{\isacharunderscore}{\kern0pt}s{\isasymrangle}\ {\isasymDown}\ LitV\ {\isacharparenleft}{\kern0pt}LBool\ True{\isacharparenright}{\kern0pt}\ {\isasymrbrakk}\ \ \isanewline
+\ \ \ \ \ \ \ \ {\isasymLongrightarrow}\ M{\isacharcomma}{\kern0pt}{\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}{\isacharcomma}{\kern0pt}T\ {\isasymturnstile}\ {\isasymlangle}{\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}ParsedIf\ bb{\isacharunderscore}{\kern0pt}guard\ {\isacharparenleft}{\kern0pt}then{\isacharunderscore}{\kern0pt}hd\ {\isacharhash}{\kern0pt}\ then{\isacharunderscore}{\kern0pt}bbs{\isacharparenright}{\kern0pt}\ elsebigblocks{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ cont{\isadigit{0}}{\isacharcomma}{\kern0pt}\ Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isasymrangle}\ {\isasymlongrightarrow}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}then{\isacharunderscore}{\kern0pt}hd{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}convert{\isacharunderscore}{\kern0pt}list{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}cont\ {\isacharparenleft}{\kern0pt}\ then{\isacharunderscore}{\kern0pt}bbs{\isacharparenright}{\kern0pt}\ cont{\isadigit{0}}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\ \ {\isacharbar}{\kern0pt}\ RedParsedIfFalse{\isacharcolon}{\kern0pt}\ \isanewline
+\ \ \ \ {\isachardoublequoteopen}{\isasymlbrakk}{\isasymAnd}b{\isachardot}{\kern0pt}\ bb{\isacharunderscore}{\kern0pt}guard\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Some\ b{\isacharparenright}{\kern0pt}\ {\isasymLongrightarrow}\ \ {\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}\ {\isasymturnstile}\ {\isasymlangle}b{\isacharcomma}{\kern0pt}\ n{\isacharunderscore}{\kern0pt}s{\isasymrangle}\ {\isasymDown}\ LitV\ {\isacharparenleft}{\kern0pt}LBool\ False{\isacharparenright}{\kern0pt}\ {\isasymrbrakk}\ \isanewline
+\ \ \ \ \ \ \ \ {\isasymLongrightarrow}\ M{\isacharcomma}{\kern0pt}{\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}{\isacharcomma}{\kern0pt}T\ {\isasymturnstile}\ {\isasymlangle}{\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}ParsedIf\ bb{\isacharunderscore}{\kern0pt}guard\ thenbigblocks\ {\isacharparenleft}{\kern0pt}else{\isacharunderscore}{\kern0pt}hd\ {\isacharhash}{\kern0pt}\ else{\isacharunderscore}{\kern0pt}bbs{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ cont{\isadigit{0}}{\isacharcomma}{\kern0pt}\ Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isasymrangle}\ {\isasymlongrightarrow}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}else{\isacharunderscore}{\kern0pt}hd{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}convert{\isacharunderscore}{\kern0pt}list{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}cont\ {\isacharparenleft}{\kern0pt}\ else{\isacharunderscore}{\kern0pt}bbs{\isacharparenright}{\kern0pt}\ cont{\isadigit{0}}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\ \ {\isacharbar}{\kern0pt}\ RedParsedWhileWrapper{\isacharcolon}{\kern0pt}\ \isanewline
+\ \ \ \ {\isachardoublequoteopen}M{\isacharcomma}{\kern0pt}{\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}{\isacharcomma}{\kern0pt}T\ {\isasymturnstile}\ \isanewline
+\ \ \ \ \ \ {\isasymlangle}{\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}WhileWrapper\ str{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ cont{\isadigit{0}}{\isacharcomma}{\kern0pt}\ \ Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isasymrangle}\ {\isasymlongrightarrow}\isanewline
+\ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}Some\ str{\isacharparenright}{\kern0pt}\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}KEndBlock\ cont{\isadigit{0}}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ \ Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \isanewline
+\ \ {\isacharbar}{\kern0pt}\ RedParsedWhile{\isacharunderscore}{\kern0pt}InvFail{\isacharcolon}{\kern0pt}\ \isanewline
+\ \ \ \ {\isachardoublequoteopen}{\isasymlbrakk}{\isasymAnd}\ b{\isachardot}{\kern0pt}\ bb{\isacharunderscore}{\kern0pt}guard\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Some\ b{\isacharparenright}{\kern0pt}\ {\isasymLongrightarrow}\ {\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}\ {\isasymturnstile}\ {\isasymlangle}b{\isacharcomma}{\kern0pt}\ n{\isacharunderscore}{\kern0pt}s{\isasymrangle}\ {\isasymDown}\ LitV\ {\isacharparenleft}{\kern0pt}LBool\ True{\isacharparenright}{\kern0pt}{\isacharsemicolon}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ bb{\isacharunderscore}{\kern0pt}invariants\ {\isacharequal}{\kern0pt}\ invs{\isadigit{1}}{\isacharat}{\kern0pt}{\isacharbrackleft}{\kern0pt}I{\isacharbrackright}{\kern0pt}{\isacharat}{\kern0pt}invs{\isadigit{2}}{\isacharsemicolon}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ expr{\isacharunderscore}{\kern0pt}all{\isacharunderscore}{\kern0pt}sat\ {\isasymLambda}\ {\isasymGamma}\ {\isasymOmega}\ n{\isacharunderscore}{\kern0pt}s\ invs{\isadigit{1}}{\isacharsemicolon}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ {\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}\ {\isasymturnstile}\ {\isasymlangle}I{\isacharcomma}{\kern0pt}\ n{\isacharunderscore}{\kern0pt}s{\isasymrangle}\ {\isasymDown}\ BoolV\ False\ {\isasymrbrakk}\ \isanewline
+\ \ \ \ \ \ \ {\isasymLongrightarrow}\ M{\isacharcomma}{\kern0pt}{\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}{\isacharcomma}{\kern0pt}T\ {\isasymturnstile}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ {\isasymlangle}{\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}ParsedWhile\ bb{\isacharunderscore}{\kern0pt}guard\ bb{\isacharunderscore}{\kern0pt}invariants\ {\isacharparenleft}{\kern0pt}bb{\isacharunderscore}{\kern0pt}hd\ {\isacharhash}{\kern0pt}\ body{\isacharunderscore}{\kern0pt}bbs{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ cont{\isadigit{0}}{\isacharcomma}{\kern0pt}\ \ Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isasymrangle}\ {\isasymlongrightarrow}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ None\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ KStop{\isacharcomma}{\kern0pt}\ Failure{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\ \ {\isacharbar}{\kern0pt}\ RedParsedWhileTrue{\isacharcolon}{\kern0pt}\ \isanewline
+\ \ \ \ {\isachardoublequoteopen}{\isasymlbrakk}{\isasymAnd}\ b{\isachardot}{\kern0pt}\ \ bb{\isacharunderscore}{\kern0pt}guard\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Some\ b{\isacharparenright}{\kern0pt}\ {\isasymLongrightarrow}\ {\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}\ {\isasymturnstile}\ {\isasymlangle}b{\isacharcomma}{\kern0pt}\ n{\isacharunderscore}{\kern0pt}s{\isasymrangle}\ {\isasymDown}\ LitV\ {\isacharparenleft}{\kern0pt}LBool\ True{\isacharparenright}{\kern0pt}{\isacharsemicolon}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}expr{\isacharunderscore}{\kern0pt}all{\isacharunderscore}{\kern0pt}sat\ {\isasymLambda}\ {\isasymGamma}\ {\isasymOmega}\ n{\isacharunderscore}{\kern0pt}s\ bb{\isacharunderscore}{\kern0pt}invariants{\isacharparenright}{\kern0pt}\ {\isasymrbrakk}\ \isanewline
+\ \ \ \ \ \ \ {\isasymLongrightarrow}\ M{\isacharcomma}{\kern0pt}{\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}{\isacharcomma}{\kern0pt}T\ {\isasymturnstile}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ {\isasymlangle}{\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}ParsedWhile\ bb{\isacharunderscore}{\kern0pt}guard\ bb{\isacharunderscore}{\kern0pt}invariants\ {\isacharparenleft}{\kern0pt}bb{\isacharunderscore}{\kern0pt}hd\ {\isacharhash}{\kern0pt}\ body{\isacharunderscore}{\kern0pt}bbs{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ cont{\isadigit{0}}{\isacharcomma}{\kern0pt}\ \ Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isasymrangle}\ {\isasymlongrightarrow}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}bb{\isacharunderscore}{\kern0pt}hd{\isacharcomma}{\kern0pt}\ convert{\isacharunderscore}{\kern0pt}list{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}cont\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}body{\isacharunderscore}{\kern0pt}bbs{\isacharparenright}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbrackleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}ParsedWhile\ bb{\isacharunderscore}{\kern0pt}guard\ bb{\isacharunderscore}{\kern0pt}invariants\ {\isacharparenleft}{\kern0pt}bb{\isacharunderscore}{\kern0pt}hd\ {\isacharhash}{\kern0pt}\ body{\isacharunderscore}{\kern0pt}bbs{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ None{\isacharparenright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}\ cont{\isadigit{0}}{\isacharcomma}{\kern0pt}\ Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isanewline
+\ \ {\isacharbar}{\kern0pt}\ RedParsedWhileFalse{\isacharcolon}{\kern0pt}\ \isanewline
+\ \ \ \ {\isachardoublequoteopen}{\isasymlbrakk}{\isasymAnd}\ b{\isachardot}{\kern0pt}\ bb{\isacharunderscore}{\kern0pt}guard\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Some\ b{\isacharparenright}{\kern0pt}\ {\isasymLongrightarrow}\ {\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}\ {\isasymturnstile}\ {\isasymlangle}b{\isacharcomma}{\kern0pt}\ n{\isacharunderscore}{\kern0pt}s{\isasymrangle}\ {\isasymDown}\ LitV\ {\isacharparenleft}{\kern0pt}LBool\ False{\isacharparenright}{\kern0pt}{\isacharsemicolon}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}expr{\isacharunderscore}{\kern0pt}all{\isacharunderscore}{\kern0pt}sat\ {\isasymLambda}\ {\isasymGamma}\ {\isasymOmega}\ n{\isacharunderscore}{\kern0pt}s\ bb{\isacharunderscore}{\kern0pt}invariants{\isacharparenright}{\kern0pt}\ {\isasymrbrakk}\ \ \isanewline
+\ \ \ \ \ \ \ {\isasymLongrightarrow}\ M{\isacharcomma}{\kern0pt}{\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}{\isacharcomma}{\kern0pt}T\ {\isasymturnstile}\ {\isasymlangle}{\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}ParsedWhile\ bb{\isacharunderscore}{\kern0pt}guard\ bb{\isacharunderscore}{\kern0pt}invariants\ bigblocks{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ cont{\isadigit{0}}{\isacharcomma}{\kern0pt}\ Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isasymrangle}\ {\isasymlongrightarrow}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ None\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ cont{\isadigit{0}}{\isacharcomma}{\kern0pt}\ Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\ \ {\isacharbar}{\kern0pt}\ RedBreak{\isadigit{0}}{\isacharcolon}{\kern0pt}\ \isanewline
+\ \ \ \ {\isachardoublequoteopen}M{\isacharcomma}{\kern0pt}{\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}{\isacharcomma}{\kern0pt}T\ {\isasymturnstile}\ {\isasymlangle}{\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}ParsedBreak\ {\isadigit{0}}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}KEndBlock\ cont{\isadigit{0}}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isasymrangle}\ {\isasymlongrightarrow}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ None\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ cont{\isadigit{0}}{\isacharcomma}{\kern0pt}\ Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\ \ {\isacharbar}{\kern0pt}\ RedBreakN{\isacharcolon}{\kern0pt}\ \isanewline
+\ \ \ \ {\isachardoublequoteopen}M{\isacharcomma}{\kern0pt}{\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}{\isacharcomma}{\kern0pt}T\ {\isasymturnstile}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ {\isasymlangle}{\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}ParsedBreak\ n{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}KSeq\ b\ cont{\isadigit{0}}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isasymrangle}\ {\isasymlongrightarrow}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ None\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}ParsedBreak\ n{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ cont{\isadigit{0}}{\isacharcomma}{\kern0pt}\ Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\ \ {\isacharbar}{\kern0pt}\ RedBreakNPlus{\isadigit{1}}{\isacharcolon}{\kern0pt}\ \isanewline
+\ \ \ \ {\isachardoublequoteopen}M{\isacharcomma}{\kern0pt}{\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}{\isacharcomma}{\kern0pt}T\ {\isasymturnstile}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ {\isasymlangle}{\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}ParsedBreak\ {\isacharparenleft}{\kern0pt}n\ {\isacharplus}{\kern0pt}\ {\isadigit{1}}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}KEndBlock\ cont{\isadigit{0}}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isasymrangle}\ {\isasymlongrightarrow}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ None\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}ParsedBreak\ n{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ cont{\isadigit{0}}{\isacharcomma}{\kern0pt}\ Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\ \ {\isacharbar}{\kern0pt}\ RedGoto{\isacharcolon}{\kern0pt}\ \isanewline
+\ \ \ \ {\isachardoublequoteopen}{\isasymlbrakk}\ {\isacharparenleft}{\kern0pt}find{\isacharunderscore}{\kern0pt}label\ label\ T\ KStop{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ Some\ {\isacharparenleft}{\kern0pt}found{\isacharunderscore}{\kern0pt}bigblock{\isacharcomma}{\kern0pt}\ found{\isacharunderscore}{\kern0pt}cont{\isacharparenright}{\kern0pt}\ {\isasymrbrakk}\ \isanewline
+\ \ \ \ \ \ \ \ {\isasymLongrightarrow}\ M{\isacharcomma}{\kern0pt}{\isasymLambda}{\isacharcomma}{\kern0pt}{\isasymGamma}{\isacharcomma}{\kern0pt}{\isasymOmega}{\isacharcomma}{\kern0pt}T\ {\isasymturnstile}\ {\isasymlangle}{\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ bb{\isacharunderscore}{\kern0pt}name\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ None\ {\isacharparenleft}{\kern0pt}Some\ {\isacharparenleft}{\kern0pt}Goto\ label{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ cont{\isadigit{0}}{\isacharcomma}{\kern0pt}\ Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isasymrangle}\ {\isasymlongrightarrow}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}found{\isacharunderscore}{\kern0pt}bigblock{\isacharcomma}{\kern0pt}\ found{\isacharunderscore}{\kern0pt}cont{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Normal\ n{\isacharunderscore}{\kern0pt}s{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordONE{abbreviation}\isamarkupfalse%
+\ red{\isacharunderscore}{\kern0pt}bigblock{\isacharunderscore}{\kern0pt}k{\isacharunderscore}{\kern0pt}step\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}p\ proc{\isacharunderscore}{\kern0pt}context\ {\isasymRightarrow}\ var{\isacharunderscore}{\kern0pt}context\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharparenright}{\kern0pt}\ fun{\isacharunderscore}{\kern0pt}interp\ {\isasymRightarrow}\ rtype{\isacharunderscore}{\kern0pt}env\ {\isasymRightarrow}\ ast\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharparenright}{\kern0pt}\ ast{\isacharunderscore}{\kern0pt}config\ {\isasymRightarrow}\ nat\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharparenright}{\kern0pt}\ ast{\isacharunderscore}{\kern0pt}config\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\isanewline
+\ \ {\isacharparenleft}{\kern0pt}{\isachardoublequoteopen}{\isacharunderscore}{\kern0pt}{\isacharcomma}{\kern0pt}{\isacharunderscore}{\kern0pt}{\isacharcomma}{\kern0pt}{\isacharunderscore}{\kern0pt}{\isacharcomma}{\kern0pt}{\isacharunderscore}{\kern0pt}{\isacharcomma}{\kern0pt}{\isacharunderscore}{\kern0pt}\ {\isasymturnstile}{\isacharunderscore}{\kern0pt}\ {\isacharminus}{\kern0pt}n{\isasymlongrightarrow}{\isacharcircum}{\kern0pt}{\isacharunderscore}{\kern0pt}{\isacharslash}{\kern0pt}\ {\isacharunderscore}{\kern0pt}{\isachardoublequoteclose}\ {\isacharbrackleft}{\kern0pt}{\isadigit{5}}{\isadigit{1}}{\isacharcomma}{\kern0pt}{\isadigit{0}}{\isacharcomma}{\kern0pt}{\isadigit{0}}{\isacharcomma}{\kern0pt}{\isadigit{0}}{\isacharcomma}{\kern0pt}{\isadigit{0}}{\isacharbrackright}{\kern0pt}\ {\isadigit{8}}{\isadigit{1}}{\isacharparenright}{\kern0pt}\isanewline
+\isakeywordTWO{where}\ {\isachardoublequoteopen}red{\isacharunderscore}{\kern0pt}bigblock{\isacharunderscore}{\kern0pt}k{\isacharunderscore}{\kern0pt}step\ M\ {\isasymLambda}\ {\isasymGamma}\ {\isasymOmega}\ T\ c{\isadigit{1}}\ n\ c{\isadigit{2}}\ {\isasymequiv}\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}red{\isacharunderscore}{\kern0pt}bigblock\ M\ {\isasymLambda}\ {\isasymGamma}\ {\isasymOmega}\ T{\isacharparenright}{\kern0pt}{\isacharcircum}{\kern0pt}{\isacharcircum}{\kern0pt}n{\isacharparenright}{\kern0pt}\ c{\isadigit{1}}\ c{\isadigit{2}}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordTWO{end}\isamarkupfalse%
+%
+\isadelimdocument
+%
+\endisadelimdocument
+%
+\isatagdocument
+%
+\isamarkupsubsection{Procedure Correctness%
+}
+\isamarkuptrue%
+%
+\endisatagdocument
+{\isafolddocument}%
+%
+\isadelimdocument
+%
+\endisadelimdocument
+%
+\begin{isamarkuptext}%
+defining correctness of the AST%
+\end{isamarkuptext}\isamarkuptrue%
+\isakeywordONE{fun}\isamarkupfalse%
+\ convert{\isacharunderscore}{\kern0pt}ast{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}program{\isacharunderscore}{\kern0pt}point\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}ast\ {\isasymRightarrow}\ bigblock\ {\isasymtimes}\ cont{\isachardoublequoteclose}\ \isakeywordTWO{where}\isanewline
+\ \ \ \ {\isachardoublequoteopen}convert{\isacharunderscore}{\kern0pt}ast{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}program{\isacharunderscore}{\kern0pt}point\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ None\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ None\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ KStop{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}convert{\isacharunderscore}{\kern0pt}ast{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}program{\isacharunderscore}{\kern0pt}point\ {\isacharparenleft}{\kern0pt}b{\isacharhash}{\kern0pt}bs{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}b{\isacharcomma}{\kern0pt}\ convert{\isacharunderscore}{\kern0pt}list{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}cont\ bs\ KStop{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordONE{fun}\isamarkupfalse%
+\ init{\isacharunderscore}{\kern0pt}ast\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}ast\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharparenright}{\kern0pt}\ nstate\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharparenright}{\kern0pt}\ ast{\isacharunderscore}{\kern0pt}config{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{where}\isanewline
+\ \ \ \ {\isachardoublequoteopen}init{\isacharunderscore}{\kern0pt}ast\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ ns{\isadigit{1}}\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}BigBlock\ None\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ None\ None{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ KStop{\isacharcomma}{\kern0pt}\ Normal\ ns{\isadigit{1}}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}init{\isacharunderscore}{\kern0pt}ast\ {\isacharparenleft}{\kern0pt}b{\isacharhash}{\kern0pt}bbs{\isacharparenright}{\kern0pt}\ ns{\isadigit{1}}\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}b{\isacharcomma}{\kern0pt}\ convert{\isacharunderscore}{\kern0pt}list{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}cont\ {\isacharparenleft}{\kern0pt}\ bbs{\isacharparenright}{\kern0pt}\ KStop{\isacharcomma}{\kern0pt}\ Normal\ ns{\isadigit{1}}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isanewline
+\isakeywordONE{context}\isamarkupfalse%
+\ semantics\ \isakeywordTWO{begin}\isanewline
+\isanewline
+\isakeywordONE{definition}\isamarkupfalse%
+\ ast{\isacharunderscore}{\kern0pt}valid{\isacharunderscore}{\kern0pt}configuration\isanewline
+\ \ \isakeywordTWO{where}\ {\isachardoublequoteopen}ast{\isacharunderscore}{\kern0pt}valid{\isacharunderscore}{\kern0pt}configuration\ {\isasymLambda}\ {\isasymGamma}\ {\isasymOmega}\ posts\ bb\ cont\ state\ {\isasymequiv}\isanewline
+\ \ \ \ \ \ \ \ \ state\ {\isasymnoteq}\ Failure\ {\isasymand}\ \isanewline
+\ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}is{\isacharunderscore}{\kern0pt}final\ {\isacharparenleft}{\kern0pt}bb{\isacharcomma}{\kern0pt}\ cont{\isacharcomma}{\kern0pt}\ state{\isacharparenright}{\kern0pt}\ {\isasymlongrightarrow}\ {\isacharparenleft}{\kern0pt}{\isasymforall}ns{\isacharprime}{\kern0pt}{\isachardot}{\kern0pt}\ state\ {\isacharequal}{\kern0pt}\ Normal\ ns{\isacharprime}{\kern0pt}\ {\isasymlongrightarrow}\ expr{\isacharunderscore}{\kern0pt}all{\isacharunderscore}{\kern0pt}sat\ {\isasymLambda}\ {\isasymGamma}\ {\isasymOmega}\ ns{\isacharprime}{\kern0pt}\ posts{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordONE{definition}\isamarkupfalse%
+\ ast{\isacharunderscore}{\kern0pt}proc{\isacharunderscore}{\kern0pt}body{\isacharunderscore}{\kern0pt}satisfies{\isacharunderscore}{\kern0pt}spec\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}p\ proc{\isacharunderscore}{\kern0pt}context\ {\isasymRightarrow}\ var{\isacharunderscore}{\kern0pt}context\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharparenright}{\kern0pt}\ fun{\isacharunderscore}{\kern0pt}interp\ {\isasymRightarrow}\ rtype{\isacharunderscore}{\kern0pt}env\ {\isasymRightarrow}\ expr\ list\ {\isasymRightarrow}\ expr\ list\ {\isasymRightarrow}\ ast\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}{\isacharprime}{\kern0pt}a{\isacharcomma}{\kern0pt}\ {\isacharprime}{\kern0pt}m{\isacharparenright}{\kern0pt}\ nstate\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{where}\ {\isachardoublequoteopen}ast{\isacharunderscore}{\kern0pt}proc{\isacharunderscore}{\kern0pt}body{\isacharunderscore}{\kern0pt}satisfies{\isacharunderscore}{\kern0pt}spec\ M\ {\isasymLambda}\ {\isasymGamma}\ {\isasymOmega}\ pres\ posts\ ast\ ns\ {\isasymequiv}\isanewline
+\ \ \ \ \ \ \ \ \ expr{\isacharunderscore}{\kern0pt}all{\isacharunderscore}{\kern0pt}sat\ {\isasymLambda}\ {\isasymGamma}\ {\isasymOmega}\ ns\ pres\ {\isasymlongrightarrow}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isasymforall}\ bb\ cont\ state{\isachardot}{\kern0pt}\ {\isacharparenleft}{\kern0pt}rtranclp\ {\isacharparenleft}{\kern0pt}red{\isacharunderscore}{\kern0pt}bigblock\ M\ {\isasymLambda}\ {\isasymGamma}\ {\isasymOmega}\ ast{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}init{\isacharunderscore}{\kern0pt}ast\ ast\ ns{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}bb{\isacharcomma}{\kern0pt}\ cont{\isacharcomma}{\kern0pt}\ state{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isasymlongrightarrow}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ ast{\isacharunderscore}{\kern0pt}valid{\isacharunderscore}{\kern0pt}configuration\ {\isasymLambda}\ {\isasymGamma}\ {\isasymOmega}\ posts\ bb\ cont\ state{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordTWO{end}\isamarkupfalse%
+\isanewline
+\isanewline
+\isanewline
+\isakeywordONE{fun}\isamarkupfalse%
+\ proc{\isacharunderscore}{\kern0pt}all{\isacharunderscore}{\kern0pt}pres\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}ast\ procedure\ {\isasymRightarrow}\ expr\ list{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{where}\ {\isachardoublequoteopen}proc{\isacharunderscore}{\kern0pt}all{\isacharunderscore}{\kern0pt}pres\ p\ {\isacharequal}{\kern0pt}\ map\ fst\ {\isacharparenleft}{\kern0pt}proc{\isacharunderscore}{\kern0pt}pres\ p{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordONE{fun}\isamarkupfalse%
+\ proc{\isacharunderscore}{\kern0pt}checked{\isacharunderscore}{\kern0pt}posts\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}ast\ procedure\ {\isasymRightarrow}\ expr\ list{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{where}\ {\isachardoublequoteopen}proc{\isacharunderscore}{\kern0pt}checked{\isacharunderscore}{\kern0pt}posts\ p\ {\isacharequal}{\kern0pt}\ map\ fst\ {\isacharparenleft}{\kern0pt}filter\ {\isacharparenleft}{\kern0pt}{\isasymlambda}x{\isachardot}{\kern0pt}\ {\isasymnot}\ snd{\isacharparenleft}{\kern0pt}x{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}proc{\isacharunderscore}{\kern0pt}posts\ p{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+%
+\isadelimtheory
+\isanewline
+%
+\endisadelimtheory
+%
+\isatagtheory
+\isakeywordTWO{end}\isamarkupfalse%
+%
+\endisatagtheory
+{\isafoldtheory}%
+%
+\isadelimtheory
+%
+\endisadelimtheory
+%
+\end{isabellebody}%
+\endinput
+%:%file=~/eth/master-thesis/bibin-foundational-boogie/BoogieLang/Ast.thy%:%
+%:%11=1%:%
+%:%27=3%:%
+%:%28=3%:%
+%:%29=4%:%
+%:%30=5%:%
+%:%44=7%:%
+%:%54=9%:%
+%:%55=9%:%
+%:%56=10%:%
+%:%57=10%:%
+%:%58=11%:%
+%:%59=11%:%
+%:%60=12%:%
+%:%61=12%:%
+%:%62=13%:%
+%:%63=14%:%
+%:%64=14%:%
+%:%65=15%:%
+%:%66=16%:%
+%:%67=17%:%
+%:%68=18%:%
+%:%69=18%:%
+%:%70=19%:%
+%:%71=20%:%
+%:%72=21%:%
+%:%73=22%:%
+%:%74=23%:%
+%:%75=24%:%
+%:%76=25%:%
+%:%78=28%:%
+%:%80=30%:%
+%:%81=30%:%
+%:%88=32%:%
+%:%100=34%:%
+%:%102=36%:%
+%:%103=36%:%
+%:%104=37%:%
+%:%105=38%:%
+%:%106=39%:%
+%:%107=40%:%
+%:%108=41%:%
+%:%109=41%:%
+%:%110=42%:%
+%:%111=43%:%
+%:%112=43%:%
+%:%113=44%:%
+%:%114=45%:%
+%:%116=47%:%
+%:%118=48%:%
+%:%119=48%:%
+%:%120=49%:%
+%:%121=50%:%
+%:%122=51%:%
+%:%123=52%:%
+%:%126=55%:%
+%:%127=56%:%
+%:%132=61%:%
+%:%133=62%:%
+%:%138=67%:%
+%:%139=68%:%
+%:%142=71%:%
+%:%143=72%:%
+%:%144=73%:%
+%:%145=74%:%
+%:%148=77%:%
+%:%149=78%:%
+%:%150=79%:%
+%:%151=80%:%
+%:%152=80%:%
+%:%153=81%:%
+%:%154=82%:%
+%:%155=83%:%
+%:%156=84%:%
+%:%157=84%:%
+%:%158=85%:%
+%:%159=86%:%
+%:%160=87%:%
+%:%162=89%:%
+%:%164=91%:%
+%:%165=91%:%
+%:%166=92%:%
+%:%167=93%:%
+%:%168=93%:%
+%:%169=94%:%
+%:%170=95%:%
+%:%171=96%:%
+%:%172=97%:%
+%:%173=98%:%
+%:%175=100%:%
+%:%176=101%:%
+%:%177=102%:%
+%:%178=103%:%
+%:%180=105%:%
+%:%181=106%:%
+%:%182=107%:%
+%:%183=108%:%
+%:%184=109%:%
+%:%185=110%:%
+%:%186=111%:%
+%:%187=112%:%
+%:%188=113%:%
+%:%189=114%:%
+%:%190=115%:%
+%:%191=116%:%
+%:%192=117%:%
+%:%193=118%:%
+%:%194=119%:%
+%:%195=120%:%
+%:%198=123%:%
+%:%199=124%:%
+%:%200=125%:%
+%:%201=126%:%
+%:%204=129%:%
+%:%205=130%:%
+%:%206=131%:%
+%:%207=132%:%
+%:%211=136%:%
+%:%212=137%:%
+%:%213=138%:%
+%:%214=139%:%
+%:%221=146%:%
+%:%222=147%:%
+%:%223=148%:%
+%:%224=149%:%
+%:%229=154%:%
+%:%230=155%:%
+%:%231=156%:%
+%:%232=157%:%
+%:%233=158%:%
+%:%237=162%:%
+%:%238=163%:%
+%:%239=164%:%
+%:%240=165%:%
+%:%241=166%:%
+%:%242=167%:%
+%:%243=168%:%
+%:%244=169%:%
+%:%246=171%:%
+%:%247=172%:%
+%:%248=173%:%
+%:%249=174%:%
+%:%251=176%:%
+%:%252=177%:%
+%:%253=178%:%
+%:%254=179%:%
+%:%256=181%:%
+%:%257=182%:%
+%:%258=183%:%
+%:%259=183%:%
+%:%260=184%:%
+%:%261=185%:%
+%:%262=186%:%
+%:%263=187%:%
+%:%271=190%:%
+%:%283=192%:%
+%:%285=194%:%
+%:%286=194%:%
+%:%287=195%:%
+%:%288=196%:%
+%:%289=197%:%
+%:%290=198%:%
+%:%291=198%:%
+%:%292=199%:%
+%:%293=200%:%
+%:%294=201%:%
+%:%295=202%:%
+%:%296=203%:%
+%:%297=204%:%
+%:%298=204%:%
+%:%299=205%:%
+%:%300=206%:%
+%:%301=206%:%
+%:%302=207%:%
+%:%304=209%:%
+%:%305=210%:%
+%:%306=211%:%
+%:%307=211%:%
+%:%308=212%:%
+%:%311=215%:%
+%:%312=216%:%
+%:%313=217%:%
+%:%314=217%:%
+%:%315=218%:%
+%:%316=219%:%
+%:%317=220%:%
+%:%318=220%:%
+%:%319=221%:%
+%:%320=222%:%
+%:%321=223%:%
+%:%322=223%:%
+%:%323=224%:%
+%:%324=225%:%
+%:%327=226%:%
+%:%332=227%:%

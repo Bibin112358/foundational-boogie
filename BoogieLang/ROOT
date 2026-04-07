@@ -1,4 +1,5 @@
 session Boogie_Lang = "HOL" +
+  options [document = pdf, document_output = "output"]
   sessions
     "HOL-Eisbach"
   theories
@@ -16,6 +17,9 @@ session Boogie_Lang = "HOL" +
     PassificationEndToEnd
     PassificationML
     BackedgeElim
-    CFGOptimizationsLoop	
+    CFGOptimizationsLoop
     Ast
     Ast_Cfg_Transformation
+  document_files
+    "root.tex"
+    (* "root.bib" if you have one *)

@@ -1,0 +1,124 @@
+%
+\begin{isabellebody}%
+\setisabellecontext{PassificationML}%
+%
+\isadelimtheory
+%
+\endisadelimtheory
+%
+\isatagtheory
+\isakeywordONE{theory}\isamarkupfalse%
+\ PassificationML\isanewline
+\isakeywordTWO{imports}\ Semantics\ HelperML\ Passification\isanewline
+\isakeywordTWO{begin}%
+\endisatagtheory
+{\isafoldtheory}%
+%
+\isadelimtheory
+\isanewline
+%
+\endisadelimtheory
+\isanewline
+%
+\isadelimML
+\isanewline
+%
+\endisadelimML
+%
+\isatagML
+\isakeywordONE{ML}\isamarkupfalse%
+\ {\isacartoucheopen}\isanewline
+fun\ type{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}tac\ {\isacharunderscore}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}fn\ {\isacharunderscore}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ all{\isacharunderscore}{\kern0pt}tac{\isacharparenright}{\kern0pt}\isanewline
+\ {\isacharbar}{\kern0pt}\ \ type{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}thm{\isadigit{1}}{\isacharcomma}{\kern0pt}thm{\isadigit{2}}{\isacharparenright}{\kern0pt}{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}rest{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ {\isacharparenleft}{\kern0pt}add{\isacharunderscore}{\kern0pt}simps\ {\isacharbrackleft}{\kern0pt}thm{\isadigit{1}}{\isacharcomma}{\kern0pt}thm{\isadigit{2}}{\isacharbrackright}{\kern0pt}\ ctxt{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}{\isachargreater}{\kern0pt}\ SOLVED{\isacharprime}{\kern0pt}{\isacharparenright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ type{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}tac\ ctxt\ rest\isanewline
+\isanewline
+{\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ apply\ resolve{\isacharunderscore}{\kern0pt}tac\ for\ each\ thm\ in\ the\ provided\ list\ {\isacharparenleft}{\kern0pt}in\ that\ order{\isacharparenright}{\kern0pt}\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+fun\ resolve{\isacharunderscore}{\kern0pt}tac{\isacharunderscore}{\kern0pt}list\ {\isacharunderscore}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}fn\ {\isacharunderscore}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ all{\isacharunderscore}{\kern0pt}tac{\isacharparenright}{\kern0pt}\isanewline
+\ {\isacharbar}{\kern0pt}\ \ resolve{\isacharunderscore}{\kern0pt}tac{\isacharunderscore}{\kern0pt}list\ ctxt\ {\isacharparenleft}{\kern0pt}thm{\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}rest{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}thm{\isacharbrackright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\ resolve{\isacharunderscore}{\kern0pt}tac{\isacharunderscore}{\kern0pt}list\ ctxt\ rest\isanewline
+\isanewline
+{\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ \isanewline
+\ \ apply\ {\isacharparenleft}{\kern0pt}rule\ passification{\isacharunderscore}{\kern0pt}cfg{\isacharunderscore}{\kern0pt}helper{\isacharbrackleft}{\kern0pt}OF\ assms{\isacharparenleft}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}\ {\isacharunderscore}{\kern0pt}\ assms{\isacharparenleft}{\kern0pt}{\isadigit{2}}{\isacharparenright}{\kern0pt}\ sync{\isacharunderscore}{\kern0pt}before{\isacharunderscore}{\kern0pt}passive{\isacharunderscore}{\kern0pt}prog{\isachardot}{\kern0pt}node{\isacharunderscore}{\kern0pt}{\isadigit{1}}\ sync{\isacharunderscore}{\kern0pt}passive{\isacharunderscore}{\kern0pt}prog{\isachardot}{\kern0pt}node{\isacharunderscore}{\kern0pt}{\isadigit{1}}\ {\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}\ \ \ \ \ \ \ \ \ \ \ \isanewline
+\ \ \ \ \ \ \ apply\ {\isacharparenleft}{\kern0pt}simp\ add{\isacharcolon}{\kern0pt}\ sync{\isacharunderscore}{\kern0pt}before{\isacharunderscore}{\kern0pt}passive{\isacharunderscore}{\kern0pt}prog{\isachardot}{\kern0pt}outEdges{\isacharunderscore}{\kern0pt}{\isadigit{1}}\ sync{\isacharunderscore}{\kern0pt}passive{\isacharunderscore}{\kern0pt}prog{\isachardot}{\kern0pt}outEdges{\isacharunderscore}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}\ \ \ \ \ \isanewline
+\ \ \ \ \ \ apply\ {\isacharparenleft}{\kern0pt}erule\ block{\isacharunderscore}{\kern0pt}anon{\isadigit{4}}{\isacharunderscore}{\kern0pt}Then{\isacharcomma}{\kern0pt}\ assumption{\isacharparenright}{\kern0pt}\isanewline
+\ \ apply\ {\isacharparenleft}{\kern0pt}tactic\ {\isasymopen}resolve{\isacharunderscore}{\kern0pt}tac{\isacharunderscore}{\kern0pt}list\ {\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}context{\isacharbraceright}{\kern0pt}\ {\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thms\ assms{\isacharparenleft}{\kern0pt}{\isadigit{3}}{\isacharminus}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharbraceright}{\kern0pt}\ {\isadigit{1}}{\isasymclose}{\isacharparenright}{\kern0pt}\ \ \ \ \ \isanewline
+\ \ \ \ apply\ {\isacharparenleft}{\kern0pt}simp{\isacharcomma}{\kern0pt}\ simp{\isacharcomma}{\kern0pt}\ simp{\isacharparenright}{\kern0pt}\ \ \isanewline
+\ \ apply\ {\isacharparenleft}{\kern0pt}simp\ only{\isacharcolon}{\kern0pt}\ sync{\isacharunderscore}{\kern0pt}before{\isacharunderscore}{\kern0pt}passive{\isacharunderscore}{\kern0pt}prog{\isachardot}{\kern0pt}outEdges{\isacharunderscore}{\kern0pt}{\isadigit{1}}{\isacharparenright}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ process\ next\ successor\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ apply\ {\isacharparenleft}{\kern0pt}erule\ member{\isacharunderscore}{\kern0pt}elim{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ apply\ {\isacharparenleft}{\kern0pt}rule\ cfg{\isacharunderscore}{\kern0pt}block{\isacharunderscore}{\kern0pt}anon{\isadigit{3}}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ apply\ simp\isanewline
+\ \ \ \ apply\ {\isacharparenleft}{\kern0pt}erule\ passive{\isacharunderscore}{\kern0pt}assms{\isacharunderscore}{\kern0pt}{\isadigit{2}}{\isacharunderscore}{\kern0pt}ext{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ apply\ simp\isanewline
+\ \ \ apply\ {\isacharparenleft}{\kern0pt}simp\ add{\isacharcolon}{\kern0pt}\ update{\isacharunderscore}{\kern0pt}nstate{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}def{\isacharparenright}{\kern0pt}\isanewline
+{\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ finished\ processing\ next\ successor\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ by\ {\isacharparenleft}{\kern0pt}simp\ add{\isacharcolon}{\kern0pt}\ member{\isacharunderscore}{\kern0pt}rec{\isacharparenleft}{\kern0pt}{\isadigit{2}}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+{\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\isanewline
+fun\ cfg{\isacharunderscore}{\kern0pt}lemma{\isacharunderscore}{\kern0pt}successors{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharunderscore}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ {\isacharparenleft}{\kern0pt}add{\isacharunderscore}{\kern0pt}simps\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ member{\isacharunderscore}{\kern0pt}rec{\isacharparenleft}{\kern0pt}{\isadigit{2}}{\isacharparenright}{\kern0pt}{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}\ ctxt{\isacharparenright}{\kern0pt}\isanewline
+\ {\isacharbar}{\kern0pt}\ \ cfg{\isacharunderscore}{\kern0pt}lemma{\isacharunderscore}{\kern0pt}successors{\isacharunderscore}{\kern0pt}tac\ ctxt\ assms\ {\isacharparenleft}{\kern0pt}succ{\isacharunderscore}{\kern0pt}cfg{\isacharunderscore}{\kern0pt}lemma\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ rest{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\isanewline
+\ \ \ \ \ \ let\ val\ n{\isacharunderscore}{\kern0pt}suc{\isacharunderscore}{\kern0pt}state{\isacharunderscore}{\kern0pt}assms\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}Thm{\isachardot}{\kern0pt}nprems{\isacharunderscore}{\kern0pt}of\ succ{\isacharunderscore}{\kern0pt}cfg{\isacharunderscore}{\kern0pt}lemma{\isacharparenright}{\kern0pt}{\isacharminus}{\kern0pt}{\isadigit{2}}\ in\isanewline
+\ \ \ \ \ \ \ \ eresolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ member{\isacharunderscore}{\kern0pt}elim{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}succ{\isacharunderscore}{\kern0pt}cfg{\isacharunderscore}{\kern0pt}lemma{\isacharbrackright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ ctxt\ THEN{\isacharprime}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ eresolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ passive{\isacharunderscore}{\kern0pt}assms{\isacharunderscore}{\kern0pt}{\isadigit{2}}{\isacharunderscore}{\kern0pt}ext{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ ctxt\ THEN{\isacharprime}{\kern0pt}\ \ \ \ \ \ \ \ \isanewline
+\ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ need\ to\ solve\ n{\isacharunderscore}{\kern0pt}suc{\isacharunderscore}{\kern0pt}state{\isacharunderscore}{\kern0pt}assms\ many\ state\ relation\ goals\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ repeat{\isacharunderscore}{\kern0pt}n{\isacharunderscore}{\kern0pt}tac{\isacharprime}{\kern0pt}\ n{\isacharunderscore}{\kern0pt}suc{\isacharunderscore}{\kern0pt}state{\isacharunderscore}{\kern0pt}assms\ {\isacharparenleft}{\kern0pt}asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ {\isacharparenleft}{\kern0pt}add{\isacharunderscore}{\kern0pt}simps\ {\isacharparenleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ update{\isacharunderscore}{\kern0pt}nstate{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}def{\isacharbraceright}{\kern0pt}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ assms{\isacharparenright}{\kern0pt}\ ctxt{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}THEN{\isacharprime}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ cfg{\isacharunderscore}{\kern0pt}lemma{\isacharunderscore}{\kern0pt}successors{\isacharunderscore}{\kern0pt}tac\ ctxt\ assms\ rest\isanewline
+\ \ \ \ \ \ end\isanewline
+\isanewline
+fun\ cfg{\isacharunderscore}{\kern0pt}lemma{\isacharunderscore}{\kern0pt}tac\ ctxt\ red{\isacharunderscore}{\kern0pt}assm\ passive{\isacharunderscore}{\kern0pt}lemma{\isacharunderscore}{\kern0pt}assm\ state{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}assms\ pre{\isacharunderscore}{\kern0pt}node{\isacharunderscore}{\kern0pt}edge{\isacharunderscore}{\kern0pt}thms\ passive{\isacharunderscore}{\kern0pt}node{\isacharunderscore}{\kern0pt}edge{\isacharunderscore}{\kern0pt}thms\ block{\isacharunderscore}{\kern0pt}lemma\ succ{\isacharunderscore}{\kern0pt}cfg{\isacharunderscore}{\kern0pt}lemmas\ {\isacharequal}{\kern0pt}\isanewline
+\ \ let\ \isanewline
+\ \ \ \ \ val\ {\isacharparenleft}{\kern0pt}pre{\isacharunderscore}{\kern0pt}node{\isacharunderscore}{\kern0pt}thm{\isacharcomma}{\kern0pt}\ pre{\isacharunderscore}{\kern0pt}edge{\isacharunderscore}{\kern0pt}thm{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ pre{\isacharunderscore}{\kern0pt}node{\isacharunderscore}{\kern0pt}edge{\isacharunderscore}{\kern0pt}thms\isanewline
+\ \ \ \ \ val\ {\isacharparenleft}{\kern0pt}passive{\isacharunderscore}{\kern0pt}node{\isacharunderscore}{\kern0pt}thm{\isacharcomma}{\kern0pt}\ passive{\isacharunderscore}{\kern0pt}edge{\isacharunderscore}{\kern0pt}thm{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ passive{\isacharunderscore}{\kern0pt}node{\isacharunderscore}{\kern0pt}edge{\isacharunderscore}{\kern0pt}thms\isanewline
+\ \ \ \ \ val\ cfg{\isacharunderscore}{\kern0pt}helper{\isacharunderscore}{\kern0pt}inst\ {\isacharequal}{\kern0pt}\ {\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ semantics{\isachardot}{\kern0pt}passification{\isacharunderscore}{\kern0pt}cfg{\isacharunderscore}{\kern0pt}helper{\isacharbraceright}{\kern0pt}\ OF\ {\isacharbrackleft}{\kern0pt}red{\isacharunderscore}{\kern0pt}assm{\isacharcomma}{\kern0pt}\ passive{\isacharunderscore}{\kern0pt}lemma{\isacharunderscore}{\kern0pt}assm{\isacharcomma}{\kern0pt}\ pre{\isacharunderscore}{\kern0pt}node{\isacharunderscore}{\kern0pt}thm{\isacharcomma}{\kern0pt}\ passive{\isacharunderscore}{\kern0pt}node{\isacharunderscore}{\kern0pt}thm{\isacharbrackright}{\kern0pt}\isanewline
+\ \ in\isanewline
+\ \ \ \ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}cfg{\isacharunderscore}{\kern0pt}helper{\isacharunderscore}{\kern0pt}inst{\isacharbrackright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\isanewline
+\ \ \ \ {\isacharparenleft}{\kern0pt}asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ {\isacharparenleft}{\kern0pt}add{\isacharunderscore}{\kern0pt}simps\ {\isacharbrackleft}{\kern0pt}pre{\isacharunderscore}{\kern0pt}edge{\isacharunderscore}{\kern0pt}thm{\isacharcomma}{\kern0pt}\ passive{\isacharunderscore}{\kern0pt}edge{\isacharunderscore}{\kern0pt}thm{\isacharbrackright}{\kern0pt}\ ctxt{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\isanewline
+\ \ \ \ eresolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}block{\isacharunderscore}{\kern0pt}lemma{\isacharbrackright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\isanewline
+\ \ \ \ assume{\isacharunderscore}{\kern0pt}tac\ ctxt\ THEN{\isacharprime}{\kern0pt}\isanewline
+\ \ \ \ resolve{\isacharunderscore}{\kern0pt}tac{\isacharunderscore}{\kern0pt}list\ ctxt\ state{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}assms\ THEN{\isacharprime}{\kern0pt}\isanewline
+\ \ \ \ asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ ctxt\ THEN{\isacharprime}{\kern0pt}\ fastforce{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\ asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ ctxt\ THEN{\isacharprime}{\kern0pt}\isanewline
+\ \ \ \ {\isacharparenleft}{\kern0pt}asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ {\isacharparenleft}{\kern0pt}add{\isacharunderscore}{\kern0pt}simps\ {\isacharbrackleft}{\kern0pt}pre{\isacharunderscore}{\kern0pt}edge{\isacharunderscore}{\kern0pt}thm{\isacharbrackright}{\kern0pt}\ ctxt{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\isanewline
+\ \ \ \ cfg{\isacharunderscore}{\kern0pt}lemma{\isacharunderscore}{\kern0pt}successors{\isacharunderscore}{\kern0pt}tac\ ctxt\ state{\isacharunderscore}{\kern0pt}rel{\isacharunderscore}{\kern0pt}assms\ succ{\isacharunderscore}{\kern0pt}cfg{\isacharunderscore}{\kern0pt}lemmas\isanewline
+\ \ end\isanewline
+{\isacartoucheclose}%
+\endisatagML
+{\isafoldML}%
+%
+\isadelimML
+\isanewline
+%
+\endisadelimML
+%
+\isadelimtheory
+\isanewline
+%
+\endisadelimtheory
+%
+\isatagtheory
+\isakeywordTWO{end}\isamarkupfalse%
+%
+\endisatagtheory
+{\isafoldtheory}%
+%
+\isadelimtheory
+%
+\endisadelimtheory
+%
+\end{isabellebody}%
+\endinput
+%:%file=~/eth/master-thesis/bibin-foundational-boogie/BoogieLang/PassificationML.thy%:%
+%:%10=1%:%
+%:%11=1%:%
+%:%12=2%:%
+%:%13=3%:%
+%:%18=3%:%
+%:%21=4%:%
+%:%24=5%:%
+%:%29=6%:%
+%:%30=6%:%
+%:%91=62%:%
+%:%96=63%:%
+%:%101=64%:%

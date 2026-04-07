@@ -1,0 +1,218 @@
+%
+\begin{isabellebody}%
+\setisabellecontext{Typing}%
+%
+\isadelimdocument
+%
+\endisadelimdocument
+%
+\isatagdocument
+%
+\isamarkupsection{Boogie's Type System%
+}
+\isamarkuptrue%
+%
+\endisatagdocument
+{\isafolddocument}%
+%
+\isadelimdocument
+%
+\endisadelimdocument
+%
+\isadelimtheory
+%
+\endisadelimtheory
+%
+\isatagtheory
+\isakeywordONE{theory}\isamarkupfalse%
+\ Typing\isanewline
+\isakeywordTWO{imports}\ Lang\ BoogieDeBruijn\isanewline
+\isakeywordTWO{begin}%
+\endisatagtheory
+{\isafoldtheory}%
+%
+\isadelimtheory
+%
+\endisadelimtheory
+%
+\begin{isamarkuptext}%
+A type environment consists of a type mapping for all the variable names and a type mapping for
+the DeBruijn indices%
+\end{isamarkuptext}\isamarkuptrue%
+\isakeywordONE{type{\isacharunderscore}{\kern0pt}synonym}\isamarkupfalse%
+\ type{\isacharunderscore}{\kern0pt}env\ {\isacharequal}{\kern0pt}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}vname\ {\isasymrightharpoonup}\ ty{\isacharparenright}{\kern0pt}\ {\isasymtimes}\ {\isacharparenleft}{\kern0pt}nat\ {\isasymrightharpoonup}\ ty{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordONE{fun}\isamarkupfalse%
+\ unop{\isacharunderscore}{\kern0pt}type\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}unop\ {\isasymRightarrow}\ prim{\isacharunderscore}{\kern0pt}ty\ {\isasymRightarrow}\ prim{\isacharunderscore}{\kern0pt}ty\ option{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{where}\ \isanewline
+\ \ \ \ {\isachardoublequoteopen}unop{\isacharunderscore}{\kern0pt}type\ UMinus\ TInt\ {\isacharequal}{\kern0pt}\ Some\ TInt{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}unop{\isacharunderscore}{\kern0pt}type\ UMinus\ TReal\ {\isacharequal}{\kern0pt}\ Some\ TReal{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}unop{\isacharunderscore}{\kern0pt}type\ UMinus\ TBool\ {\isacharequal}{\kern0pt}\ None{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}unop{\isacharunderscore}{\kern0pt}type\ Not\ TInt\ {\isacharequal}{\kern0pt}\ None{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}unop{\isacharunderscore}{\kern0pt}type\ Not\ TReal\ {\isacharequal}{\kern0pt}\ None{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}unop{\isacharunderscore}{\kern0pt}type\ Not\ TBool\ {\isacharequal}{\kern0pt}\ Some\ TBool{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}unop{\isacharunderscore}{\kern0pt}type\ IntToReal\ TInt\ {\isacharequal}{\kern0pt}\ Some\ TReal{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}unop{\isacharunderscore}{\kern0pt}type\ IntToReal\ TReal\ {\isacharequal}{\kern0pt}\ None{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}unop{\isacharunderscore}{\kern0pt}type\ IntToReal\ TBool\ {\isacharequal}{\kern0pt}\ None{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordONE{primrec}\isamarkupfalse%
+\ binop{\isacharunderscore}{\kern0pt}type\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}binop\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}prim{\isacharunderscore}{\kern0pt}ty\ {\isasymtimes}\ prim{\isacharunderscore}{\kern0pt}ty{\isacharparenright}{\kern0pt}\ set\ {\isasymtimes}\ prim{\isacharunderscore}{\kern0pt}ty{\isacharparenright}{\kern0pt}\ option{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{where}\isanewline
+\ \ \ \ {\isachardoublequoteopen}binop{\isacharunderscore}{\kern0pt}type\ Eq\ {\isacharequal}{\kern0pt}\ None{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}binop{\isacharunderscore}{\kern0pt}type\ Neq\ {\isacharequal}{\kern0pt}\ None{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}binop{\isacharunderscore}{\kern0pt}type\ RealDiv\ {\isacharequal}{\kern0pt}\ Some\ {\isacharparenleft}{\kern0pt}{\isacharbraceleft}{\kern0pt}{\isacharparenleft}{\kern0pt}TInt{\isacharcomma}{\kern0pt}\ TInt{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}TReal{\isacharcomma}{\kern0pt}\ TReal{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}TInt{\isacharcomma}{\kern0pt}\ TReal{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}TReal{\isacharcomma}{\kern0pt}\ TInt{\isacharparenright}{\kern0pt}{\isacharbraceright}{\kern0pt}{\isacharcomma}{\kern0pt}\ TReal{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ \isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}binop{\isacharunderscore}{\kern0pt}type\ Add\ {\isacharequal}{\kern0pt}\ Some\ {\isacharparenleft}{\kern0pt}{\isacharbraceleft}{\kern0pt}{\isacharparenleft}{\kern0pt}TInt{\isacharcomma}{\kern0pt}\ TInt{\isacharparenright}{\kern0pt}{\isacharbraceright}{\kern0pt}{\isacharcomma}{\kern0pt}\ TInt{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}binop{\isacharunderscore}{\kern0pt}type\ Sub\ {\isacharequal}{\kern0pt}\ Some\ {\isacharparenleft}{\kern0pt}{\isacharbraceleft}{\kern0pt}{\isacharparenleft}{\kern0pt}TInt{\isacharcomma}{\kern0pt}\ TInt{\isacharparenright}{\kern0pt}{\isacharbraceright}{\kern0pt}{\isacharcomma}{\kern0pt}\ TInt{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}binop{\isacharunderscore}{\kern0pt}type\ Mul\ {\isacharequal}{\kern0pt}\ Some\ {\isacharparenleft}{\kern0pt}{\isacharbraceleft}{\kern0pt}{\isacharparenleft}{\kern0pt}TInt{\isacharcomma}{\kern0pt}\ TInt{\isacharparenright}{\kern0pt}{\isacharbraceright}{\kern0pt}{\isacharcomma}{\kern0pt}\ TInt{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}binop{\isacharunderscore}{\kern0pt}type\ Div\ {\isacharequal}{\kern0pt}\ Some\ {\isacharparenleft}{\kern0pt}{\isacharbraceleft}{\kern0pt}{\isacharparenleft}{\kern0pt}TInt{\isacharcomma}{\kern0pt}\ TInt{\isacharparenright}{\kern0pt}{\isacharbraceright}{\kern0pt}{\isacharcomma}{\kern0pt}\ TInt{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}binop{\isacharunderscore}{\kern0pt}type\ Mod\ {\isacharequal}{\kern0pt}\ Some\ {\isacharparenleft}{\kern0pt}{\isacharbraceleft}{\kern0pt}{\isacharparenleft}{\kern0pt}TInt{\isacharcomma}{\kern0pt}\ TInt{\isacharparenright}{\kern0pt}{\isacharbraceright}{\kern0pt}{\isacharcomma}{\kern0pt}\ TInt{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}binop{\isacharunderscore}{\kern0pt}type\ Lt\ {\isacharequal}{\kern0pt}\ Some\ {\isacharparenleft}{\kern0pt}{\isacharbraceleft}{\kern0pt}{\isacharparenleft}{\kern0pt}TInt{\isacharcomma}{\kern0pt}\ TInt{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}TReal{\isacharcomma}{\kern0pt}\ TReal{\isacharparenright}{\kern0pt}{\isacharbraceright}{\kern0pt}{\isacharcomma}{\kern0pt}\ TBool{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}binop{\isacharunderscore}{\kern0pt}type\ Le\ {\isacharequal}{\kern0pt}\ Some\ {\isacharparenleft}{\kern0pt}{\isacharbraceleft}{\kern0pt}{\isacharparenleft}{\kern0pt}TInt{\isacharcomma}{\kern0pt}\ TInt{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}TReal{\isacharcomma}{\kern0pt}\ TReal{\isacharparenright}{\kern0pt}{\isacharbraceright}{\kern0pt}{\isacharcomma}{\kern0pt}\ TBool{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}binop{\isacharunderscore}{\kern0pt}type\ Gt\ {\isacharequal}{\kern0pt}\ Some\ {\isacharparenleft}{\kern0pt}{\isacharbraceleft}{\kern0pt}{\isacharparenleft}{\kern0pt}TInt{\isacharcomma}{\kern0pt}\ TInt{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}TReal{\isacharcomma}{\kern0pt}\ TReal{\isacharparenright}{\kern0pt}{\isacharbraceright}{\kern0pt}{\isacharcomma}{\kern0pt}\ TBool{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}binop{\isacharunderscore}{\kern0pt}type\ Ge\ {\isacharequal}{\kern0pt}\ Some\ {\isacharparenleft}{\kern0pt}{\isacharbraceleft}{\kern0pt}{\isacharparenleft}{\kern0pt}TInt{\isacharcomma}{\kern0pt}\ TInt{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}TReal{\isacharcomma}{\kern0pt}\ TReal{\isacharparenright}{\kern0pt}{\isacharbraceright}{\kern0pt}{\isacharcomma}{\kern0pt}\ TBool{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}binop{\isacharunderscore}{\kern0pt}type\ And\ {\isacharequal}{\kern0pt}\ Some\ {\isacharparenleft}{\kern0pt}{\isacharbraceleft}{\kern0pt}{\isacharparenleft}{\kern0pt}TBool{\isacharcomma}{\kern0pt}\ TBool{\isacharparenright}{\kern0pt}{\isacharbraceright}{\kern0pt}{\isacharcomma}{\kern0pt}\ TBool{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}binop{\isacharunderscore}{\kern0pt}type\ Or\ {\isacharequal}{\kern0pt}\ Some\ {\isacharparenleft}{\kern0pt}{\isacharbraceleft}{\kern0pt}{\isacharparenleft}{\kern0pt}TBool{\isacharcomma}{\kern0pt}\ TBool{\isacharparenright}{\kern0pt}{\isacharbraceright}{\kern0pt}{\isacharcomma}{\kern0pt}\ TBool{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}binop{\isacharunderscore}{\kern0pt}type\ Imp\ {\isacharequal}{\kern0pt}\ Some\ {\isacharparenleft}{\kern0pt}{\isacharbraceleft}{\kern0pt}{\isacharparenleft}{\kern0pt}TBool{\isacharcomma}{\kern0pt}\ TBool{\isacharparenright}{\kern0pt}{\isacharbraceright}{\kern0pt}{\isacharcomma}{\kern0pt}\ TBool{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}binop{\isacharunderscore}{\kern0pt}type\ Iff\ {\isacharequal}{\kern0pt}\ Some\ {\isacharparenleft}{\kern0pt}{\isacharbraceleft}{\kern0pt}{\isacharparenleft}{\kern0pt}TBool{\isacharcomma}{\kern0pt}\ TBool{\isacharparenright}{\kern0pt}{\isacharbraceright}{\kern0pt}{\isacharcomma}{\kern0pt}\ TBool{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordONE{fun}\isamarkupfalse%
+\ binop{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}type\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}binop\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{where}\ \isanewline
+\ \ \ \ {\isachardoublequoteopen}binop{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}type\ Eq\ {\isacharequal}{\kern0pt}\ True{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}binop{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}type\ Neq\ {\isacharequal}{\kern0pt}\ True{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}binop{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}type\ {\isacharunderscore}{\kern0pt}\ {\isacharequal}{\kern0pt}\ False{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordONE{inductive}\isamarkupfalse%
+\ typing\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}fdecls\ {\isasymRightarrow}\ type{\isacharunderscore}{\kern0pt}env\ {\isasymRightarrow}\ expr\ {\isasymRightarrow}\ ty\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ {\isacharparenleft}{\kern0pt}{\isachardoublequoteopen}{\isacharunderscore}{\kern0pt}{\isacharcomma}{\kern0pt}{\isacharunderscore}{\kern0pt}\ {\isasymturnstile}\ {\isacharparenleft}{\kern0pt}{\isacharunderscore}{\kern0pt}\ {\isacharcolon}{\kern0pt}\ {\isacharunderscore}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ {\isacharbrackleft}{\kern0pt}{\isadigit{5}}{\isadigit{1}}{\isacharcomma}{\kern0pt}{\isadigit{0}}{\isacharcomma}{\kern0pt}{\isadigit{0}}{\isacharcomma}{\kern0pt}{\isadigit{0}}{\isacharbrackright}{\kern0pt}\ {\isadigit{8}}{\isadigit{1}}{\isacharparenright}{\kern0pt}\isanewline
+\isakeywordTWO{and}\ typing{\isacharunderscore}{\kern0pt}list\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}fdecls\ {\isasymRightarrow}\ type{\isacharunderscore}{\kern0pt}env\ {\isasymRightarrow}\ expr\ list\ {\isasymRightarrow}\ ty\ list\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\ {\isacharparenleft}{\kern0pt}{\isachardoublequoteopen}{\isacharunderscore}{\kern0pt}{\isacharcomma}{\kern0pt}{\isacharunderscore}{\kern0pt}\ {\isasymturnstile}\ {\isacharparenleft}{\kern0pt}{\isacharunderscore}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}{\isacharcolon}{\kern0pt}{\isacharbrackright}{\kern0pt}\ {\isacharunderscore}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ {\isacharbrackleft}{\kern0pt}{\isadigit{5}}{\isadigit{1}}{\isacharcomma}{\kern0pt}{\isadigit{0}}{\isacharcomma}{\kern0pt}{\isadigit{0}}{\isacharcomma}{\kern0pt}{\isadigit{0}}{\isacharbrackright}{\kern0pt}\ {\isadigit{8}}{\isadigit{1}}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \isakeywordTWO{for}\ F\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ fdecls\isanewline
+\ \ \isakeywordTWO{where}\isanewline
+\ \ \ \ TypVar{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymlbrakk}\ {\isacharparenleft}{\kern0pt}fst\ {\isasymDelta}{\isacharparenright}{\kern0pt}\ x\ {\isacharequal}{\kern0pt}\ Some\ ty\ {\isasymrbrakk}\ {\isasymLongrightarrow}\ F{\isacharcomma}{\kern0pt}{\isasymDelta}\ {\isasymturnstile}\ Var\ x\ {\isacharcolon}{\kern0pt}\ ty{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ TypBVar{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymlbrakk}\ {\isacharparenleft}{\kern0pt}snd\ {\isasymDelta}{\isacharparenright}{\kern0pt}\ i\ {\isacharequal}{\kern0pt}\ Some\ ty\ {\isasymrbrakk}\ {\isasymLongrightarrow}\ F{\isacharcomma}{\kern0pt}{\isasymDelta}\ {\isasymturnstile}\ BVar\ i\ {\isacharcolon}{\kern0pt}\ ty{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ TypPrim{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymlbrakk}\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}lit\ l\ {\isacharequal}{\kern0pt}\ prim{\isacharunderscore}{\kern0pt}ty\ {\isasymrbrakk}\ {\isasymLongrightarrow}\ F{\isacharcomma}{\kern0pt}{\isasymDelta}\ {\isasymturnstile}\ Lit\ l\ {\isacharcolon}{\kern0pt}\ TPrim\ prim{\isacharunderscore}{\kern0pt}ty{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ TypUnOp{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymlbrakk}\ F{\isacharcomma}{\kern0pt}{\isasymDelta}\ {\isasymturnstile}\ e\ {\isacharcolon}{\kern0pt}\ TPrim\ arg{\isacharunderscore}{\kern0pt}ty{\isacharsemicolon}{\kern0pt}\ unop{\isacharunderscore}{\kern0pt}type\ uop\ arg{\isacharunderscore}{\kern0pt}ty\ {\isacharequal}{\kern0pt}\ Some\ ret{\isacharunderscore}{\kern0pt}ty\ {\isasymrbrakk}\ \ {\isasymLongrightarrow}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ F{\isacharcomma}{\kern0pt}{\isasymDelta}\ {\isasymturnstile}\ UnOp\ uop\ e\ {\isacharcolon}{\kern0pt}\ TPrim\ ret{\isacharunderscore}{\kern0pt}ty{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ TypBinOpMono{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymlbrakk}\ binop{\isacharunderscore}{\kern0pt}type\ bop\ {\isacharequal}{\kern0pt}\ Some\ {\isacharparenleft}{\kern0pt}targs{\isacharcomma}{\kern0pt}\ ret{\isacharunderscore}{\kern0pt}ty{\isacharparenright}{\kern0pt}{\isacharsemicolon}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ F{\isacharcomma}{\kern0pt}{\isasymDelta}\ {\isasymturnstile}\ e{\isadigit{1}}\ {\isacharcolon}{\kern0pt}\ TPrim\ left{\isacharunderscore}{\kern0pt}ty{\isacharsemicolon}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ F{\isacharcomma}{\kern0pt}{\isasymDelta}\ {\isasymturnstile}\ e{\isadigit{2}}\ {\isacharcolon}{\kern0pt}\ TPrim\ right{\isacharunderscore}{\kern0pt}ty{\isacharsemicolon}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}left{\isacharunderscore}{\kern0pt}ty{\isacharcomma}{\kern0pt}\ right{\isacharunderscore}{\kern0pt}ty{\isacharparenright}{\kern0pt}\ {\isasymin}\ targs\ \ {\isasymrbrakk}\ {\isasymLongrightarrow}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ F{\isacharcomma}{\kern0pt}{\isasymDelta}\ {\isasymturnstile}\ e{\isadigit{1}}\ {\isasymguillemotleft}bop{\isasymguillemotright}\ e{\isadigit{2}}\ {\isacharcolon}{\kern0pt}\ TPrim\ ret{\isacharunderscore}{\kern0pt}ty{\isachardoublequoteclose}\isanewline
+\ \ \isanewline
+\ \ {\isacharbar}{\kern0pt}\ TypBinopPoly{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymlbrakk}\ binop{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}type\ bop{\isacharsemicolon}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ F{\isacharcomma}{\kern0pt}{\isasymDelta}\ {\isasymturnstile}\ e{\isadigit{1}}\ {\isacharcolon}{\kern0pt}\ ty{\isadigit{1}}{\isacharsemicolon}{\kern0pt}\ F{\isacharcomma}{\kern0pt}{\isasymDelta}\ {\isasymturnstile}\ e{\isadigit{2}}\ {\isacharcolon}{\kern0pt}\ ty{\isadigit{2}}{\isacharsemicolon}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ msubstT{\isacharunderscore}{\kern0pt}opt\ ty{\isacharunderscore}{\kern0pt}inst\ ty{\isadigit{1}}\ {\isacharequal}{\kern0pt}\ msubstT{\isacharunderscore}{\kern0pt}opt\ ty{\isacharunderscore}{\kern0pt}inst\ ty{\isadigit{2}}{\isasymrbrakk}\ {\isasymLongrightarrow}\ \isanewline
+\ \ \ \ \ \ \ \ F{\isacharcomma}{\kern0pt}{\isasymDelta}\ {\isasymturnstile}\ e{\isadigit{1}}\ {\isasymguillemotleft}bop{\isasymguillemotright}\ e{\isadigit{2}}\ {\isacharcolon}{\kern0pt}\ TPrim\ {\isacharparenleft}{\kern0pt}TBool{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\ \ {\isacharbar}{\kern0pt}\ TypFunExp{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymlbrakk}\ map{\isacharunderscore}{\kern0pt}of\ F\ f\ {\isacharequal}{\kern0pt}\ Some\ {\isacharparenleft}{\kern0pt}n{\isacharunderscore}{\kern0pt}ty{\isacharunderscore}{\kern0pt}params{\isacharcomma}{\kern0pt}\ args{\isacharunderscore}{\kern0pt}ty{\isacharcomma}{\kern0pt}\ ret{\isacharunderscore}{\kern0pt}ty{\isacharparenright}{\kern0pt}{\isacharsemicolon}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ length\ ty{\isacharunderscore}{\kern0pt}params\ {\isacharequal}{\kern0pt}\ n{\isacharunderscore}{\kern0pt}ty{\isacharunderscore}{\kern0pt}params{\isacharsemicolon}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ length\ args\ {\isacharequal}{\kern0pt}\ length\ args{\isacharunderscore}{\kern0pt}ty{\isacharsemicolon}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ F{\isacharcomma}{\kern0pt}{\isasymDelta}\ {\isasymturnstile}\ args\ {\isacharbrackleft}{\kern0pt}{\isacharcolon}{\kern0pt}{\isacharbrackright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}map\ {\isacharparenleft}{\kern0pt}msubstT{\isacharunderscore}{\kern0pt}opt\ ty{\isacharunderscore}{\kern0pt}params{\isacharparenright}{\kern0pt}\ args{\isacharunderscore}{\kern0pt}ty{\isacharparenright}{\kern0pt}\ {\isasymrbrakk}\ {\isasymLongrightarrow}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ F{\isacharcomma}{\kern0pt}{\isasymDelta}\ {\isasymturnstile}\ FunExp\ f\ ty{\isacharunderscore}{\kern0pt}params\ args\ {\isacharcolon}{\kern0pt}\ {\isacharparenleft}{\kern0pt}msubstT{\isacharunderscore}{\kern0pt}opt\ ty{\isacharunderscore}{\kern0pt}params\ ret{\isacharunderscore}{\kern0pt}ty{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ TypCondExp{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymlbrakk}\ F{\isacharcomma}{\kern0pt}{\isasymDelta}\ {\isasymturnstile}\ cond\ {\isacharcolon}{\kern0pt}\ TPrim\ {\isacharparenleft}{\kern0pt}TBool{\isacharparenright}{\kern0pt}{\isacharsemicolon}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ F{\isacharcomma}{\kern0pt}{\isasymDelta}\ {\isasymturnstile}\ thn\ {\isacharcolon}{\kern0pt}\ ty{\isacharsemicolon}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ F{\isacharcomma}{\kern0pt}{\isasymDelta}\ {\isasymturnstile}\ els\ {\isacharcolon}{\kern0pt}\ ty\ {\isasymrbrakk}\ {\isasymLongrightarrow}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ F{\isacharcomma}{\kern0pt}{\isasymDelta}\ {\isasymturnstile}\ CondExp\ cond\ thn\ els\ {\isacharcolon}{\kern0pt}\ ty{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ TypOld{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymlbrakk}\ F{\isacharcomma}{\kern0pt}\ {\isasymDelta}\ {\isasymturnstile}\ e\ {\isacharcolon}{\kern0pt}\ ty\ {\isasymrbrakk}\ {\isasymLongrightarrow}\ F{\isacharcomma}{\kern0pt}\ {\isasymDelta}\ \ {\isasymturnstile}\ Old\ e\ {\isacharcolon}{\kern0pt}\ ty{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ TypForall{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymlbrakk}\ F{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}fst\ {\isasymDelta}{\isacharcomma}{\kern0pt}\ ext{\isacharunderscore}{\kern0pt}env\ {\isacharparenleft}{\kern0pt}snd\ {\isasymDelta}{\isacharparenright}{\kern0pt}\ ty{\isacharparenright}{\kern0pt}\ {\isasymturnstile}\ e\ {\isacharcolon}{\kern0pt}\ TPrim\ {\isacharparenleft}{\kern0pt}TBool{\isacharparenright}{\kern0pt}\ {\isasymrbrakk}\ {\isasymLongrightarrow}\ F{\isacharcomma}{\kern0pt}{\isasymDelta}\ {\isasymturnstile}\ Forall\ ty\ e\ {\isacharcolon}{\kern0pt}\ TPrim\ {\isacharparenleft}{\kern0pt}TBool{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ TypExists{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymlbrakk}\ F{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}fst\ {\isasymDelta}{\isacharcomma}{\kern0pt}\ ext{\isacharunderscore}{\kern0pt}env\ {\isacharparenleft}{\kern0pt}snd\ {\isasymDelta}{\isacharparenright}{\kern0pt}\ ty{\isacharparenright}{\kern0pt}\ {\isasymturnstile}\ e\ {\isacharcolon}{\kern0pt}\ TPrim\ {\isacharparenleft}{\kern0pt}TBool{\isacharparenright}{\kern0pt}\ {\isasymrbrakk}\ {\isasymLongrightarrow}\ F{\isacharcomma}{\kern0pt}{\isasymDelta}\ {\isasymturnstile}\ Exists\ ty\ e\ {\isacharcolon}{\kern0pt}\ TPrim\ {\isacharparenleft}{\kern0pt}TBool{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ TypForallT{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymlbrakk}\ F{\isacharcomma}{\kern0pt}{\isacharparenleft}{\kern0pt}shift{\isacharunderscore}{\kern0pt}env\ {\isadigit{1}}\ {\isadigit{0}}\ {\isacharparenleft}{\kern0pt}fst\ {\isasymDelta}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ shift{\isacharunderscore}{\kern0pt}env\ {\isadigit{1}}\ {\isadigit{0}}\ {\isacharparenleft}{\kern0pt}snd\ {\isasymDelta}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isasymturnstile}\ e\ {\isacharcolon}{\kern0pt}\ TPrim\ {\isacharparenleft}{\kern0pt}TBool{\isacharparenright}{\kern0pt}{\isasymrbrakk}\ {\isasymLongrightarrow}\ F{\isacharcomma}{\kern0pt}\ {\isasymDelta}\ {\isasymturnstile}\ ForallT\ e\ {\isacharcolon}{\kern0pt}\ TPrim\ {\isacharparenleft}{\kern0pt}TBool{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ TypExistsT{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymlbrakk}\ F{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}shift{\isacharunderscore}{\kern0pt}env\ {\isadigit{1}}\ {\isadigit{0}}\ {\isacharparenleft}{\kern0pt}fst\ {\isasymDelta}{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\ shift{\isacharunderscore}{\kern0pt}env\ {\isadigit{1}}\ {\isadigit{0}}\ {\isacharparenleft}{\kern0pt}snd\ {\isasymDelta}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isasymturnstile}\ e\ {\isacharcolon}{\kern0pt}\ TPrim\ {\isacharparenleft}{\kern0pt}TBool{\isacharparenright}{\kern0pt}{\isasymrbrakk}\ {\isasymLongrightarrow}\ F{\isacharcomma}{\kern0pt}\ {\isasymDelta}\ {\isasymturnstile}\ ExistsT\ e\ {\isacharcolon}{\kern0pt}\ TPrim\ {\isacharparenleft}{\kern0pt}TBool{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ TypListNil{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}F{\isacharcomma}{\kern0pt}{\isasymDelta}\ {\isasymturnstile}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}{\isacharcolon}{\kern0pt}{\isacharbrackright}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ TypListCons{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isasymlbrakk}\ F{\isacharcomma}{\kern0pt}{\isasymDelta}\ {\isasymturnstile}\ e\ {\isacharcolon}{\kern0pt}\ ty{\isacharsemicolon}{\kern0pt}\ \ F{\isacharcomma}{\kern0pt}{\isasymDelta}\ {\isasymturnstile}\ es\ {\isacharbrackleft}{\kern0pt}{\isacharcolon}{\kern0pt}{\isacharbrackright}{\kern0pt}\ tys\ {\isasymrbrakk}\ {\isasymLongrightarrow}\ F{\isacharcomma}{\kern0pt}{\isasymDelta}\ {\isasymturnstile}\ {\isacharparenleft}{\kern0pt}e{\isacharhash}{\kern0pt}es{\isacharparenright}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}{\isacharcolon}{\kern0pt}{\isacharbrackright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}ty{\isacharhash}{\kern0pt}tys{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+%
+\isadelimtheory
+%
+\endisadelimtheory
+%
+\isatagtheory
+\isakeywordTWO{end}\isamarkupfalse%
+%
+\endisatagtheory
+{\isafoldtheory}%
+%
+\isadelimtheory
+%
+\endisadelimtheory
+%
+\end{isabellebody}%
+\endinput
+%:%file=~/eth/master-thesis/bibin-foundational-boogie/BoogieLang/Typing.thy%:%
+%:%11=1%:%
+%:%27=3%:%
+%:%28=3%:%
+%:%29=4%:%
+%:%30=5%:%
+%:%39=7%:%
+%:%40=8%:%
+%:%42=9%:%
+%:%43=9%:%
+%:%44=10%:%
+%:%45=11%:%
+%:%46=11%:%
+%:%47=12%:%
+%:%48=13%:%
+%:%49=14%:%
+%:%50=15%:%
+%:%51=16%:%
+%:%52=17%:%
+%:%53=18%:%
+%:%54=19%:%
+%:%55=20%:%
+%:%56=21%:%
+%:%57=22%:%
+%:%58=23%:%
+%:%59=23%:%
+%:%60=24%:%
+%:%61=25%:%
+%:%62=26%:%
+%:%63=27%:%
+%:%64=28%:%
+%:%65=29%:%
+%:%66=30%:%
+%:%67=31%:%
+%:%68=32%:%
+%:%69=33%:%
+%:%70=34%:%
+%:%71=35%:%
+%:%72=36%:%
+%:%73=37%:%
+%:%74=38%:%
+%:%75=39%:%
+%:%76=40%:%
+%:%77=41%:%
+%:%78=42%:%
+%:%79=42%:%
+%:%80=43%:%
+%:%81=44%:%
+%:%82=45%:%
+%:%83=46%:%
+%:%84=47%:%
+%:%85=48%:%
+%:%86=48%:%
+%:%87=49%:%
+%:%88=50%:%
+%:%89=51%:%
+%:%90=52%:%
+%:%91=53%:%
+%:%92=54%:%
+%:%93=55%:%
+%:%94=56%:%
+%:%95=57%:%
+%:%99=61%:%
+%:%100=62%:%
+%:%100=64%:%
+%:%101=65%:%
+%:%104=68%:%
+%:%105=74%:%
+%:%106=75%:%
+%:%110=79%:%
+%:%111=80%:%
+%:%114=83%:%
+%:%115=84%:%
+%:%116=85%:%
+%:%117=86%:%
+%:%118=87%:%
+%:%119=88%:%
+%:%120=89%:%
+%:%121=90%:%
+%:%128=91%:%

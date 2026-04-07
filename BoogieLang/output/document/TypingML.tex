@@ -1,0 +1,197 @@
+%
+\begin{isabellebody}%
+\setisabellecontext{TypingML}%
+%
+\isadelimtheory
+%
+\endisadelimtheory
+%
+\isatagtheory
+\isakeywordONE{theory}\isamarkupfalse%
+\ TypingML\ \ \ \ \ \ \ \ \isanewline
+\ \ \isakeywordTWO{imports}\ TypingHelper\ HelperML\isanewline
+\isakeywordTWO{begin}%
+\endisatagtheory
+{\isafoldtheory}%
+%
+\isadelimtheory
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \isanewline
+%
+\endisadelimtheory
+%
+\isadelimML
+\isanewline
+%
+\endisadelimML
+%
+\isatagML
+\isakeywordONE{ML}\isamarkupfalse%
+\ {\isacartoucheopen}\isanewline
+\isanewline
+{\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\isanewline
+To\ prove\ a\ typing\ relation\ in\ the\ presence\ of\ type\ variables{\isacharcomma}{\kern0pt}\ one\ needs\ to\ know\ what\ \isanewline
+type\ variable\ substitution\ to\ use\ for\ equality\ and\ inequality{\isachardot}{\kern0pt}\isanewline
+The\ tactic\ implemented\ here\ takes\ this\ information\ in\ the\ form\ of\ a\ tree\ {\isacharparenleft}{\kern0pt}see\ typing{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}hint{\isacharparenright}{\kern0pt}\ that\isanewline
+reflects\ the\ structure\ of\ the\ expression\ to\ be\ typed{\isachardot}{\kern0pt}\ At\ each\ node\ of\ the\ tree{\isacharcomma}{\kern0pt}\ the\ hint\ is\ either\isanewline
+NoPolyHint\ {\isacharparenleft}{\kern0pt}in\ which\ case\ no\ hint\ is\ required\ for\ that\ entire\ subtree{\isacharparenright}{\kern0pt}\ or\ PolyHintNode\ {\isacharparenleft}{\kern0pt}in\ which\isanewline
+case\ there\ is\ a\ potential\ theorem\ indicating\ what\ needs\ to\ be\ applied\ at\ that\ point\ and\ a\ hint\ tree\isanewline
+for\ each\ subnode{\isacharparenright}{\kern0pt}{\isachardot}{\kern0pt}\ \isanewline
+For\ optimization\ reasons{\isacharcomma}{\kern0pt}\ we\ use\ trees\ that\ only\ reflect\ nodes\ that\ can\ branch\ {\isacharparenleft}{\kern0pt}i{\isachardot}{\kern0pt}e{\isachardot}{\kern0pt}{\isacharcomma}{\kern0pt}\ binary\isanewline
+operations\ and\ function\ calls\ currently{\isacharparenright}{\kern0pt}{\isachardot}{\kern0pt}\ For\ all\ other\ nodes\ {\isacharparenleft}{\kern0pt}i{\isachardot}{\kern0pt}e{\isachardot}{\kern0pt}{\isacharcomma}{\kern0pt}\ those\ with\ only\ one\ subnode{\isacharparenright}{\kern0pt}\isanewline
+no\ hint\ is\ required\ and\ the\ hint\ tree\ should\ not\ represent\ them\ using\ a\ separate\ node{\isachardot}{\kern0pt}\ This\ means\isanewline
+the\ hint\ tree\ reflects\ the\ structure\ of\ the\ expression\ where\ consecutive\ nodes\ with\ only\ single\ \isanewline
+subnodes\ are\ merged{\isachardot}{\kern0pt}\isanewline
+{\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\isanewline
+datatype\ typing{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}hint\ {\isacharequal}{\kern0pt}\ NoPolyHint\ {\isacharbar}{\kern0pt}\ PolyHintNode\ of\ {\isacharparenleft}{\kern0pt}thm\ option\ {\isacharasterisk}{\kern0pt}\ {\isacharparenleft}{\kern0pt}typing{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}hint\ list{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\isanewline
+fun\ has{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}hint\ NoPolyHint\ {\isacharequal}{\kern0pt}\ false\isanewline
+\ {\isacharbar}{\kern0pt}\ \ has{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}hint\ {\isacharparenleft}{\kern0pt}PolyHintNode\ {\isacharparenleft}{\kern0pt}NONE{\isacharcomma}{\kern0pt}\ {\isacharunderscore}{\kern0pt}\ {\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ false\isanewline
+\ {\isacharbar}{\kern0pt}\ \ has{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}hint\ {\isacharparenleft}{\kern0pt}PolyHintNode\ {\isacharparenleft}{\kern0pt}SOME\ {\isacharunderscore}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharunderscore}{\kern0pt}\ {\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ true\isanewline
+\isanewline
+fun\ the{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}hint\ NoPolyHint\ {\isacharequal}{\kern0pt}\ error{\isacharparenleft}{\kern0pt}{\isachardoublequote}{\kern0pt}invoked\ the{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}hint\ on\ NoPolyHint{\isachardoublequote}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ the{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}hint\ {\isacharparenleft}{\kern0pt}PolyHintNode\ {\isacharparenleft}{\kern0pt}thm{\isacharcomma}{\kern0pt}\ hints{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}thm{\isacharcomma}{\kern0pt}\ hints{\isacharparenright}{\kern0pt}\isanewline
+\isanewline
+fun\ typing{\isacharunderscore}{\kern0pt}tac\ ctxt\ hint{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tree\ lookup{\isacharunderscore}{\kern0pt}assms\ func{\isacharunderscore}{\kern0pt}assms\ {\isacharequal}{\kern0pt}\ \ \isanewline
+\ \ FIRST{\isacharunderscore}{\kern0pt}AND{\isacharunderscore}{\kern0pt}THEN{\isacharprime}{\kern0pt}\ \isanewline
+\ \ \ \ {\isacharbrackleft}{\kern0pt}\ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ TypVar{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+\ \ \ \ \ \ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ TypBVar{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+\ \ \ \ \ \ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ TypPrim{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+\ \ \ \ \ \ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ TypUnOp{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+\ \ \ \ \ \ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ TypBinOpMono{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\ assm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}solved{\isacharunderscore}{\kern0pt}tac\ ctxt{\isacharcomma}{\kern0pt}\isanewline
+\ \ \ \ \ \ if\ has{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}hint\ hint{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tree\ then\isanewline
+\ \ \ \ \ \ \ \ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ typ{\isacharunderscore}{\kern0pt}binop{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}helper{\isacharunderscore}{\kern0pt}{\isadigit{2}}{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\ assm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}solved{\isacharunderscore}{\kern0pt}tac\ ctxt\isanewline
+\ \ \ \ \ \ else\ \isanewline
+\ \ \ \ \ \ \ \ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ typ{\isacharunderscore}{\kern0pt}binop{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}helper{\isacharunderscore}{\kern0pt}empty{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\ assm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}solved{\isacharunderscore}{\kern0pt}tac\ ctxt{\isacharcomma}{\kern0pt}\isanewline
+\ \ \ \ \ \ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ typ{\isacharunderscore}{\kern0pt}funexp{\isacharunderscore}{\kern0pt}helper{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+\ \ \ \ \ \ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ TypOld{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+\ \ \ \ \ \ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ TypForall{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+\ \ \ \ \ \ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ TypExists{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+\ \ \ \ \ \ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ TypForallT{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+\ \ \ \ \ \ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ TypExistsT{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}\isanewline
+\ \ \ \ {\isacharbrackright}{\kern0pt}\isanewline
+\ \ \ \ {\isacharbrackleft}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ Var\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ assm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}solved{\isacharunderscore}{\kern0pt}tac\ {\isacharparenleft}{\kern0pt}ctxt\ addsimps\ lookup{\isacharunderscore}{\kern0pt}assms{\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ BVar\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ assm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}solved{\isacharunderscore}{\kern0pt}tac\ ctxt{\isacharcomma}{\kern0pt}\isanewline
+\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ Prim\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ assm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}solved{\isacharunderscore}{\kern0pt}tac\ ctxt{\isacharcomma}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ Unop\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ fn\ i\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ fn\ st\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}typing{\isacharunderscore}{\kern0pt}tac\ ctxt\ hint{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tree\ lookup{\isacharunderscore}{\kern0pt}assms\ func{\isacharunderscore}{\kern0pt}assms{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}{\isachargreater}{\kern0pt}\ SOLVED{\isacharprime}{\kern0pt}{\isacharparenright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ assm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}solved{\isacharunderscore}{\kern0pt}tac\ ctxt{\isacharparenright}{\kern0pt}\ i\ st{\isacharcomma}{\kern0pt}\isanewline
+\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ Binop\ Mono\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ fn\ i\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ fn\ st\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ {\isacharparenleft}{\kern0pt}i{\isacharcomma}{\kern0pt}st{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}{\isacharminus}{\kern0pt}{\isachargreater}{\kern0pt}\ {\isacharparenleft}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ let\ val\ {\isacharparenleft}{\kern0pt}hints{\isadigit{1}}{\isacharcomma}{\kern0pt}\ hints{\isadigit{2}}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ case\ hint{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tree\ of\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ NoPolyHint\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ {\isacharparenleft}{\kern0pt}NoPolyHint{\isacharcomma}{\kern0pt}\ NoPolyHint{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharbar}{\kern0pt}\ PolyHintNode\ {\isacharparenleft}{\kern0pt}{\isacharunderscore}{\kern0pt}{\isacharcomma}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isacharbrackleft}{\kern0pt}h{\isadigit{1}}{\isacharcomma}{\kern0pt}\ h{\isadigit{2}}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ {\isacharparenleft}{\kern0pt}h{\isadigit{1}}{\isacharcomma}{\kern0pt}\ h{\isadigit{2}}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharbar}{\kern0pt}\ {\isacharunderscore}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ error{\isacharparenleft}{\kern0pt}{\isachardoublequote}{\kern0pt}hints\ not\ in\ correct\ format\ for\ binop\ mono{\isachardoublequote}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ in\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}typing{\isacharunderscore}{\kern0pt}tac\ ctxt\ hints{\isadigit{1}}\ lookup{\isacharunderscore}{\kern0pt}assms\ func{\isacharunderscore}{\kern0pt}assms\ {\isacharbar}{\kern0pt}{\isachargreater}{\kern0pt}\ SOLVED{\isacharprime}{\kern0pt}{\isacharparenright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}typing{\isacharunderscore}{\kern0pt}tac\ ctxt\ hints{\isadigit{2}}\ lookup{\isacharunderscore}{\kern0pt}assms\ func{\isacharunderscore}{\kern0pt}assms\ {\isacharbar}{\kern0pt}{\isachargreater}{\kern0pt}\ SOLVED{\isacharprime}{\kern0pt}{\isacharparenright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ assm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}solved{\isacharunderscore}{\kern0pt}tac\ ctxt\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ end\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenright}{\kern0pt}{\isacharcomma}{\kern0pt}\isanewline
+\isanewline
+\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ Binop\ Poly\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ binop{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}tac\ ctxt\ hint{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tree\ lookup{\isacharunderscore}{\kern0pt}assms\ func{\isacharunderscore}{\kern0pt}assms{\isacharcomma}{\kern0pt}\isanewline
+\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ FunExp\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}assm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}solved{\isacharunderscore}{\kern0pt}tac\ {\isacharparenleft}{\kern0pt}ctxt\ addsimps\ func{\isacharunderscore}{\kern0pt}assms{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\isanewline
+\ \ \ \ \ \ assm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}solved{\isacharunderscore}{\kern0pt}tac\ ctxt\ THEN{\isacharprime}{\kern0pt}\ assm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}solved{\isacharunderscore}{\kern0pt}tac\ ctxt\ THEN{\isacharprime}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ goal{\isacharcolon}{\kern0pt}\ {\isasymtau}\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}msubstT{\isacharunderscore}{\kern0pt}opt\ ty{\isacharunderscore}{\kern0pt}params\ ret{\isacharunderscore}{\kern0pt}ty{\isacharparenright}{\kern0pt}\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ {\isacharparenleft}{\kern0pt}ctxt\ addsimps\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ msubstT{\isacharunderscore}{\kern0pt}opt{\isacharunderscore}{\kern0pt}def{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ before\ this\ final\ tactic\ the\ goal\ is\ of\ the\ form\ {\isasymopen}map\ {\isacharparenleft}{\kern0pt}msubstT{\isacharunderscore}{\kern0pt}opt\ ty{\isacharunderscore}{\kern0pt}params{\isacharparenright}{\kern0pt}\ args{\isacharunderscore}{\kern0pt}ty{\isasymclose}{\isacharcomma}{\kern0pt}\ which\ we\ want\ to\ simplify\ fully\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ asm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}tac\ {\isacharparenleft}{\kern0pt}ctxt\ addsimps\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ msubstT{\isacharunderscore}{\kern0pt}opt{\isacharunderscore}{\kern0pt}def{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\isanewline
+\ \ \ \ \ \ typing{\isacharunderscore}{\kern0pt}list{\isacharunderscore}{\kern0pt}tac\ ctxt\ hint{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tree\ lookup{\isacharunderscore}{\kern0pt}assms\ func{\isacharunderscore}{\kern0pt}assms{\isacharcomma}{\kern0pt}\isanewline
+\isanewline
+\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ Old\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ fn\ i\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ fn\ st\ \ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}typing{\isacharunderscore}{\kern0pt}tac\ ctxt\ hint{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tree\ lookup{\isacharunderscore}{\kern0pt}assms\ func{\isacharunderscore}{\kern0pt}assms{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}{\isachargreater}{\kern0pt}\ SOLVED{\isacharprime}{\kern0pt}{\isacharparenright}{\kern0pt}\ i\ st{\isacharcomma}{\kern0pt}\isanewline
+\ \ \ \ \isanewline
+\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ Forall\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ fn\ i\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ fn\ st\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}typing{\isacharunderscore}{\kern0pt}tac\ ctxt\ hint{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tree\ lookup{\isacharunderscore}{\kern0pt}assms\ func{\isacharunderscore}{\kern0pt}assms{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}{\isachargreater}{\kern0pt}\ SOLVED{\isacharprime}{\kern0pt}{\isacharparenright}{\kern0pt}\ i\ st{\isacharcomma}{\kern0pt}\isanewline
+\isanewline
+\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ Exists\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ fn\ i\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ fn\ st\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}typing{\isacharunderscore}{\kern0pt}tac\ ctxt\ hint{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tree\ lookup{\isacharunderscore}{\kern0pt}assms\ func{\isacharunderscore}{\kern0pt}assms{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}{\isachargreater}{\kern0pt}\ SOLVED{\isacharprime}{\kern0pt}{\isacharparenright}{\kern0pt}\ i\ st{\isacharcomma}{\kern0pt}\isanewline
+\isanewline
+\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ ForallT\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ fn\ i\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ fn\ st\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}typing{\isacharunderscore}{\kern0pt}tac\ ctxt\ hint{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tree\ lookup{\isacharunderscore}{\kern0pt}assms\ func{\isacharunderscore}{\kern0pt}assms{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}{\isachargreater}{\kern0pt}\ SOLVED{\isacharprime}{\kern0pt}{\isacharparenright}{\kern0pt}\ i\ st{\isacharcomma}{\kern0pt}\isanewline
+\isanewline
+\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharasterisk}{\kern0pt}\ ExistsT\ {\isacharasterisk}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ fn\ i\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ fn\ st\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}typing{\isacharunderscore}{\kern0pt}tac\ ctxt\ hint{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tree\ lookup{\isacharunderscore}{\kern0pt}assms\ func{\isacharunderscore}{\kern0pt}assms{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}{\isachargreater}{\kern0pt}\ SOLVED{\isacharprime}{\kern0pt}{\isacharparenright}{\kern0pt}\ i\ st\isanewline
+\ \ \ \ {\isacharbrackright}{\kern0pt}\isanewline
+\ and\ \ \isanewline
+\ \ \ typing{\isacharunderscore}{\kern0pt}list{\isacharunderscore}{\kern0pt}tac\ ctxt\ hint{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tree\ lookup{\isacharunderscore}{\kern0pt}assms\ func{\isacharunderscore}{\kern0pt}assms\ {\isacharequal}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ TypListNil{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}\ ORELSE{\isacharprime}{\kern0pt}\isanewline
+\ \ \ \ \ \ {\isacharparenleft}{\kern0pt}resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ TypListCons{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}fn\ i\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ fn\ st\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ {\isacharparenleft}{\kern0pt}i{\isacharcomma}{\kern0pt}\ st{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}{\isacharminus}{\kern0pt}{\isachargreater}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}\ let\ val\ {\isacharparenleft}{\kern0pt}hint{\isadigit{1}}{\isacharcomma}{\kern0pt}\ hint{\isacharunderscore}{\kern0pt}tail{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ case\ hint{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tree\ of\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ NoPolyHint\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ {\isacharparenleft}{\kern0pt}NoPolyHint{\isacharcomma}{\kern0pt}\ NoPolyHint{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharbar}{\kern0pt}\ PolyHintNode\ {\isacharparenleft}{\kern0pt}t{\isacharcomma}{\kern0pt}\ h{\isadigit{1}}\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ htail{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ {\isacharparenleft}{\kern0pt}h{\isadigit{1}}{\isacharcomma}{\kern0pt}\ PolyHintNode\ {\isacharparenleft}{\kern0pt}t{\isacharcomma}{\kern0pt}\ htail{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharbar}{\kern0pt}\ {\isacharunderscore}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ error{\isacharparenleft}{\kern0pt}{\isachardoublequote}{\kern0pt}hints\ not\ in\ correct\ format\ for\ binop\ mono{\isachardoublequote}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ in\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}typing{\isacharunderscore}{\kern0pt}tac\ ctxt\ hint{\isadigit{1}}\ lookup{\isacharunderscore}{\kern0pt}assms\ func{\isacharunderscore}{\kern0pt}assms\ {\isacharbar}{\kern0pt}{\isachargreater}{\kern0pt}\ SOLVED{\isacharprime}{\kern0pt}{\isacharparenright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}typing{\isacharunderscore}{\kern0pt}list{\isacharunderscore}{\kern0pt}tac\ ctxt\ hint{\isacharunderscore}{\kern0pt}tail\ lookup{\isacharunderscore}{\kern0pt}assms\ func{\isacharunderscore}{\kern0pt}assms{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ end\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ {\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ {\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ {\isacharparenright}{\kern0pt}\isanewline
+\ and\ \isanewline
+\ \ \ binop{\isacharunderscore}{\kern0pt}poly{\isacharunderscore}{\kern0pt}tac\ ctxt\ hint{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tree\ lookup{\isacharunderscore}{\kern0pt}assms\ func{\isacharunderscore}{\kern0pt}assms\ i\ st\ {\isacharequal}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ case\ hint{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}tree\ of\isanewline
+\ \ \ \ \ \ \ PolyHintNode\ {\isacharparenleft}{\kern0pt}hint{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}opt{\isacharcomma}{\kern0pt}\ {\isacharbrackleft}{\kern0pt}h{\isadigit{1}}{\isacharcomma}{\kern0pt}h{\isadigit{2}}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}i{\isacharcomma}{\kern0pt}\ st{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}{\isacharminus}{\kern0pt}{\isachargreater}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}\ {\isacharparenleft}{\kern0pt}if\ is{\isacharunderscore}{\kern0pt}some\ hint{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}opt\ then\ resolve{\isacharunderscore}{\kern0pt}tac\ ctxt\ {\isacharbrackleft}{\kern0pt}the\ hint{\isacharunderscore}{\kern0pt}thm{\isacharunderscore}{\kern0pt}opt{\isacharbrackright}{\kern0pt}\ else\ K\ all{\isacharunderscore}{\kern0pt}tac{\isacharparenright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}typing{\isacharunderscore}{\kern0pt}tac\ ctxt\ h{\isadigit{1}}\ lookup{\isacharunderscore}{\kern0pt}assms\ func{\isacharunderscore}{\kern0pt}assms{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}{\isachargreater}{\kern0pt}\ SOLVED{\isacharprime}{\kern0pt}{\isacharparenright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}typing{\isacharunderscore}{\kern0pt}tac\ ctxt\ h{\isadigit{2}}\ lookup{\isacharunderscore}{\kern0pt}assms\ func{\isacharunderscore}{\kern0pt}assms{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}{\isachargreater}{\kern0pt}\ SOLVED{\isacharprime}{\kern0pt}{\isacharparenright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ assm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}solved{\isacharunderscore}{\kern0pt}tac\ {\isacharparenleft}{\kern0pt}ctxt\ addsimps\ {\isacharbrackleft}{\kern0pt}{\isacharat}{\kern0pt}{\isacharbraceleft}{\kern0pt}thm\ msubstT{\isacharunderscore}{\kern0pt}opt{\isacharunderscore}{\kern0pt}def{\isacharbraceright}{\kern0pt}{\isacharbrackright}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ {\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ \ {\isacharbar}{\kern0pt}\ NoPolyHint\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}i{\isacharcomma}{\kern0pt}\ st{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}{\isacharminus}{\kern0pt}{\isachargreater}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}typing{\isacharunderscore}{\kern0pt}tac\ ctxt\ NoPolyHint\ lookup{\isacharunderscore}{\kern0pt}assms\ func{\isacharunderscore}{\kern0pt}assms{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}{\isachargreater}{\kern0pt}\ SOLVED{\isacharprime}{\kern0pt}{\isacharparenright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\isanewline
+\ \ \ \ \ \ \ \ \ \ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}typing{\isacharunderscore}{\kern0pt}tac\ ctxt\ NoPolyHint\ lookup{\isacharunderscore}{\kern0pt}assms\ func{\isacharunderscore}{\kern0pt}assms{\isacharparenright}{\kern0pt}\ {\isacharbar}{\kern0pt}{\isachargreater}{\kern0pt}\ SOLVED{\isacharprime}{\kern0pt}{\isacharparenright}{\kern0pt}\ THEN{\isacharprime}{\kern0pt}\ \isanewline
+\ \ \ \ \ \ \ \ \ \ assm{\isacharunderscore}{\kern0pt}full{\isacharunderscore}{\kern0pt}simp{\isacharunderscore}{\kern0pt}solved{\isacharunderscore}{\kern0pt}tac\ ctxt\isanewline
+\ \ \ \ \ \ \ \ {\isacharparenright}{\kern0pt}\isanewline
+\ \ \ \ \ {\isacharbar}{\kern0pt}\ {\isacharunderscore}{\kern0pt}\ {\isacharequal}{\kern0pt}{\isachargreater}{\kern0pt}\ error{\isacharparenleft}{\kern0pt}{\isachardoublequote}{\kern0pt}hints\ not\ in\ correct\ format\ for\ binop\ mono{\isachardoublequote}{\kern0pt}{\isacharparenright}{\kern0pt}\isanewline
+\isanewline
+fun\ typing{\isacharunderscore}{\kern0pt}tac{\isacharunderscore}{\kern0pt}no{\isacharunderscore}{\kern0pt}hints\ ctxt\ lookup{\isacharunderscore}{\kern0pt}assms\ func{\isacharunderscore}{\kern0pt}assms\ {\isacharequal}{\kern0pt}\ typing{\isacharunderscore}{\kern0pt}tac\ ctxt\ NoPolyHint\ lookup{\isacharunderscore}{\kern0pt}assms\ func{\isacharunderscore}{\kern0pt}assms\isanewline
+{\isacartoucheclose}%
+\endisatagML
+{\isafoldML}%
+%
+\isadelimML
+\isanewline
+%
+\endisadelimML
+%
+\isadelimtheory
+\isanewline
+%
+\endisadelimtheory
+%
+\isatagtheory
+\isakeywordTWO{end}\isamarkupfalse%
+%
+\endisatagtheory
+{\isafoldtheory}%
+%
+\isadelimtheory
+%
+\endisadelimtheory
+%
+\end{isabellebody}%
+\endinput
+%:%file=~/eth/master-thesis/bibin-foundational-boogie/BoogieLang/TypingML.thy%:%
+%:%10=1%:%
+%:%11=1%:%
+%:%12=2%:%
+%:%13=3%:%
+%:%18=3%:%
+%:%23=4%:%
+%:%28=5%:%
+%:%29=5%:%
+%:%165=136%:%
+%:%170=137%:%
+%:%175=138%:%

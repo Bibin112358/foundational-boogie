@@ -1,0 +1,182 @@
+This is LuaHBTeX, Version 1.17.0 (TeX Live 2023)  (format=lualatex 2026.3.24)  24 MAR 2026 16:09
+ restricted system commands enabled.
+**root.tex
+(./root.tex
+LaTeX2e <2022-11-01> patch level 1
+Lua module: luaotfload 2022-10-03 3.23 Lua based OpenType font support
+Lua module: lualibs 2022-10-04 2.75 ConTeXt Lua standard libraries.
+Lua module: lualibs-extended 2022-10-04 2.75 ConTeXt Lua libraries -- extended c
+ollection.
+luaotfload | conf : Root cache directory is "/home/bibinm/.texlive2023/texmf-var
+/luatex-cache/generic/names".
+luaotfload | init : Loading fontloader "fontloader-2022-10-03.lua" from kpse-res
+olved path "/usr/share/texlive/texmf-dist/tex/luatex/luaotfload/fontloader-2022-
+10-03.lua".
+Lua-only attribute luaotfload@noligature = 1
+luaotfload | init : Context OpenType loader version 3.120
+Inserting `luaotfload.node_processor' in `pre_linebreak_filter'.
+Inserting `luaotfload.node_processor' in `hpack_filter'.
+Inserting `luaotfload.glyph_stream' in `glyph_stream_provider'.
+Inserting `luaotfload.define_font' in `define_font'.
+Lua-only attribute luaotfload_color_attribute = 2
+luaotfload | conf : Root cache directory is "/home/bibinm/.texlive2023/texmf-var
+/luatex-cache/generic/names".
+Inserting `luaotfload.harf.strip_prefix' in `find_opentype_file'.
+Inserting `luaotfload.harf.strip_prefix' in `find_truetype_file'.
+Removing  `luaotfload.glyph_stream' from `glyph_stream_provider'.
+Inserting `luaotfload.harf.glyphstream' in `glyph_stream_provider'.
+Inserting `luaotfload.harf.finalize_vlist' in `post_linebreak_filter'.
+Inserting `luaotfload.harf.finalize_hlist' in `hpack_filter'.
+Inserting `luaotfload.cleanup_files' in `wrapup_run'.
+Inserting `luaotfload.harf.finalize_unicode' in `finish_pdffile'.
+Inserting `luaotfload.glyphinfo' in `glyph_info'.
+Lua-only attribute luaotfload.letterspace_done = 3
+Inserting `luaotfload.aux.set_sscale_dimens' in `luaotfload.patch_font'.
+Inserting `luaotfload.aux.set_font_index' in `luaotfload.patch_font'.
+Inserting `luaotfload.aux.patch_cambria_domh' in `luaotfload.patch_font'.
+Inserting `luaotfload.aux.fixup_fontdata' in `luaotfload.patch_font_unsafe'.
+Inserting `luaotfload.aux.set_capheight' in `luaotfload.patch_font'.
+Inserting `luaotfload.aux.set_xheight' in `luaotfload.patch_font'.
+Inserting `luaotfload.rewrite_fontname' in `luaotfload.patch_font'. L3 programm
+ing layer <2023-02-22>
+Inserting `tracingstacklevels' in `input_level_string'.
+(/usr/share/texlive/texmf-dist/tex/latex/base/article.cls
+Document Class: article 2022/07/02 v1.4n Standard LaTeX document class
+(/usr/share/texlive/texmf-dist/tex/latex/base/size10.clo
+File: size10.clo 2022/07/02 v1.4n Standard LaTeX file (size option)
+luaotfload | db : Font names database loaded from /home/bibinm/.texlive2023/texm
+f-var/luatex-cache/generic/names/luaotfload-names.luc.gz)
+\c@part=\count183
+\c@section=\count184
+\c@subsection=\count185
+\c@subsubsection=\count186
+\c@paragraph=\count187
+\c@subparagraph=\count188
+\c@figure=\count189
+\c@table=\count190
+\abovecaptionskip=\skip48
+\belowcaptionskip=\skip49
+\bibindent=\dimen139
+) (./isabelle.sty
+\symbbbfont=\mathgroup4
+LaTeX Font Info:    Overwriting symbol font `bbbfont' in version `bold'
+(Font)                  U/txmia/m/it --> U/txmia/bx/it on input line 44.
+\isa@parindent=\dimen140
+\isa@parskip=\dimen141
+
+(/usr/share/texlive/texmf-dist/tex/generic/ulem/ulem.sty
+\UL@box=\box51
+\UL@hyphenbox=\box52
+\UL@skip=\skip50
+\UL@hook=\toks16
+\UL@height=\dimen142
+\UL@pe=\count191
+\UL@pixel=\dimen143
+\ULC@box=\box53
+Package: ulem 2019/11/18
+\ULdepth=\dimen144
+) (./isabelletags.sty
+(./comment.sty
+\CommentStream=\write3
+ Excluding comment 'comment') Including comment 'isadelimML'
+Including comment 'isatagML' Including comment 'isadelimdocument'
+Including comment 'isatagdocument' Including comment 'isadelimimportant'
+Including comment 'isatagimportant' Excluding comment 'isadeliminvisible'
+Excluding comment 'isataginvisible' Including comment 'isadelimproof'
+Including comment 'isatagproof' Including comment 'isadelimtheory'
+Including comment 'isatagtheory' Including comment 'isadelimunimportant'
+Including comment 'isatagunimportant' Including comment 'isadelimvisible'
+Including comment 'isatagvisible'))
+(/usr/share/texlive/texmf-dist/tex/latex/l3backend/l3backend-luatex.def
+File: l3backend-luatex.def 2023-01-16 L3 backend support: PDF output (LuaTeX)
+\l__color_backend_stack_int=\count192
+\l__pdf_internal_box=\box54
+)
+No file root.aux.
+
+\openout1 = root.aux
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 8.
+LaTeX Font Info:    ... okay on input line 8.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 8.
+LaTeX Font Info:    ... okay on input line 8.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 8.
+LaTeX Font Info:    ... okay on input line 8.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 8.
+LaTeX Font Info:    ... okay on input line 8.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 8.
+LaTeX Font Info:    Trying to load font information for TS1+cmr on input line 8
+.
+(/usr/share/texlive/texmf-dist/tex/latex/base/ts1cmr.fd
+File: ts1cmr.fd 2022/07/10 v2.5l Standard LaTeX font definitions
+)
+LaTeX Font Info:    ... okay on input line 8.
+LaTeX Font Info:    Checking defaults for TU/lmr/m/n on input line 8.
+LaTeX Font Info:    ... okay on input line 8.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 8.
+LaTeX Font Info:    ... okay on input line 8.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 8.
+LaTeX Font Info:    ... okay on input line 8.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <12> on input line 10.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <8> on input line 10.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <6> on input line 10.
+LaTeX Font Info:    Trying to load font information for U+txmia on input line 1
+0.
+
+(/usr/share/texlive/texmf-dist/tex/latex/txfonts/utxmia.fd
+File: utxmia.fd 2000/12/15 v3.1
+) [1
+
+{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}]
+\openout2 = MapExample.aux
+ (./MapExample.tex
+! Undefined control sequence.
+l.55 ...isacharprime}{\kern0pt}p\ {\isasymRightarrow
+                                                  }\ {\isacharprime}{\kern0p...
+? 
+! Undefined control sequence.
+l.96 ...oteopen}IntV{\isadigit{0}}\ i\ {\isasymequiv
+                                                  }\ LitV{\isadigit{0}}\ {\i...
+? 
+! Undefined control sequence.
+l.98 ...\ {\isachardoublequoteopen}TT\ {\isasymequiv
+                                                  }\ TPrim\ TInt{\isachardou...
+? 
+! Undefined control sequence.
+l.101 ...{\isadigit{1}}{\isadigit{1}}\ {\isasymequiv
+                                                  }\ FunL\ {\isacharparenlef...
+? 
+
+Overfull \hbox (1.0323pt too wide) in paragraph at lines 99--101
+[][]\TU/lmr/bx/n/9 ab-bre-vi-a-tion \TU/lmtt/m/sl/9 m11 :: "'a val1" \TU/lmr/bx
+/n/9 where \TU/lmtt/m/sl/9 "m11  FunL (undefined(IntV0 3 := Inr
+ []
+
+! Undefined control sequence.
+l.103 ...{\isadigit{1}}{\isadigit{4}}\ {\isasymequiv
+                                                  }\ MapV\ {\isacharparenlef...
+? 
+! Undefined control sequence.
+l.106 ...{\isadigit{2}}{\isadigit{2}}\ {\isasymequiv
+                                                  }\ FunL\ {\isacharparenlef...
+? 
+! Emergency stop.
+l.106 
+    
+End of file on the terminal!
+
+
+
+Here is how much of LuaTeX's memory you used:
+ 968 strings out of 478285
+ 100000,1977958 words of node,token memory allocated 11489 words of node memory still in use:
+   96 hlist, 2 rule, 30 disc, 27 local_par, 1 dir, 291 glue, 129 kern, 32 penalt
+y, 752 glyph, 423 attribute, 58 glue_spec, 423 attribute_list, 1 temp, 3 if_stac
+k, 4 write nodes
+   avail lists: 4:2,5:2,8:1,10:1
+ 21201 multiletter control sequences out of 65536+600000
+ 38 fonts using 2748039 bytes
+ 55i,6n,59p,766b,213s stack positions out of 10000i,1000n,20000p,200000b,200000s
+!  ==> Fatal error occurred, no output PDF file produced!

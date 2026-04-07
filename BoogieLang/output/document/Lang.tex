@@ -1,0 +1,477 @@
+%
+\begin{isabellebody}%
+\setisabellecontext{Lang}%
+%
+\isadelimdocument
+%
+\endisadelimdocument
+%
+\isatagdocument
+%
+\isamarkupsection{Syntax of the Boogie language%
+}
+\isamarkuptrue%
+%
+\endisatagdocument
+{\isafolddocument}%
+%
+\isadelimdocument
+%
+\endisadelimdocument
+%
+\isadelimtheory
+%
+\endisadelimtheory
+%
+\isatagtheory
+\isakeywordONE{theory}\isamarkupfalse%
+\ Lang\isanewline
+\ \ \isakeywordTWO{imports}\ Main\ HOL{\isachardot}{\kern0pt}Real\isanewline
+\isakeywordTWO{begin}%
+\endisatagtheory
+{\isafoldtheory}%
+%
+\isadelimtheory
+\isanewline
+%
+\endisadelimtheory
+\isanewline
+\isakeywordONE{type{\isacharunderscore}{\kern0pt}synonym}\isamarkupfalse%
+\ fname\ {\isacharequal}{\kern0pt}\ string\ \isanewline
+\isakeywordONE{type{\isacharunderscore}{\kern0pt}synonym}\isamarkupfalse%
+\ vname\ {\isacharequal}{\kern0pt}\ nat\ \isanewline
+\isakeywordONE{type{\isacharunderscore}{\kern0pt}synonym}\isamarkupfalse%
+\ pname\ {\isacharequal}{\kern0pt}\ string\ \isanewline
+\isanewline
+\isakeywordONE{datatype}\isamarkupfalse%
+\ lit\ {\isacharequal}{\kern0pt}\ \ LBool\ bool\ \ {\isacharbar}{\kern0pt}\ LInt\ int\ {\isacharbar}{\kern0pt}\ LReal\ real\isanewline
+\isanewline
+\isakeywordONE{datatype}\isamarkupfalse%
+\ binop\ {\isacharequal}{\kern0pt}\ Eq\ {\isacharbar}{\kern0pt}\ Neq\ {\isacharbar}{\kern0pt}\ Add\ {\isacharbar}{\kern0pt}\ Sub\ {\isacharbar}{\kern0pt}\ Mul\ {\isacharbar}{\kern0pt}\ Div\ {\isacharbar}{\kern0pt}\ RealDiv\ {\isacharbar}{\kern0pt}\ Mod\ {\isacharbar}{\kern0pt}\ Lt\ {\isacharbar}{\kern0pt}\ Le\ {\isacharbar}{\kern0pt}\ Gt\ {\isacharbar}{\kern0pt}\ Ge\ {\isacharbar}{\kern0pt}\ And\ {\isacharbar}{\kern0pt}\ Or\ {\isacharbar}{\kern0pt}\ Imp\ {\isacharbar}{\kern0pt}\ Iff\isanewline
+\isakeywordONE{datatype}\isamarkupfalse%
+\ unop\ {\isacharequal}{\kern0pt}\ Not\ {\isacharbar}{\kern0pt}\ UMinus\ {\isacharbar}{\kern0pt}\ IntToReal\isanewline
+\isanewline
+\isakeywordONE{datatype}\isamarkupfalse%
+\ prim{\isacharunderscore}{\kern0pt}ty\ \isanewline
+\ {\isacharequal}{\kern0pt}\ TBool\ {\isacharbar}{\kern0pt}\ TInt\ {\isacharbar}{\kern0pt}\ TReal\isanewline
+\isanewline
+\isakeywordONE{type{\isacharunderscore}{\kern0pt}synonym}\isamarkupfalse%
+\ tcon{\isacharunderscore}{\kern0pt}id\ {\isacharequal}{\kern0pt}\ string\ \isanewline
+\isanewline
+\isakeywordONE{datatype}\isamarkupfalse%
+\ ty\isanewline
+\ \ {\isacharequal}{\kern0pt}\ TVar\ nat\ {\isacharbar}{\kern0pt}\ \isanewline
+\ \ \ \ TPrim\ prim{\isacharunderscore}{\kern0pt}ty\ {\isacharbar}{\kern0pt}\ \isanewline
+\ \ \ \ TCon\ tcon{\isacharunderscore}{\kern0pt}id\ {\isachardoublequoteopen}ty\ list{\isachardoublequoteclose}\ \ {\isacharbar}{\kern0pt}\isanewline
+\ \ \ \ TMap\ ty\ ty\ \isanewline
+\isanewline
+\isakeywordONE{primrec}\isamarkupfalse%
+\ type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}lit\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}lit\ {\isasymRightarrow}\ prim{\isacharunderscore}{\kern0pt}ty{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{where}\ \isanewline
+\ \ \ \ {\isachardoublequoteopen}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}lit\ {\isacharparenleft}{\kern0pt}LBool\ {\isacharunderscore}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ TBool{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}lit\ {\isacharparenleft}{\kern0pt}LInt\ {\isacharunderscore}{\kern0pt}{\isacharparenright}{\kern0pt}\ \ {\isacharequal}{\kern0pt}\ TInt{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}type{\isacharunderscore}{\kern0pt}of{\isacharunderscore}{\kern0pt}lit\ {\isacharparenleft}{\kern0pt}LReal\ {\isacharunderscore}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ TReal{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordONE{datatype}\isamarkupfalse%
+\ expr\isanewline
+\ \ {\isacharequal}{\kern0pt}\isanewline
+\ \ \ \ Var\ vname\isanewline
+\ \ {\isacharbar}{\kern0pt}\ BVar\ nat\ \isanewline
+\ \ {\isacharbar}{\kern0pt}\ Lit\ lit\isanewline
+\ \ {\isacharbar}{\kern0pt}\ UnOp\ unop\ {\isachardoublequoteopen}expr{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ BinOp\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}expr{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ binop\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}expr{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ {\isacharparenleft}{\kern0pt}{\isachardoublequoteopen}{\isacharunderscore}{\kern0pt}\ {\isasymguillemotleft}{\isacharunderscore}{\kern0pt}{\isasymguillemotright}\ {\isacharunderscore}{\kern0pt}{\isachardoublequoteclose}\ {\isacharbrackleft}{\kern0pt}{\isadigit{8}}{\isadigit{0}}{\isacharcomma}{\kern0pt}{\isadigit{0}}{\isacharcomma}{\kern0pt}{\isadigit{8}}{\isadigit{1}}{\isacharbrackright}{\kern0pt}\ {\isadigit{8}}{\isadigit{0}}{\isacharparenright}{\kern0pt}\ \isanewline
+\ \ {\isacharbar}{\kern0pt}\ FunExp\ fname\ {\isachardoublequoteopen}ty\ list{\isachardoublequoteclose}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}expr\ list{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\ \isanewline
+\ \ {\isacharbar}{\kern0pt}\ MapSelect\ expr\ expr\isanewline
+\ \ {\isacharbar}{\kern0pt}\ MapStore\ expr\ expr\ expr\isanewline
+\ \ {\isacharbar}{\kern0pt}\ CondExp\ expr\ expr\ expr\isanewline
+\ \ {\isacharbar}{\kern0pt}\ Old\ expr\isanewline
+\isanewline
+\ \ {\isacharbar}{\kern0pt}\ Forall\ ty\ expr\isanewline
+\ \ {\isacharbar}{\kern0pt}\ Exists\ ty\ expr\isanewline
+\isanewline
+\ \ {\isacharbar}{\kern0pt}\ ForallT\ expr\ \isanewline
+\ \ {\isacharbar}{\kern0pt}\ ExistsT\ expr%
+\begin{isamarkuptext}%
+We use a De-Bruijn encoding for bound variables \isa{\isaconst{BVar}} and names for local/global variables 
+\isa{\isaconst{Var}} (where names are natural numbers. While this setup suggests that we use the locally 
+nameless encoding, this is not the case (see Semantics.thy for more details).%
+\end{isamarkuptext}\isamarkuptrue%
+\isakeywordONE{datatype}\isamarkupfalse%
+\ cmd\isanewline
+\ {\isacharequal}{\kern0pt}\ Assert\ expr\isanewline
+\ {\isacharbar}{\kern0pt}\ Assume\ expr\isanewline
+\ {\isacharbar}{\kern0pt}\ Assign\ vname\ expr\isanewline
+\ {\isacharbar}{\kern0pt}\ Havoc\ vname\isanewline
+\ {\isacharbar}{\kern0pt}\ ProcCall\ pname\ {\isachardoublequoteopen}expr\ list{\isachardoublequoteclose}\ {\isachardoublequoteopen}vname\ list{\isachardoublequoteclose}%
+\begin{isamarkuptext}%
+Function declarations: number of type parameters, argument types and return type%
+\end{isamarkuptext}\isamarkuptrue%
+\isakeywordONE{type{\isacharunderscore}{\kern0pt}synonym}\isamarkupfalse%
+\ fdecl\ {\isacharequal}{\kern0pt}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}fname\ {\isasymtimes}\ nat\ {\isasymtimes}\ ty\ list\ {\isasymtimes}\ ty{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isakeywordONE{type{\isacharunderscore}{\kern0pt}synonym}\isamarkupfalse%
+\ fdecls\ {\isacharequal}{\kern0pt}\ {\isachardoublequoteopen}fdecl\ list{\isachardoublequoteclose}%
+\begin{isamarkuptext}%
+Variable declarations: the optional expression represents the where-clause%
+\end{isamarkuptext}\isamarkuptrue%
+\isakeywordONE{type{\isacharunderscore}{\kern0pt}synonym}\isamarkupfalse%
+\ vdecl\ {\isacharequal}{\kern0pt}\ {\isachardoublequoteopen}vname\ {\isasymtimes}\ ty\ {\isasymtimes}\ {\isacharparenleft}{\kern0pt}expr\ option{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isakeywordONE{type{\isacharunderscore}{\kern0pt}synonym}\isamarkupfalse%
+\ vdecls\ {\isacharequal}{\kern0pt}\ {\isachardoublequoteopen}vdecl\ list{\isachardoublequoteclose}%
+\begin{isamarkuptext}%
+Type constructor declarations: number of arguments for each constructor%
+\end{isamarkuptext}\isamarkuptrue%
+\isakeywordONE{type{\isacharunderscore}{\kern0pt}synonym}\isamarkupfalse%
+\ tdecls\ {\isacharequal}{\kern0pt}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}tcon{\isacharunderscore}{\kern0pt}id\ {\isasymtimes}\ nat{\isacharparenright}{\kern0pt}\ list{\isachardoublequoteclose}%
+\begin{isamarkuptext}%
+Basic blocks as a list of commands%
+\end{isamarkuptext}\isamarkuptrue%
+\isakeywordONE{type{\isacharunderscore}{\kern0pt}synonym}\isamarkupfalse%
+\ block\ {\isacharequal}{\kern0pt}\ {\isachardoublequoteopen}cmd\ list{\isachardoublequoteclose}%
+\begin{isamarkuptext}%
+Identify nodes in the CFG by natural numbers. We always use block identifiers from 0 to N-1 when
+there N blocks in the CFG%
+\end{isamarkuptext}\isamarkuptrue%
+\isakeywordONE{type{\isacharunderscore}{\kern0pt}synonym}\isamarkupfalse%
+\ node\ {\isacharequal}{\kern0pt}\ {\isachardoublequoteopen}nat{\isachardoublequoteclose}\isanewline
+\ \isanewline
+\isakeywordONE{record}\isamarkupfalse%
+\ mbodyCFG\ {\isacharequal}{\kern0pt}\isanewline
+\ \ entry\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}node{\isachardoublequoteclose}\isanewline
+\ \ out{\isacharunderscore}{\kern0pt}edges\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}node\ list{\isacharparenright}{\kern0pt}\ list{\isachardoublequoteclose}\isanewline
+\ \ node{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}block\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}block\ list{\isachardoublequoteclose}%
+\begin{isamarkuptext}%
+Let N be the number of blocks in the CFG.
+CFG of a procedure body is represented by:
+  1) A block id indicating the entry of the CFG (\isa{\isaconst{entry}})
+  2) The outgoing edges for each block. We represent this is as a list of length N (\isa{\isaconst{out{\isacharunderscore}{\kern0pt}edges}}).
+     The outgoing block ids for the block with id i are given by i-th element in the list.
+  3) A mapping from block ids to the corresponding list of commands. We represent this as a list of
+     length N, where the list of commands for the block with id i are given by the i-th element in
+     the list.%
+\end{isamarkuptext}\isamarkuptrue%
+%
+\begin{isamarkuptext}%
+Procedure pre- and postconditions contain a boolean to indicate whether they are free (true) or 
+      checked (false).%
+\end{isamarkuptext}\isamarkuptrue%
+\isakeywordONE{record}\isamarkupfalse%
+\ {\isacharprime}{\kern0pt}struct{\isacharunderscore}{\kern0pt}ty\ procedure\ {\isacharequal}{\kern0pt}\isanewline
+\ \ proc{\isacharunderscore}{\kern0pt}ty{\isacharunderscore}{\kern0pt}args\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ nat\isanewline
+\ \ proc{\isacharunderscore}{\kern0pt}args\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ vdecls\isanewline
+\ \ proc{\isacharunderscore}{\kern0pt}rets\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ vdecls\isanewline
+\ \ proc{\isacharunderscore}{\kern0pt}modifs\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}vname\ list{\isachardoublequoteclose}\isanewline
+\ \ proc{\isacharunderscore}{\kern0pt}pres\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}expr\ {\isasymtimes}\ bool{\isacharparenright}{\kern0pt}\ list{\isachardoublequoteclose}\ \isanewline
+\ \ proc{\isacharunderscore}{\kern0pt}posts\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}expr\ {\isasymtimes}\ bool{\isacharparenright}{\kern0pt}\ list{\isachardoublequoteclose}\isanewline
+\ \ proc{\isacharunderscore}{\kern0pt}body\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharparenleft}{\kern0pt}vdecls\ {\isasymtimes}\ {\isacharprime}{\kern0pt}struct{\isacharunderscore}{\kern0pt}ty{\isacharparenright}{\kern0pt}\ option{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordONE{fun}\isamarkupfalse%
+\ proc{\isacharunderscore}{\kern0pt}checked{\isacharunderscore}{\kern0pt}pres\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}struct{\isacharunderscore}{\kern0pt}ty\ procedure\ {\isasymRightarrow}\ expr\ list{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{where}\ {\isachardoublequoteopen}proc{\isacharunderscore}{\kern0pt}checked{\isacharunderscore}{\kern0pt}pres\ p\ {\isacharequal}{\kern0pt}\ map\ fst\ {\isacharparenleft}{\kern0pt}filter\ {\isacharparenleft}{\kern0pt}{\isasymlambda}x{\isachardot}{\kern0pt}\ {\isasymnot}\ snd{\isacharparenleft}{\kern0pt}x{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}proc{\isacharunderscore}{\kern0pt}pres\ p{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordONE{fun}\isamarkupfalse%
+\ proc{\isacharunderscore}{\kern0pt}free{\isacharunderscore}{\kern0pt}pres\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}struct{\isacharunderscore}{\kern0pt}ty\ procedure\ {\isasymRightarrow}\ expr\ list{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{where}\ {\isachardoublequoteopen}proc{\isacharunderscore}{\kern0pt}free{\isacharunderscore}{\kern0pt}pres\ p\ {\isacharequal}{\kern0pt}\ map\ fst\ {\isacharparenleft}{\kern0pt}filter\ {\isacharparenleft}{\kern0pt}{\isasymlambda}x{\isachardot}{\kern0pt}\ snd{\isacharparenleft}{\kern0pt}x{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}proc{\isacharunderscore}{\kern0pt}pres\ p{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordONE{fun}\isamarkupfalse%
+\ proc{\isacharunderscore}{\kern0pt}all{\isacharunderscore}{\kern0pt}pres\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}struct{\isacharunderscore}{\kern0pt}ty\ procedure\ {\isasymRightarrow}\ expr\ list{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{where}\ {\isachardoublequoteopen}proc{\isacharunderscore}{\kern0pt}all{\isacharunderscore}{\kern0pt}pres\ p\ {\isacharequal}{\kern0pt}\ map\ fst\ {\isacharparenleft}{\kern0pt}proc{\isacharunderscore}{\kern0pt}pres\ p{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordONE{fun}\isamarkupfalse%
+\ proc{\isacharunderscore}{\kern0pt}checked{\isacharunderscore}{\kern0pt}posts\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}struct{\isacharunderscore}{\kern0pt}ty\ procedure\ {\isasymRightarrow}\ expr\ list{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{where}\ {\isachardoublequoteopen}proc{\isacharunderscore}{\kern0pt}checked{\isacharunderscore}{\kern0pt}posts\ p\ {\isacharequal}{\kern0pt}\ map\ fst\ {\isacharparenleft}{\kern0pt}filter\ {\isacharparenleft}{\kern0pt}{\isasymlambda}x{\isachardot}{\kern0pt}\ {\isasymnot}\ snd{\isacharparenleft}{\kern0pt}x{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}proc{\isacharunderscore}{\kern0pt}posts\ p{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordONE{fun}\isamarkupfalse%
+\ proc{\isacharunderscore}{\kern0pt}all{\isacharunderscore}{\kern0pt}posts\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}struct{\isacharunderscore}{\kern0pt}ty\ procedure\ {\isasymRightarrow}\ expr\ list{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{where}\ {\isachardoublequoteopen}proc{\isacharunderscore}{\kern0pt}all{\isacharunderscore}{\kern0pt}posts\ p\ {\isacharequal}{\kern0pt}\ map\ fst\ {\isacharparenleft}{\kern0pt}proc{\isacharunderscore}{\kern0pt}posts\ p{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordONE{fun}\isamarkupfalse%
+\ proc{\isacharunderscore}{\kern0pt}free{\isacharunderscore}{\kern0pt}posts\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}struct{\isacharunderscore}{\kern0pt}ty\ procedure\ {\isasymRightarrow}\ expr\ list{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{where}\ {\isachardoublequoteopen}proc{\isacharunderscore}{\kern0pt}free{\isacharunderscore}{\kern0pt}posts\ p\ {\isacharequal}{\kern0pt}\ map\ fst\ {\isacharparenleft}{\kern0pt}filter\ {\isacharparenleft}{\kern0pt}{\isasymlambda}x{\isachardot}{\kern0pt}\ snd{\isacharparenleft}{\kern0pt}x{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}proc{\isacharunderscore}{\kern0pt}posts\ p{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+\isanewline
+\isakeywordONE{definition}\isamarkupfalse%
+\ exprs{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}only{\isacharunderscore}{\kern0pt}checked{\isacharunderscore}{\kern0pt}spec\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}expr\ list\ {\isasymRightarrow}\ {\isacharparenleft}{\kern0pt}expr\ {\isasymtimes}\ bool{\isacharparenright}{\kern0pt}\ list{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{where}\ {\isachardoublequoteopen}exprs{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}only{\isacharunderscore}{\kern0pt}checked{\isacharunderscore}{\kern0pt}spec\ es\ {\isacharequal}{\kern0pt}\ map\ {\isacharparenleft}{\kern0pt}{\isasymlambda}e{\isachardot}{\kern0pt}\ {\isacharparenleft}{\kern0pt}e{\isacharcomma}{\kern0pt}\ False{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}\ es{\isachardoublequoteclose}%
+\begin{isamarkuptext}%
+For cases where there are no free pre- and postconditions, one can use
+ \isa{\isaconst{exprs{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}only{\isacharunderscore}{\kern0pt}checked{\isacharunderscore}{\kern0pt}spec}} to lift expressions to checked pre- and postconditions.
+The proof generation currently does not support free specifications.%
+\end{isamarkuptext}\isamarkuptrue%
+\isakeywordONE{lemma}\isamarkupfalse%
+\ exprs{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}only{\isacharunderscore}{\kern0pt}checked{\isacharunderscore}{\kern0pt}spec{\isacharunderscore}{\kern0pt}{\isadigit{1}}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}es\ {\isacharequal}{\kern0pt}\ map\ fst\ {\isacharparenleft}{\kern0pt}exprs{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}only{\isacharunderscore}{\kern0pt}checked{\isacharunderscore}{\kern0pt}spec\ es{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+%
+\isadelimproof
+\ \ %
+\endisadelimproof
+%
+\isatagproof
+\isakeywordONE{unfolding}\isamarkupfalse%
+\ exprs{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}only{\isacharunderscore}{\kern0pt}checked{\isacharunderscore}{\kern0pt}spec{\isacharunderscore}{\kern0pt}def\isanewline
+\ \ \isakeywordONE{by}\isamarkupfalse%
+\ {\isacharparenleft}{\kern0pt}induction\ es{\isacharparenright}{\kern0pt}\ auto%
+\endisatagproof
+{\isafoldproof}%
+%
+\isadelimproof
+\isanewline
+%
+\endisadelimproof
+\isanewline
+\isakeywordONE{lemma}\isamarkupfalse%
+\ exprs{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}only{\isacharunderscore}{\kern0pt}checked{\isacharunderscore}{\kern0pt}spec{\isacharunderscore}{\kern0pt}{\isadigit{2}}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}es\ {\isacharequal}{\kern0pt}\ map\ fst\ {\isacharparenleft}{\kern0pt}filter\ {\isacharparenleft}{\kern0pt}{\isasymlambda}x{\isachardot}{\kern0pt}\ {\isasymnot}\ snd\ x{\isacharparenright}{\kern0pt}\ {\isacharparenleft}{\kern0pt}exprs{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}only{\isacharunderscore}{\kern0pt}checked{\isacharunderscore}{\kern0pt}spec\ es{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+%
+\isadelimproof
+\ \ %
+\endisadelimproof
+%
+\isatagproof
+\isakeywordONE{unfolding}\isamarkupfalse%
+\ exprs{\isacharunderscore}{\kern0pt}to{\isacharunderscore}{\kern0pt}only{\isacharunderscore}{\kern0pt}checked{\isacharunderscore}{\kern0pt}spec{\isacharunderscore}{\kern0pt}def\isanewline
+\ \ \isakeywordONE{by}\isamarkupfalse%
+\ {\isacharparenleft}{\kern0pt}induction\ es{\isacharparenright}{\kern0pt}\ auto%
+\endisatagproof
+{\isafoldproof}%
+%
+\isadelimproof
+\isanewline
+%
+\endisadelimproof
+\isanewline
+\isakeywordONE{type{\isacharunderscore}{\kern0pt}synonym}\isamarkupfalse%
+\ {\isacharprime}{\kern0pt}struct{\isacharunderscore}{\kern0pt}ty\ pdecl\ {\isacharequal}{\kern0pt}\ {\isachardoublequoteopen}pname\ {\isasymtimes}\ {\isacharprime}{\kern0pt}struct{\isacharunderscore}{\kern0pt}ty\ procedure{\isachardoublequoteclose}%
+\begin{isamarkuptext}%
+An axiom is a boolean expression that can refer to constants.%
+\end{isamarkuptext}\isamarkuptrue%
+\isakeywordONE{type{\isacharunderscore}{\kern0pt}synonym}\isamarkupfalse%
+\ axiom\ {\isacharequal}{\kern0pt}\ expr\isanewline
+\isanewline
+\isakeywordONE{record}\isamarkupfalse%
+\ {\isacharprime}{\kern0pt}struct{\isacharunderscore}{\kern0pt}ty\ prog\ {\isacharequal}{\kern0pt}\isanewline
+\ \ prog{\isacharunderscore}{\kern0pt}ty{\isacharunderscore}{\kern0pt}constr\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ tdecls\ \isanewline
+\ \ prog{\isacharunderscore}{\kern0pt}funcs\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ fdecls\isanewline
+\ \ prog{\isacharunderscore}{\kern0pt}consts\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ vdecls\isanewline
+\ \ prog{\isacharunderscore}{\kern0pt}globals\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ vdecls\isanewline
+\ \ prog{\isacharunderscore}{\kern0pt}axioms\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}axiom\ list{\isachardoublequoteclose}\isanewline
+\ \ prog{\isacharunderscore}{\kern0pt}procs\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}{\isacharprime}{\kern0pt}struct{\isacharunderscore}{\kern0pt}ty\ pdecl\ list{\isachardoublequoteclose}%
+\begin{isamarkuptext}%
+Type declarations are ignored by the semantics (all possible types are taken into account, which
+is more general and the resulting semantics can be reduced to the case where one only quantifies over 
+those types that can be constructed via the type declarations that appear in the program).%
+\end{isamarkuptext}\isamarkuptrue%
+\isakeywordONE{primrec}\isamarkupfalse%
+\ closed\ {\isacharcolon}{\kern0pt}{\isacharcolon}{\kern0pt}\ {\isachardoublequoteopen}ty\ {\isasymRightarrow}\ bool{\isachardoublequoteclose}\isanewline
+\ \ \isakeywordTWO{where}\isanewline
+\ \ \ \ {\isachardoublequoteopen}closed\ {\isacharparenleft}{\kern0pt}TVar\ i{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ False{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}closed\ {\isacharparenleft}{\kern0pt}TPrim\ prim{\isacharunderscore}{\kern0pt}ty{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ True{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}closed\ {\isacharparenleft}{\kern0pt}TCon\ tcon{\isacharunderscore}{\kern0pt}id\ ty{\isacharunderscore}{\kern0pt}args{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ list{\isacharunderscore}{\kern0pt}all\ closed\ ty{\isacharunderscore}{\kern0pt}args{\isachardoublequoteclose}\isanewline
+\ \ {\isacharbar}{\kern0pt}\ {\isachardoublequoteopen}closed\ {\isacharparenleft}{\kern0pt}TMap\ ty{\isacharunderscore}{\kern0pt}key\ ty{\isacharunderscore}{\kern0pt}val{\isacharparenright}{\kern0pt}\ {\isacharequal}{\kern0pt}\ {\isacharparenleft}{\kern0pt}{\isacharparenleft}{\kern0pt}closed\ ty{\isacharunderscore}{\kern0pt}val{\isacharparenright}{\kern0pt}\ {\isasymand}\ {\isacharparenleft}{\kern0pt}closed\ ty{\isacharunderscore}{\kern0pt}key{\isacharparenright}{\kern0pt}{\isacharparenright}{\kern0pt}{\isachardoublequoteclose}\isanewline
+%
+\isadelimtheory
+\isanewline
+%
+\endisadelimtheory
+%
+\isatagtheory
+\isakeywordTWO{end}\isamarkupfalse%
+%
+\endisatagtheory
+{\isafoldtheory}%
+%
+\isadelimtheory
+%
+\endisadelimtheory
+%
+\end{isabellebody}%
+\endinput
+%:%file=~/eth/master-thesis/bibin-foundational-boogie/BoogieLang/Lang.thy%:%
+%:%11=1%:%
+%:%27=3%:%
+%:%28=3%:%
+%:%29=4%:%
+%:%30=5%:%
+%:%35=5%:%
+%:%38=6%:%
+%:%39=7%:%
+%:%40=7%:%
+%:%41=8%:%
+%:%42=8%:%
+%:%43=9%:%
+%:%44=9%:%
+%:%45=10%:%
+%:%46=11%:%
+%:%47=11%:%
+%:%48=12%:%
+%:%49=13%:%
+%:%50=13%:%
+%:%51=14%:%
+%:%52=14%:%
+%:%53=15%:%
+%:%54=16%:%
+%:%55=16%:%
+%:%56=17%:%
+%:%57=18%:%
+%:%58=19%:%
+%:%59=19%:%
+%:%60=20%:%
+%:%61=21%:%
+%:%62=21%:%
+%:%63=22%:%
+%:%64=23%:%
+%:%65=24%:%
+%:%66=25%:%
+%:%67=26%:%
+%:%68=27%:%
+%:%69=27%:%
+%:%70=28%:%
+%:%71=29%:%
+%:%72=30%:%
+%:%73=31%:%
+%:%74=32%:%
+%:%75=33%:%
+%:%76=33%:%
+%:%77=34%:%
+%:%78=35%:%
+%:%79=36%:%
+%:%80=37%:%
+%:%81=38%:%
+%:%82=39%:%
+%:%83=40%:%
+%:%84=41%:%
+%:%85=42%:%
+%:%86=43%:%
+%:%87=44%:%
+%:%88=45%:%
+%:%89=46%:%
+%:%90=47%:%
+%:%91=48%:%
+%:%92=49%:%
+%:%93=50%:%
+%:%95=52%:%
+%:%96=53%:%
+%:%97=54%:%
+%:%99=57%:%
+%:%100=57%:%
+%:%101=58%:%
+%:%102=59%:%
+%:%103=60%:%
+%:%104=61%:%
+%:%105=62%:%
+%:%107=64%:%
+%:%109=65%:%
+%:%110=65%:%
+%:%111=66%:%
+%:%112=66%:%
+%:%114=68%:%
+%:%116=69%:%
+%:%117=69%:%
+%:%118=70%:%
+%:%119=70%:%
+%:%121=72%:%
+%:%123=73%:%
+%:%124=73%:%
+%:%126=75%:%
+%:%128=76%:%
+%:%129=76%:%
+%:%131=78%:%
+%:%132=79%:%
+%:%134=80%:%
+%:%135=80%:%
+%:%136=81%:%
+%:%137=82%:%
+%:%138=82%:%
+%:%139=83%:%
+%:%140=84%:%
+%:%141=85%:%
+%:%143=88%:%
+%:%144=89%:%
+%:%145=90%:%
+%:%146=91%:%
+%:%147=92%:%
+%:%148=93%:%
+%:%149=94%:%
+%:%150=95%:%
+%:%154=98%:%
+%:%155=99%:%
+%:%157=100%:%
+%:%158=100%:%
+%:%159=101%:%
+%:%160=102%:%
+%:%161=103%:%
+%:%162=104%:%
+%:%163=105%:%
+%:%164=106%:%
+%:%165=107%:%
+%:%166=108%:%
+%:%167=109%:%
+%:%168=109%:%
+%:%169=110%:%
+%:%170=111%:%
+%:%171=112%:%
+%:%172=112%:%
+%:%173=113%:%
+%:%174=114%:%
+%:%175=115%:%
+%:%176=115%:%
+%:%177=116%:%
+%:%178=117%:%
+%:%179=118%:%
+%:%180=118%:%
+%:%181=119%:%
+%:%182=120%:%
+%:%183=121%:%
+%:%184=121%:%
+%:%185=122%:%
+%:%186=123%:%
+%:%187=124%:%
+%:%188=124%:%
+%:%189=125%:%
+%:%190=126%:%
+%:%191=127%:%
+%:%192=127%:%
+%:%193=128%:%
+%:%195=129%:%
+%:%196=130%:%
+%:%197=131%:%
+%:%199=133%:%
+%:%200=133%:%
+%:%203=134%:%
+%:%207=134%:%
+%:%208=134%:%
+%:%209=135%:%
+%:%210=135%:%
+%:%215=135%:%
+%:%218=136%:%
+%:%219=137%:%
+%:%220=137%:%
+%:%223=138%:%
+%:%227=138%:%
+%:%228=138%:%
+%:%229=139%:%
+%:%230=139%:%
+%:%235=139%:%
+%:%238=140%:%
+%:%239=141%:%
+%:%240=141%:%
+%:%242=143%:%
+%:%244=144%:%
+%:%245=144%:%
+%:%246=145%:%
+%:%247=146%:%
+%:%248=146%:%
+%:%249=147%:%
+%:%250=148%:%
+%:%251=149%:%
+%:%252=150%:%
+%:%253=151%:%
+%:%254=152%:%
+%:%256=154%:%
+%:%257=155%:%
+%:%258=156%:%
+%:%260=158%:%
+%:%261=158%:%
+%:%262=159%:%
+%:%263=160%:%
+%:%264=161%:%
+%:%265=162%:%
+%:%266=163%:%
+%:%269=164%:%
+%:%274=165%:%
