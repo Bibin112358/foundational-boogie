@@ -301,7 +301,7 @@ lemma wf_vAdd1: "wf vAdd1"
 subsubsection \<open>Well formdness of a higher order map\<close>
 
 locale valoftype =
-  assumes VOT: "\<And>t. valid_mapty t \<Longrightarrow> closed t \<Longrightarrow> (type_of_val ((val_of_type t)::'a::absval valn) = t \<and> wf ((val_of_type t)::'a::absval valn))"
+  assumes VOT: "\<And>t. tmap_lvl t \<le> 3 \<Longrightarrow> closed t \<Longrightarrow> (type_of_val ((val_of_type t)::'a::absval valn) = t \<and> wf ((val_of_type t)::'a::absval valn))"
 begin
 
 fun toVal1 :: "'a valn \<Rightarrow> 'a val1" where "toVal1 (MapV (Inr (Inr m))) = m" | "toVal1 _ = undefined"
@@ -341,25 +341,21 @@ proof -
     using K assms(2) by auto
 qed
 
+lemma validClosedTMII: "tmap_lvl (TMap TT TT) \<le> 3 \<and> closed (TMap TT TT)" by simp
+
 lemma homvotdef: "tyL (toVal1 (val_of_type (TMap TT TT))) = (TT, TT)" using VOT
-  by (smt (verit) One_nat_def Suc_eq_plus1 closed.simps(2,4) tmap_lvl.simps(1,3) kTMII
-      le_eq_less_or_eq max_0_1(2) not_less_eq_eq numeral_Bit1 numeral_One plus_1_eq_Suc toVal1.simps(1)
-      tyL.simps val.distinct(3) valid_mapty.elims(3) wf.simps wf_ty.elims(1) wf_ty.simps(2)
-      zero_less_two)
+  by (metis kTMII toVal1.simps(1) tyL.simps validClosedTMII wf.simps
+      wf_ty.simps(1,2))
 
 
 lemma votTMIIpreserved: "val3ToValn (Inr (Inr (Inl (toVal1 (val_of_type (TMII)))))) = (val_of_type (TMII))"
-  by (metis (no_types, lifting) One_nat_def Suc_eq_plus1 closed.simps(2,4)
-      tmap_lvl.simps(1,3) kTMII le_eq_less_or_eq max_0_1(2) not_less_eq_eq numeral_Bit1
-      numeral_One plus_1_eq_Suc toVal1.simps(1) val3ToValn.simps(3) valid_mapty.elims(3) wf.simps
-      wf_ty.simps(1,2) zero_less_two VOT)
+  by (metis VOT kTMII toVal1.simps(1) val3ToValn.simps(3) validClosedTMII wf.simps
+      wf_ty.simps(1,2))
 
 
 lemma wff: "type_of_val (selectImpl homV k) = TMII"
   apply (case_tac k rule: ValnCases; (simp add: valBij2))
     using homvotdef VOT by auto
-
-lemma validClosedTMII: "valid_mapty (TMap TT TT) \<and> closed (TMap TT TT)" by simp
 
 lemma compwf:
   assumes "a = (MapV (Inr (Inr (FunL f TT TT))))"
@@ -984,5 +980,6 @@ lemma int_inverse_0: "type_of_val k = TT \<Longrightarrow> (k = IntV i) = (conve
 lemmas map_helper =
   locale_select locale_store intintmap inteq 
     int_inverse_3 int_inverse_2 int_inverse_1 int_inverse_0 convert_val_to_int.simps
+    bool_inverse_3 bool_inverse_2 bool_inverse_1
 
 end
