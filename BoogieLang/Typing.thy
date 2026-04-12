@@ -66,12 +66,12 @@ and typing_list :: "fdecls \<Rightarrow> type_env \<Rightarrow> expr list \<Righ
                      F,\<Delta> \<turnstile> e1 : ty1; F,\<Delta> \<turnstile> e2 : ty2;
                      msubstT_opt ty_inst ty1 = msubstT_opt ty_inst ty2\<rbrakk> \<Longrightarrow> 
         F,\<Delta> \<turnstile> e1 \<guillemotleft>bop\<guillemotright> e2 : TPrim (TBool)"
-(*  | TypMapSelect: "\<lbrakk> F,\<Delta> \<turnstile> m : TMap tk tv;
+  | TypMapSelect: "\<lbrakk> F,\<Delta> \<turnstile> m : TMap tk tv; closed (TMap tk tv);
                      F,\<Delta> \<turnstile> k : tk \<rbrakk> \<Longrightarrow>
                      F,\<Delta> \<turnstile> MapSelect m k : tv"
-  | TypMapStore: "\<lbrakk> F,\<Delta> \<turnstile> m : TMap tk tv;
-                     F,\<Delta> \<turnstile> k : tk; F,\<Delta> \<turnstile> k : tv \<rbrakk> \<Longrightarrow>
-                     F,\<Delta> \<turnstile> MapStore m k v : TMap tk tv"*)
+  | TypMapStore: "\<lbrakk> F,\<Delta> \<turnstile> m : TMap tk tv; closed (TMap tk tv);
+                     F,\<Delta> \<turnstile> k : tk; F,\<Delta> \<turnstile> v : tv \<rbrakk> \<Longrightarrow>
+                     F,\<Delta> \<turnstile> MapStore m k v : TMap tk tv"
   | TypFunExp: "\<lbrakk> map_of F f = Some (n_ty_params, args_ty, ret_ty);
                   length ty_params = n_ty_params;
                   length args = length args_ty;

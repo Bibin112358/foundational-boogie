@@ -39,6 +39,8 @@ fun typing_tac ctxt hint_thm_tree lookup_assms func_assms =
         resolve_tac ctxt [@{thm typ_binop_poly_helper_2}] THEN' assm_full_simp_solved_tac ctxt
       else 
         resolve_tac ctxt [@{thm typ_binop_poly_helper_empty}] THEN' assm_full_simp_solved_tac ctxt,
+      resolve_tac ctxt [@{thm TypMapSelect}],
+      resolve_tac ctxt [@{thm TypMapStore}], 
       resolve_tac ctxt [@{thm typ_funexp_helper}],
       resolve_tac ctxt [@{thm TypOld}],
       resolve_tac ctxt [@{thm TypForall}],
@@ -72,6 +74,10 @@ fun typing_tac ctxt hint_thm_tree lookup_assms func_assms =
 
       (* Binop Poly *)
       binop_poly_tac ctxt hint_thm_tree lookup_assms func_assms,
+      (* MapSelect *)
+      assm_full_simp_solved_tac ctxt, 
+      (* MapStore *)
+      assm_full_simp_solved_tac ctxt, 
       (* FunExp *)
       (assm_full_simp_solved_tac (ctxt addsimps func_assms)) THEN'
       assm_full_simp_solved_tac ctxt THEN' assm_full_simp_solved_tac ctxt THEN' 
