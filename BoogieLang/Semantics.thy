@@ -447,6 +447,11 @@ locale semantics =
   fixes map_select :: "('a::absval, 'm::mapval) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
   fixes map_store  :: "('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val \<Rightarrow> ('a, 'm) val"
   fixes maxmaplvl :: nat
+  assumes "\<And>(m::('a, 'm) val) (k::('a, 'm) val) tk tv.
+    \<lbrakk>type_of_val m = TMap tk tv; type_of_val k = tk\<rbrakk> \<Longrightarrow> type_of_val (map_select m k) = tv"
+  assumes "\<And>(m::('a, 'm) val) (k::('a, 'm) val) (r::('a, 'm) val) tk tv.
+    \<lbrakk>type_of_val m = TMap tk tv; type_of_val k = tk; type_of_val r = tv\<rbrakk>
+    \<Longrightarrow> type_of_val (map_store m k r) = TMap tk tv"
   assumes "\<And>v::('a, 'm) val. tmap_lvl (type_of_val v) \<le> maxmaplvl"
 begin
 

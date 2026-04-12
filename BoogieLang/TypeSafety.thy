@@ -177,6 +177,9 @@ lemma old_global_switch_wt:
   unfolding state_well_typed_def
   by simp
 
+lemma instantiate_closed: "closed t \<Longrightarrow> instantiate \<Omega> t = t"
+  by (induction t; simp) (simp add: list.map_ident_strong list_all_iff)
+
 text \<open>Type preservation theorem\<close>
 
 context semantics begin
@@ -226,24 +229,29 @@ next
   from this obtain v1 v2 where 
      E:"binop_eval_val bop v1 v2 = Some v" by auto
   thus ?case using  \<open>binop_poly_type bop\<close> binop_poly_type_correct by fastforce
-(*next
+next
   case (TypMapSelect \<Delta> me tk tv ke r)
   from this obtain mv kv where 
-     " \<Lambda>, \<Gamma>, \<Omega> \<turnstile> \<langle>me, n_s\<rangle> \<Down> mv" and " \<Lambda>, \<Gamma>, \<Omega> \<turnstile> \<langle>ke, n_s\<rangle> \<Down> kv" and 
+     "\<Lambda>, \<Gamma>, \<Omega> \<turnstile> \<langle>me, n_s\<rangle> \<Down> mv" and " \<Lambda>, \<Gamma>, \<Omega> \<turnstile> \<langle>ke, n_s\<rangle> \<Down> kv" and 
      E:"map_select mv kv = r"
     by auto
-  then show ?case using  instantiate_msubst_opt  sorry
-   (* by (smt (verit) TypMapSelect.IH(2,4) TypMapSelect.prems(1,3,4,5,6) Wf_F Wf_\<Gamma>
-        instantiate.simps(4) nstate.fold_congs(2) semantics_axioms semantics_def
-        wf_expr.simps(6))*)
-  (*moreover from this have T1:"type_of_val mv = TMap tk tv" and 
-    T2:"type_of_val kv = tk" using TypMapSelect by auto
-  ultimately show ?case using \<open>(left_ty, right_ty) \<in> targs\<close> \<open>binop_type bop = Some (targs, ret_ty)\<close> binop_type_correct      
-    using TypBinOpMono.hyps(2) 
-    by fastforce*)
+  moreover from this have T1:"type_of_val mv = TMap tk tv" and 
+    T2:"type_of_val kv = tk" using TypMapSelect instantiate_closed by auto
+  ultimately show ?case  using TypMapSelect.hyps
+    using instantiate_closed semantics_axioms semantics_def
+    by (smt (verit, ccfv_SIG) closed.simps(4))
 next
-  case (TypMapStore \<Delta> me tk tv ke r)
-  then show ?case  sorry*)
+  case (TypMapStore \<Delta> me tk tr ke re nv)
+  from this obtain mv kv rv where 
+     "\<Lambda>, \<Gamma>, \<Omega> \<turnstile> \<langle>me, n_s\<rangle> \<Down> mv" and "\<Lambda>, \<Gamma>, \<Omega> \<turnstile> \<langle>ke, n_s\<rangle> \<Down> kv" and 
+     "\<Lambda>, \<Gamma>, \<Omega> \<turnstile> \<langle>re, n_s\<rangle> \<Down> rv" and E:"map_store mv kv rv = nv"
+    by auto
+  moreover from this have T1:"type_of_val mv = TMap tk tr" and 
+    T2:"type_of_val kv = tk" and T3:"type_of_val rv = tr"
+    using TypMapStore instantiate_closed by auto
+  ultimately show ?case
+    using TypMapStore.hyps instantiate_closed semantics_axioms semantics_def
+    by metis
 next
   case (TypFunExp f n_ty_params args_ty ret_ty ty_params args \<Delta>)
   from this obtain vargs fi where
@@ -432,12 +440,31 @@ next
   show ?case
     apply (cases bop; rule exI; rule RedBinOp[OF RedLeft RedRight])
     using \<open>binop_poly_type bop\<close> by auto
-(*next
-  case (TypMapSelect \<Delta> me tk tv ke r)
-  then show ?case  sorry
 next
-  case (TypMapStore \<Delta> me tk tv ke r)
-  then show ?case  sorry*)
+  case (TypMapSelect \<Delta> me tk tv ke)
+  have "\<exists>a. \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>me,n_s\<rangle> \<Down> a" 
+    apply (rule TypMapSelect.IH) using TypMapSelect.prems by auto
+  moreover have "\<exists>a. \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>ke,n_s\<rangle> \<Down> a"
+    apply (rule TypMapSelect.IH) using TypMapSelect.prems by auto
+  ultimately  obtain v1 v2 where RedLeft:"\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>me,n_s\<rangle> \<Down> v1" and  RedRight:"\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>ke,n_s\<rangle> \<Down> v2"
+    by auto
+  show ?case
+    apply (rule exI; rule RedMapSelect[OF RedLeft RedRight])
+    by auto
+next
+  case (TypMapStore \<Delta> me tk tv ke re)
+  have "\<exists>a. \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>me,n_s\<rangle> \<Down> a" 
+    apply (rule TypMapStore.IH) using TypMapStore.prems by auto
+  moreover have "\<exists>a. \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>ke,n_s\<rangle> \<Down> a"
+    apply (rule TypMapStore.IH) using TypMapStore.prems by auto
+  moreover have "\<exists>a. \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>re,n_s\<rangle> \<Down> a"
+    apply (rule TypMapStore.IH) using TypMapStore.prems by auto
+  ultimately  obtain mv kv rv where M:"\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>me,n_s\<rangle> \<Down> mv"
+    and  K:"\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>ke,n_s\<rangle> \<Down> kv" and  R:"\<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>re,n_s\<rangle> \<Down> rv"
+    by auto
+  show ?case
+    apply (rule exI; rule RedMapStore[OF M K R])
+    by auto
 next
   case (TypFunExp f n_ty_params args_ty ret_ty ty_params args \<Delta>)
   have "\<exists>vargs. \<Lambda>,\<Gamma>,\<Omega> \<turnstile> \<langle>args, n_s\<rangle> [\<Down>] vargs" 
