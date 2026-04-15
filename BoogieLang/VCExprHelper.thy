@@ -164,7 +164,7 @@ in the VC using this type). We define various functions on these closed types th
 the VC and that we must instantiate appropriately.\<close>
 
 datatype closed_ty = 
-  TPrimC prim_ty | TConC tcon_id "closed_ty list" | TMapC closed_ty closed_ty
+  TPrimC prim_ty | TConC tcon_id "closed_ty list" | TMapC (TMapCInv0: closed_ty) (TMapCInv1:closed_ty)
 
 fun ty_to_closed :: "ty \<Rightarrow> closed_ty"
   where 
