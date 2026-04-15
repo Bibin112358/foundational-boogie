@@ -1,5 +1,5 @@
 theory HelperML
-  imports VCHints TypingHelper PassificationEndToEnd Ast_Cfg_Transformation CFGOptimizationsLoop MapExample
+  imports VCHints TypingHelper PassificationEndToEnd Ast_Cfg_Transformation CFGOptimizationsLoop Map3Semantics
 begin
 
 interpretation semantics wf_select wf_store 3

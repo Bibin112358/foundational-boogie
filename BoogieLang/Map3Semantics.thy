@@ -1,6 +1,6 @@
 section \<open>Instantiation Example for MapV\<close>
 
-theory MapExample
+theory Map3Semantics
   imports Semantics VCExprHelper
 begin
 
