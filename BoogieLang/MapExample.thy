@@ -50,32 +50,32 @@ lemma wfvotTT: "(type_of_val ((val_of_type TT)::'a::absval valn) = TT \<and> wf 
 
 lemma mAdd1Typesafe:
   shows "type_of_val (selectImpl vAdd1 k) = (TPrim TInt)"
-  apply (cases k rule: toVal3210.cases)
+  apply (cases k rule: ofValn.cases)
   apply (metis (no_types, lifting) fAdd1.elims int_inverse_3 selectImpl.simps selectImplAux.simps(3)
-      toVal0.simps(1) toVal3210.simps(1,3) type_of_lit.simps(2) type_of_val.simps(1) val3ToValn.simps(1)
+      toVal0.simps(1) ofValn.simps(1,3) type_of_lit.simps(2) type_of_val.simps(1) valnOf.simps(1)
       wfvotTT)
   using wfvotTT tint_intv
   apply (metis (no_types, opaque_lifting) fAdd1.simps(4) selectImpl.simps selectImplAux.simps(3)
-      toVal0.simps(1) toVal3210.simps(1,3) val3ToValn.simps(2) valBij valBij2)
+      toVal0.simps(1) ofValn.simps(1,3) valnOf.simps(2) valBij valBij2)
   apply (metis dom_ty.elims fst_conv mapval_ty_eq_ty321 selectImpl.simps selectImplAux.simps(11)
-      toVal3210.simps(3) ty.sel(5) ty321.simps(1) tyL.simps type_of_val.simps(3) valBij2 wfvotTT)
+      ofValn.simps(3) ty.sel(5) ty321.simps(1) tyL.simps type_of_val.simps(3) valBij2 wfvotTT)
   apply (metis dom_ty.elims fst_conv mapval_ty_eq_ty321 selectImpl.simps selectImplAux.simps(10)
-      toVal3210.simps(3,4) ty.sel(5) ty321.simps(1) tyL.simps type_of_val.simps(3) valBij2 wfvotTT)
+      ofValn.simps(3,4) ty.sel(5) ty321.simps(1) tyL.simps type_of_val.simps(3) valBij2 wfvotTT)
   apply (metis dom_ty.elims fst_conv mapval_ty_eq_ty321 selectImpl.simps selectImplAux.simps(09)
-      toVal3210.simps(3,5) ty.sel(5) ty321.simps(1) tyL.simps type_of_val.simps(3) valBij2 wfvotTT)
+      ofValn.simps(3,5) ty.sel(5) ty321.simps(1) tyL.simps type_of_val.simps(3) valBij2 wfvotTT)
   done
 
 (* TODO: more general *)
-lemma votTTpreserved: "val3ToValn (Inr (Inr (Inr (toVal0 (val_of_type (TT)))))) = (val_of_type (TT))"
-  by (metis int_inverse_3 toVal0.simps(1) val3ToValn.simps(1) wfvotTT)
+lemma votTTpreserved: "valnOf (Inr (Inr (Inr (toVal0 (val_of_type (TT)))))) = (val_of_type (TT))"
+  by (metis int_inverse_3 toVal0.simps(1) valnOf.simps(1) wfvotTT)
 
 lemma vAdd1defualt: "(\<not>wf k \<or> type_of_val k \<noteq> dom_ty vAdd1) \<Longrightarrow> (selectImpl vAdd1 k) = val_of_type (ran_ty vAdd1)"
-  apply (cases "k" rule: toVal3210.cases; cases "type_of_val k"; simp) 
+  apply (cases "k" rule: ofValn.cases; cases "type_of_val k"; simp) 
       apply (rename_tac v t, case_tac v; simp) using votTTpreserved apply fastforce
-  using wfLitV wfAbsV toVal3210_inj valBij apply blast
+  using wfLitV wfAbsV ofValn_inj valBij apply blast
   using votTTpreserved apply auto[1]
   using votTTpreserved apply auto[1]
-  using wfLitV wfAbsV toVal3210_inj valBij apply blast+
+  using wfLitV wfAbsV ofValn_inj valBij apply blast+
   done
 
 lemma vAdd1wfSelect: "wf (selectImpl vAdd1 k)"
@@ -120,8 +120,8 @@ lemma kTMII:
   shows "\<exists>f. k = MapV (Inr (Inr (FunL f TT TT)))"
 proof -
   have "tmap_lvl (type_of_val k) = 1" using assms by simp
-  then obtain k' where "toVal3210 k = Inr (Inr (Inl k'))" using C1Inrrl assms by blast
-  then have K: "k = MapV (Inr (Inr k'))" using toVal3210.elims by auto
+  then obtain k' where "ofValn k = Inr (Inr (Inl k'))" using C1Inrrl assms by blast
+  then have K: "k = MapV (Inr (Inr k'))" using ofValn.elims by auto
   then have "wf_L 1 k'" using assms by force
   then show ?thesis
     apply (cases k')
@@ -135,8 +135,8 @@ lemma homvotdef: "tyL (toVal1 (val_of_type (TMap TT TT))) = (TT, TT)" using VOT
       wf_ty.simps(1,2))
 
 
-lemma votTMIIpreserved: "val3ToValn (Inr (Inr (Inl (toVal1 (val_of_type (TMII)))))) = (val_of_type (TMII))"
-  by (metis VOT kTMII toVal1.simps(1) val3ToValn.simps(3) validClosedTMII wf.simps
+lemma votTMIIpreserved: "valnOf (Inr (Inr (Inl (toVal1 (val_of_type (TMII)))))) = (val_of_type (TMII))"
+  by (metis VOT kTMII toVal1.simps(1) valnOf.simps(3) validClosedTMII wf.simps
       wf_ty.simps(1,2))
 
 
@@ -154,12 +154,12 @@ proof -
 
   have wf1: "\<forall>k. wf (selectImpl b k)"
     apply rule
-    apply (case_tac k rule: toVal3210.cases; (simp add: assms))
+    apply (case_tac k rule: ofValn.cases; (simp add: assms))
     apply (rename_tac v, case_tac v; (simp add: assms))
     apply (metis val_of_type.simps votTTpreserved wfvotTT)
-    apply (metis fAdd1.elims val3ToValn.simps(1) votTTpreserved wfLitV wfvotTT)
+    apply (metis fAdd1.elims valnOf.simps(1) votTTpreserved wfLitV wfvotTT)
     apply (metis val_of_type.simps votTTpreserved wfvotTT)
-    apply (metis toVal3210.simps(1) val0.exhaust val3ToValn.simps(2) valBij2 wfAbsV
+    apply (metis ofValn.simps(1) val0.exhaust valnOf.simps(2) valBij2 wfAbsV
         wfLitV)
     apply (metis valBij2 val_of_type.simps wfvotTT)+
     done
@@ -167,7 +167,7 @@ proof -
   have wf2: "\<forall>k. (\<not>wf k \<or> type_of_val k \<noteq> dom_ty b) \<longrightarrow> (selectImpl b k) = val_of_type (ran_ty b)"
   proof (rule) fix k
     show "(\<not>wf k \<or> type_of_val k \<noteq> dom_ty b) \<longrightarrow> (selectImpl b k) = val_of_type (ran_ty b)"
-    proof (cases k rule: toVal3210.cases)
+    proof (cases k rule: ofValn.cases)
       case (1 v)
       then show ?thesis apply (cases v)
         using assms(2) votTTpreserved apply auto[1]
@@ -183,11 +183,11 @@ proof -
     
   have wf3: "\<forall>k. type_of_val (selectImpl b k) = ran_ty b"
     apply rule
-    apply (case_tac k rule: toVal3210.cases; (simp add: assms))
+    apply (case_tac k rule: ofValn.cases; (simp add: assms))
     apply (rename_tac v, case_tac v; simp)
     apply (metis val_of_type.simps votTTpreserved wfvotTT)
     apply (metis (no_types, lifting) fAdd1.elims type_of_lit.simps(2) type_of_val.simps(1)
-        val3ToValn.simps(1) votTTpreserved wfvotTT)
+        valnOf.simps(1) votTTpreserved wfvotTT)
     apply (metis val_of_type.simps votTTpreserved wfvotTT)
     apply (metis val_of_type.simps votTTpreserved wfvotTT)
     apply (metis valBij2 val_of_type.simps wfvotTT)+
@@ -195,7 +195,7 @@ proof -
 
   have wf2: "\<forall>k. (\<not>wf k \<or> type_of_val k \<noteq> dom_ty b) \<longrightarrow> (selectImpl b k) = val_of_type (ran_ty b)"
     apply rule
-    apply (case_tac k rule: toVal3210.cases; (simp add: assms valBij2))
+    apply (case_tac k rule: ofValn.cases; (simp add: assms valBij2))
         apply (rename_tac v, case_tac v; simp)
     using votTTpreserved apply fastforce
     using wfLitV apply blast
@@ -207,7 +207,7 @@ qed
 
 
 lemma vhomVwfSelect: "wf (selectImpl homV k)"
-  apply (cases k rule: toVal3210.cases; simp)
+  apply (cases k rule: ofValn.cases; simp)
   using VOT votTMIIpreserved apply auto[1]
   using VOT votTMIIpreserved apply auto[1]
     apply (rename_tac m, case_tac m)
@@ -246,10 +246,10 @@ lemma
   assumes "wf (MapV (Inl (FunL f tk tv)))"
   assumes "wf k"
   assumes "type_of_val k = dom_ty (MapV (Inl (FunL f tk tv)))"
-  shows "\<exists>k'. toVal3210 k = Inr ( k')"
+  shows "\<exists>k'. ofValn k = Inr ( k')"
 proof -
   have "tmap_lvl (type_of_val (MapV (Inl (FunL f tk tv)))) = 3"
-    using InlC3 wf.simps assms(1) toVal3210.simps wf_impl_wf_ty by force
+    using InlC3 wf.simps assms(1) ofValn.simps wf_impl_wf_ty by force
   then have "tmap_lvl (dom_ty (MapV (Inl (FunL f tk tv)))) \<le> 2"
     by auto
   then have "tmap_lvl (type_of_val k) \<le> 2" using assms by auto
